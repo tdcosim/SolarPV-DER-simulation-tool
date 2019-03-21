@@ -9,8 +9,8 @@ import six
 
 from scipy.integrate import odeint
 ####from graphviz import Digraph
-from pvder.utilities import SimulationUtilities
-from pvder import utility_functions
+from utilities import SimulationUtilities
+import utility_functions as utility_functions
 
 class ModelUtilities():
     """Class for model wide utilities."""
@@ -66,7 +66,16 @@ class GridSimulation(SimulationUtilities):
     DEBUG_POWER = False
     DEBUG_PLL = True
     
-    def __init__(self,grid_model,PV_model,simulation_events,tStop = 0.5,tInc = 0.001):
+    def __init__(self,PV_model,events,grid_model=None,tStop = 0.5,tInc = 0.001):
+        """Creates an instance of `GridSimulation`.
+        
+        Args:
+          PV_model: An instance of `SolarPV_DER`.
+          events: An instance of `SimulationEvents`.
+          grid_model: An instance of `GridModel` (only need to be suppled in stand alone simulation).
+          tStop: A scalar specifying the end time for simulation.
+          tInc: A scalar specifying the time step for simulation.
+        """
         
         #Increment count to keep track of number of simulation instances
         GridSimulation.sim_count = GridSimulation.sim_count+1
@@ -77,9 +86,12 @@ class GridSimulation(SimulationUtilities):
         self.tStop = tStop
         self.tInc = tInc
         self.PV_model = PV_model
-        self.grid_model = grid_model
-        self.simulation_events = simulation_events
-        six.print_("before Remove existing simulation")
+        self.simulation_events = events
+        if self.PV_model.standAlone and grid_model is not None:
+            self.grid_model = grid_model
+        elif self.PV_model.standAlone and grid_model is None:
+            raise ValueError('`Grid` instance need to provided in stand alone mode for creating `GridSimulation` instance!')
+        
         #Remove existing simulation events
         self.simulation_events.remove_solar_event(3.0)
         self.simulation_events.remove_load_event(4.0)
@@ -284,7 +296,7 @@ class GridSimulation(SimulationUtilities):
         self.Zload1_t = []
         for i,t in enumerate(tAll):       #Loop through load events
             _Zload1_actual =  self.simulation_events.load_events(t)  
-            _Zload1 = _Zload1_actual/self.grid_model.Zbase
+            _Zload1 = _Zload1_actual/self.PV_model.Zbase
             
             self.Zload1_t.append(_Zload1)
         self.Zload1_t = np.asarray(self.Zload1_t)
@@ -379,12 +391,20 @@ class GridSimulation(SimulationUtilities):
         self.wte_t = solution[:,22]
         
         #Grid voltage
-        self.vagR_t = solution[:,23]
-        self.vagI_t = solution[:,24]
-        self.vbgR_t = solution[:,25]
-        self.vbgI_t = solution[:,26]
-        self.vcgR_t = solution[:,27]
-        self.vcgI_t = solution[:,28]
+        if self.PV_model.standAlone:
+            self.vagR_t = solution[:,23]
+            self.vagI_t = solution[:,24]
+            self.vbgR_t = solution[:,25]
+            self.vbgI_t = solution[:,26]
+            self.vcgR_t = solution[:,27]
+            self.vcgI_t = solution[:,28]
+        else:
+            self.vagR_t = np.repeat(self.PV_model.gridVoltagePhaseA.real,len(self.t))
+            self.vagI_t = np.repeat(self.PV_model.gridVoltagePhaseA.imag,len(self.t))
+            self.vbgR_t = np.repeat(self.PV_model.gridVoltagePhaseB.real,len(self.t))
+            self.vbgI_t = np.repeat(self.PV_model.gridVoltagePhaseB.imag,len(self.t))
+            self.vcgR_t = np.repeat(self.PV_model.gridVoltagePhaseC.real,len(self.t))
+            self.vcgI_t = np.repeat(self.PV_model.gridVoltagePhaseC.imag,len(self.t))
         
         #Time series current
         self.ia_t = self.iaR_t + 1j*self.iaI_t

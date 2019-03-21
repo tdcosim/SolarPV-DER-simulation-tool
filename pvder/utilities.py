@@ -16,6 +16,15 @@ class SimulationResults():
     figure_DPI = 1200
 
     def __init__(self,simulation,figure_index=1,PER_UNIT=True,font_size=18,PLOT_TITLE=True):
+        """Creates an instance of `SimulationResults`.
+        
+        Args:
+          simulation: An instance of `GridSimulation`.
+          figure_index: An integer specifying the figure index.
+          font_size: An integer spcifying the font size to be used withing plots.
+          PLOT_TITLE: A boolean specifying whether the title will be displayed in plots.
+
+        """
         # do a lazy import. This is against PEP style guidelines. However,
         # matplotlib has a ~25mb memory foot print. Hence, if each opendssapi.worker
         # imports this then memory consumption becomes a burden very quickly. This

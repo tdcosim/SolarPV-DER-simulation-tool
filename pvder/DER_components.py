@@ -8,9 +8,10 @@ import pdb
 import warnings
 
 from scipy.optimize import fsolve, minimize
-from pvder.grid_components import Grid
-from pvder.utilities import SimulationUtilities
-from pvder import utility_functions
+from grid_components import Grid
+from utilities import SimulationUtilities
+import utility_functions as utility_functions
+
 
 class PV_module(object):
     """
@@ -37,7 +38,16 @@ class PV_module(object):
                          '250':{'Np':45,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 650.0,'Vdcmpp_max': 1000.0}}
     
     def __init__(self,events,Sinverter_rated):
-        #Events object
+        """Creates an instance of `PV module`.
+        
+        Args:
+          events: An instance of `SimulationEvents`.
+          Sinverter_rated: A scalar specifying the rated power of the DER.
+        
+        Raises:
+          ValueError: If parameters corresponding to `Sinverter_rated` are not available.
+        """
+        
         self.events = events
         if Sinverter_rated in {50e3,100e3,250e3}:
            _DER_rating = str(int(Sinverter_rated/1e3))
@@ -198,19 +208,37 @@ class SolarPV_DER(PV_module,Grid):
     n_steps = 0
     ramp_del_t = 0.5 #0.025 
     
-    def __init__(self,grid_model,events,\
-                                       Sinverter_rated = 50.0e3,\
-                                       ia0 = 0+0j,xa0 =0+0j , ua0 = 0+0j,\
-                                       xDC0 = 0,xQ0 = 0,xPLL0 = 0.0,wte0 = 2*math.pi,\
-                                       standAlone=True,gridVoltagePhaseA=.50+0j,\
-                                       gridVoltagePhaseB=-.25-.43301270j,\
-                                       gridVoltagePhaseC=-.25+.43301270j,STEADY_STATE_INITIALIZATION=False,\
-                                       pvderConfig=None):   # Rl = 1.0,Ll = 0.0, ia0 = 0.26 -  1j*0.04,xa0 = 1.0 + 1j*0.15,xDC0 = 0.25,,xQ0 = -0.03
+    def __init__(self,events,grid_model=None,\
+                             Sinverter_rated = 50.0e3,\
+                             ia0 = 0+0j,xa0 =0+0j , ua0 = 0+0j,\
+                             xDC0 = 0,xQ0 = 0,xPLL0 = 0.0,wte0 = 2*math.pi,\
+                             gridVoltagePhaseA=.50+0j,\
+                             gridVoltagePhaseB=-.25-.43301270j,\
+                             gridVoltagePhaseC=-.25+.43301270j,\
+                             gridFrequency = 2*math.pi*60.0,\
+                             standAlone=True,STEADY_STATE_INITIALIZATION=False,\
+                             pvderConfig=None): 
         
-        ####
-        self.standAlone,self.gridVoltagePhaseA,self.gridVoltagePhaseB,self.gridVoltagePhaseC=\
-                                                                                             standAlone,\
-                                                                                             gridVoltagePhaseA,gridVoltagePhaseB,gridVoltagePhaseC
+        """Creates an instance of `SolarPV_DER`.
+        
+        Args:
+          events: An instance of `SimulationEvents`.
+          grid_model: An instance of `GridModel`(only need to be suppled for stand alone simulation).
+          Sinverter_rated: A scalar specifying the rated power of the DER.
+          ia0,xa0,ua0: Complex scalars specifying the initial value of inverter states in the DER instance.
+          xDC0,xQ0,xPLL0,wte0: Real scalars specifying the initial value of inverter states in the DER instance.
+          gridVoltatePhaseA,gridVoltatePhaseA,gridVoltatePhaseA = Complex scalar specifying initial voltage at PCC - LV side from external program.
+          standAlone: A boolean specifying if the DER instance is a stand alone simulation or part of a larger simulation.
+          STEADY_STATE_INITIALIZATION: A boolean specifying whether states in the DER instance will be initialized to steady state values.
+          pvderConfig: A dictionary containing configuration parameters that may be supplied from an external program.
+          
+        Raises:
+          ValueError: If parameters corresponding to `Sinverter_rated` are not available.
+          ValueError: If rated DC link voltage is not sufficient.
+        """
+        self.standAlone = standAlone
+        self.gridVoltagePhaseA, self.gridVoltagePhaseB, self.gridVoltagePhaseC = gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC
+        self.gridFrequency = gridFrequency
         #Increment count to keep track of number of PV-DER model instances
         SolarPV_DER.DER_count = SolarPV_DER.DER_count+1
         self.PV_DER_ID = SolarPV_DER.DER_count
@@ -222,8 +250,12 @@ class SolarPV_DER(PV_module,Grid):
         
         self.STEADY_STATE_INITIALIZATION = STEADY_STATE_INITIALIZATION
         
-        #Grid object
-        self.grid_model = grid_model
+        #Connect grid instance only if working in stand alone mode
+        if self.standAlone and grid_model is not None:
+            self.grid_model = grid_model
+        elif self.standAlone and grid_model is None:
+            raise ValueError('`Grid` instance need to provided in stand alone mode for creating `SolarPV_DER` instance`!')
+        
         #Events object
         self.events = events
         #Object name
@@ -253,15 +285,14 @@ class SolarPV_DER(PV_module,Grid):
         else:
             self.n_total_ODE = self.n_ODE
             self.Zload1_actual =  10e6+1j*0.0     #Using a large value of impedance to represent a no load condition
-        utility_functions.print_to_terminal('after Exhibit different behavior')
         
         self.Rload1_actual = self.Zload1_actual.real
         self.Lload1_actual = self.Z1_actual.imag/(2*math.pi*60.0)
         
         #Per-unit values
-        self.Rload1 = self.Rload1_actual/self.grid_model.Zbase  #resistance in per unit value
-        self.Lload1 = self.Lload1_actual/self.grid_model.Lbase  #inductance in per unit value
-        self.Zload1 =self.Zload1_actual/self.grid_model.Zbase
+        self.Rload1 = self.Rload1_actual/Grid.Zbase  #resistance in per unit value
+        self.Lload1 = self.Lload1_actual/Grid.Lbase  #inductance in per unit value
+        self.Zload1 = self.Zload1_actual/Grid.Zbase
         
         #Reference
         self.Q_ref = 0.0
@@ -277,7 +308,7 @@ class SolarPV_DER(PV_module,Grid):
         self.Vdc = self.Vdc_ref
         #PV module power output
         self.Ppv = self.Ppv_calc(self.Vdc_actual)
-        utility_functions.print_to_terminal('before Initialize all states with steady state')
+        
         #Initialize all states with steady state values at current operating point
         if self.STEADY_STATE_INITIALIZATION == True:
            ia0,xa0,ua0,ib0,xb0,ub0,ic0,xc0,uc0,Vdc0,xDC0,xQ0,xPLL0,wte0 =  self.steady_state_calc()
@@ -311,7 +342,7 @@ class SolarPV_DER(PV_module,Grid):
         #PLL
         self.xPLL = xPLL0
         self.wte = wte0
-        utility_functions.print_to_terminal('before Derived voltages')
+        
         #Derived voltages
         self.vta = self.vta_calc()
         self.vtb = self.vtb_calc()
@@ -319,22 +350,24 @@ class SolarPV_DER(PV_module,Grid):
         self.va = self.va_calc()
         self.vb = self.vb_calc()
         self.vc = self.vc_calc()
-        utility_functions.print_to_terminal('before Load current')
+        #Grid frequency
+        self.wgrid_measured = self.wgrid_calc()
+        
         #Load current
         self.iaload1 = self.iaload1_calc()
         self.ibload1 = self.ibload1_calc()
         self.icload1 = self.icload1_calc()
                 
         #Derived powers
-        utility_functions.print_to_terminal('before Derived powers')
         self.S = self.S_calc()
         self.S_PCC = self.S_PCC_calc()
-        self.S_G = self.S_G_calc()
-        self.S_load1 = self.S_load1_calc()
         self.S_PCCa = self.S_PCCa_calc()
         self.S_PCCb = self.S_PCCb_calc()
         self.S_PCCc = self.S_PCCc_calc()
-        utility_functions.print_to_terminal('before RMS voltages')
+        self.S_load1 = self.S_load1_calc()
+        if self.standAlone:
+            self.S_G = self.S_G_calc()
+            
         #RMS voltages
         self.Vrms = self.Vrms_calc()
         self.Vrms_ref =  self.Vanominal/math.sqrt(2) 
@@ -344,25 +377,17 @@ class SolarPV_DER(PV_module,Grid):
             self.Vabrms = self.Vabrms_calc()
             #Inverter RMS current
             self.Irms = self.Irms_calc()
-        utility_functions.print_to_terminal('before Reference currents')
         #Reference currents
         self.ia_ref = self.ia_ref_calc()
         self.ib_ref = self.ib_ref_calc()
         self.ic_ref = self.ic_ref_calc()
-        utility_functions.print_to_terminal('before Convert to time domain')
         #Convert to time domain
-        self.vat,self.vbt,self.vct = utility_functions.phasor_to_time(upha = self.va,uphb = self.vb,uphc = self.vc,w=self.grid_model.wgrid,t=0.0)
-        utility_functions.print_to_terminal('before Convert from 3ph time domain')
+        self.vat,self.vbt,self.vct = utility_functions.phasor_to_time(upha = self.va,uphb = self.vb,uphc = self.vc,w=self.wgrid_measured,t=0.0)
         #Convert from 3ph time domain to d-q using Parks transformation
         self.vd,self.vq,self.v0 = utility_functions.abc_to_dq0(self.vat,self.vbt,self.vct,self.wte) #Grid voltage
-        utility_functions.print_to_terminal('before LVRT settings')
         #LVRT settings
         self.LVRT_initialize(pvderConfig)
-        
-        if self.standAlone:
-            self.vagt,self.vbgt,self.vcgt = utility_functions.phasor_to_time(upha = self.grid_model.vag,uphb = self.grid_model.vbg,uphc = self.grid_model.vcg,w=self.grid_model.wgrid,t=0.0)
-            self.vdg,self.vqg,self.v0g = utility_functions.abc_to_dq0(self.vagt,self.vbgt,self.vcgt,self.wte)
-        utility_functions.print_to_terminal('after standAlone')
+
         #PLL frequency
         self.we = self.we_calc()
         utility_functions.print_to_terminal('after standAlone')
@@ -401,16 +426,16 @@ class SolarPV_DER(PV_module,Grid):
         self.C = self.C_actual/Grid.Cbase          #DC link capacitor capacitance
         self.Zf = self.Zf_actual/Grid.Zbase
         
-        #Interconnection to grid
+        #Interconnection to PCC - HV side
         #Actual values
         self.Z1_actual = self.circuit_parameters[_DER_rating]['Z1_actual']
         self.R1_actual = self.Z1_actual.real
         self.L1_actual = self.Z1_actual.imag/(2*math.pi*60.0)
         
         #Per-unit values
-        self.R1 = self.R1_actual/self.grid_model.Zbase  #Line/transformer resistance
-        self.L1 = self.L1_actual/self.grid_model.Lbase  #Line/transformer inductance
-        self.Z1 =self.Z1_actual/self.grid_model.Zbase    #Line/transformer impedance
+        self.R1 = self.R1_actual/Grid.Zbase  #Line/transformer resistance
+        self.L1 = self.L1_actual/Grid.Lbase  #Line/transformer inductance
+        self.Z1 =self.Z1_actual/Grid.Zbase    #Line/transformer impedance
         
         self.transformer_name = 'transformer_'+str(SolarPV_DER.DER_count)
         
@@ -434,13 +459,13 @@ class SolarPV_DER(PV_module,Grid):
         """Display values of voltage and current quantities."""
         if quantity not in {'voltage','current','power'}:
             raise ValueError('Unknown quantity: ' + str(plot_type))
-        print('______{}_____\n'.format(self.name))
+        print('______{} - {}_____\n'.format(self.name,quantity.capitalize()))
         if quantity ==  'voltage':
-            print('Vdc:{:.2f}\nVta:{:.2f},Vtb:{:.2f},Vtb:{:.2f}\nVtrms:{:.2f}'.format(self.Vdc*self.Vbase,self.vta*self.Vbase,self.vtb*self.Vbase,self.vtc*self.Vbase,self.Vtrms*self.Vbase))
+            print('Vdc:{:.2f}\nVta:{:.2f} V,Vtb:{:.2f} V,Vtb:{:.2f} V\nVtrms:{:.2f} V\nVtn:{:.2f} V'.format(self.Vdc*self.Vbase,self.vta*self.Vbase,self.vtb*self.Vbase,self.vtc*self.Vbase,self.Vtrms*self.Vbase,(self.vta+self.vtb+self.vtc)*self.Vbase))
         elif quantity ==  'current':
-            print('ia:{:.2f},ib:{:.2f},ic:{:.2f}\nIrms:{:.2f}'.format(self.ia*self.Ibase,self.ib*self.Ibase,self.ic*self.Ibase,self.Irms*self.Ibase))
+            print('ia:{:.2f} A,ib:{:.2f} A,ic:{:.2f} A\nIrms:{:.2f} V\nIn:{:.2f} A'.format(self.ia*self.Ibase,self.ib*self.Ibase,self.ic*self.Ibase,self.Irms*self.Ibase,(self.ia+self.ib+self.ic)*self.Ibase))
         elif quantity ==  'power':
-            print('Ppv:{:.2f}\nS:{:.2f}\nS_PCC:{:.2f}'.format(self.Ppv*self.Sbase,self.S*self.Sbase,self.S_PCC*self.Sbase))
+            print('Ppv:{:.2f} W\nS:{:.2f} W\nS_PCC:{:.2f} W'.format(self.Ppv*self.Sbase,self.S*self.Sbase,self.S_PCC*self.Sbase))
     
     
     def show_PV_DER_parameters(self,quantity='voltages'):
@@ -527,7 +552,6 @@ class SolarPV_DER(PV_module,Grid):
     def we_calc(self):
         """Calculate inverter frequency from PLL."""
         
-        #return  self.Kp_PLL*(self.vdg) + self.xPLL + 2*math.pi*60.0
         return  self.Kp_PLL*(self.vd) + self.xPLL + 2*math.pi*60.0
     
     #Controller outer loop equations (Current set-point)
@@ -661,6 +685,15 @@ class SolarPV_DER(PV_module,Grid):
             val=self.gridVoltagePhaseC
         
         return val
+    
+    def wgrid_calc(self):
+        """Frequency of grid voltage source."""
+        if self.standAlone:
+           val = self.grid_model.wgrid
+        else:
+           val = self.gridFrequency
+        return val
+    
     def iaload1_calc(self):
         """Current counsumed by load connected at PCC LV side -  Phase A."""
         
@@ -843,6 +876,8 @@ class SolarPV_DER(PV_module,Grid):
         self.vb = self.vb_calc()
         self.vc = self.vc_calc()
         self.Vrms = self.Vrms_calc()
+        #Update grid frequency
+        self.wgrid_measured = self.wgrid_calc()
         
         #Update power output
         self.S = self.S_calc()
@@ -890,15 +925,10 @@ class SolarPV_DER(PV_module,Grid):
         #d-q transformation
         
         #Convert PCC LV side voltage from phasor to time domain
-        self.vat,self.vbt,self.vct = utility_functions.phasor_to_time(upha = self.va,uphb = self.vb,uphc = self.vc,w=self.grid_model.wgrid,t=t)
+        self.vat,self.vbt,self.vct = utility_functions.phasor_to_time(upha = self.va,uphb = self.vb,uphc = self.vc,w=self.wgrid_measured,t=t)
         
         #Convert from 3ph time domain to d-q using Parks transformation
         self.vd,self.vq,self.v0 = utility_functions.abc_to_dq0(self.vat,self.vbt,self.vct,self.wte) #PCC LV side voltage
-        
-        #Convert grid voltage from phasor to time domain to d-q in stand alone mode
-        if self.standAlone:
-           self.vagt,self.vbgt,self.vcgt = utility_functions.phasor_to_time(upha = self.grid_model.vag,uphb = self.grid_model.vbg,uphc = self.grid_model.vcg,w=self.grid_model.wgrid,t=t)
-           self.vdg,self.vqg,self.v0g = utility_functions.abc_to_dq0(self.vagt,self.vbgt,self.vcgt,self.wte) #Grid voltage
         
         #Calculate inverter frequency from PLL equation
         self.we = self.we_calc()
@@ -1047,7 +1077,6 @@ class SolarPV_DER(PV_module,Grid):
             dxQ = -self.Ki_Q*(self.Q_ref - self.S_PCC.imag)
         
         #SRF-PLL dynamics
-        #dxPLL = self.Ki_PLL*(self.vdg)
         dxPLL = self.Ki_PLL*(self.vd)
         
         #Frequency integration to get angle
@@ -1137,6 +1166,8 @@ class SolarPV_DER(PV_module,Grid):
         self.vb = self.vb_calc()
         self.vc = self.vc_calc()
         self.Vrms = self.Vrms_calc()
+        #Update grid frequency
+        self.wgrid_measured = self.wgrid_calc()
         
         #Update RMS values
         if self.DO_EXTRA_CALCULATIONS:
@@ -1181,7 +1212,7 @@ class SolarPV_DER(PV_module,Grid):
         #d-q transformation
         
         #Convert PCC LV side voltage from phasor to time domain
-        self.vat,self.vbt,self.vct = utility_functions.phasor_to_time(upha = self.va,uphb = self.vb,uphc = self.vc,w=self.grid_model.wgrid,t=t)
+        self.vat,self.vbt,self.vct = utility_functions.phasor_to_time(upha = self.va,uphb = self.vb,uphc = self.vc,w=self.wgrid_measured,t=t)
         
         #Convert from 3ph time domain to d-q using Parks transformation
         self.vd,self.vq,self.v0 = utility_functions.abc_to_dq0(self.vat,self.vbt,self.vct,self.wte) #PCC LV side voltage
@@ -1202,9 +1233,9 @@ class SolarPV_DER(PV_module,Grid):
         ra,theta_a = cmath.polar(self.va)
         rb,theta_b = cmath.polar(self.vb)
         rc,theta_c = cmath.polar(self.vc)
-        theta_a = self.grid_model.wgrid*t + theta_a - math.pi/2
-        theta_b = self.grid_model.wgrid*t + theta_b - math.pi/2
-        theta_c = self.grid_model.wgrid*t + theta_c - math.pi/2
+        theta_a = self.wgrid_measured*t + theta_a - math.pi/2
+        theta_b = self.wgrid_measured*t + theta_b - math.pi/2
+        theta_c = self.wgrid_measured*t + theta_c - math.pi/2
             
         J[varInd['iaR'],varInd['iaR']] = -self.Rf/self.Lf            
         J[varInd['iaR'],varInd['iaI']] = (self.xPLL+self.Kp_PLL*self.vd+2*math.pi*60)/self.wbase

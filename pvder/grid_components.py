@@ -3,14 +3,14 @@ import numpy as np
 import math
 import cmath
 import six
-from pvder.utilities import SimulationUtilities
-from pvder import utility_functions
+from utilities import SimulationUtilities
+import utility_functions as utility_functions
 
 class Grid(SimulationUtilities):
     """ Class for grid"""
     
     grid_count = 0
-	#Number of ODE's
+    #Number of ODE's
     n_grid_ODE = 6
     
     #Grid voltage time constant
@@ -22,7 +22,7 @@ class Grid(SimulationUtilities):
     
     Ibase = Sbase/Vbase
     Zbase = (Vbase**2)/Sbase
-	
+    
     Lbase = Zbase/wbase
     Cbase = 1/(Zbase*wbase)
     
@@ -32,7 +32,14 @@ class Grid(SimulationUtilities):
     tInc = 0.001
     t = np.arange(tStart, tStop, tInc)
     
-    def __init__(self,events,unbalance_ratio_b=1.0,unbalance_ratio_c=1.0,Z2_actual = 1.61 + 1j*5.54,standAlone=True,VpuInitial=1.0): #Z2_actual = 1.61 + 1j*5.54
+    def __init__(self,events,unbalance_ratio_b=1.0,unbalance_ratio_c=1.0,Z2_actual = 1.61 + 1j*5.54):
+        """Creates an instance of `GridSimulation`.
+        
+        Args:
+          events: An instance of `SimulationEvents`.
+          unbalance_ratio_b,unbalance_ratio_c: Scalar specifying difference in Phase B and Phase C voltage magnitude compared to phase A.
+          Z2_actual: Complex scalar specifying the impedance of the feeder connecting the DER with the voltage source.
+        """
         
         #Increment count
         Grid.grid_count = Grid.grid_count+1
@@ -42,7 +49,7 @@ class Grid(SimulationUtilities):
         #Object name
         self.name = 'grid'+str(Grid.grid_count)
         
-       #Voltage unbalance
+        #Voltage unbalance
         self.unbalance_ratio_b = unbalance_ratio_b
         self.unbalance_ratio_c = unbalance_ratio_c
         
@@ -67,14 +74,9 @@ class Grid(SimulationUtilities):
         self.Vbgrid = utility_functions.Ub_calc(self.Vagrid*self.unbalance_ratio_b)
         self.Vcgrid = utility_functions.Uc_calc(self.Vagrid*self.unbalance_ratio_c)
         #Actual Grid voltage
-        if standAlone:
-            self.vag = self.Vagrid_no_conversion
-            self.vbg = utility_functions.Ub_calc(self.vag*self.unbalance_ratio_b)
-            self.vcg = utility_functions.Uc_calc(self.vag*self.unbalance_ratio_c)
-        else:
-            self.vag = (50.0+0.0j)*VpuInitial
-            self.vbg = (-25-43.30127018922194j)*VpuInitial
-            self.vcg = (-25+43.30127018922194j)*VpuInitial
+        self.vag = self.Vagrid_no_conversion
+        self.vbg = utility_functions.Ub_calc(self.vag*self.unbalance_ratio_b)
+        self.vcg = utility_functions.Uc_calc(self.vag*self.unbalance_ratio_c)
         self.Vgrms = self.Vgrms_calc()
     
     @property
@@ -86,7 +88,7 @@ class Grid(SimulationUtilities):
 
     def Vgrms_calc(self):
         """Grid side terminal voltage -  RMS"""
-        return utility_functions.Urms_calc(self.vag,self.vbg,self.vcg)/math.sqrt(2)
+        return utility_functions.Urms_calc(self.vag,self.vbg,self.vcg)
         
     def update_grid_states(self,vag,vbg,vcg):
         """Update grid states"""

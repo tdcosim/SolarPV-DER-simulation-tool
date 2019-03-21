@@ -2,7 +2,7 @@ from __future__ import division
 import math
 import operator
 import six
-from pvder import utility_functions
+import utility_functions as utility_functions
 
 class SimulationEvents():
     """ Utility class for events."""
@@ -14,7 +14,15 @@ class SimulationEvents():
     Zload1_actual_default = 10e6+0j
     
     def __init__(self,SOLAR_EVENT_ENABLE = True,GRID_EVENT_ENABLE = True, LOAD_EVENT_ENABLE = True):
+        """Creates an instance of `SimulationEvents`.
         
+        Args:
+          SOLAR_EVENT_ENABLE: A boolean to enable solar insolation events.
+          GRID_EVENT_ENABLE: A boolean to enable grid voltage or frequency events.
+          LOAD_EVENT_ENABLE: A boolean to enable load change events at PCC-LV side.
+
+        """
+                
         #Increment count to keep track of number of simulation events instances
         SimulationEvents.events_count = SimulationEvents.events_count + 1
         self.events_ID =SimulationEvents.events_count
