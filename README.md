@@ -1,36 +1,34 @@
 **Status:** Maintenance (expect bug fixes and minor updates)
-# Gym environment for PV-DER
+# Utilitiy for simulating dynamics of PV-DER
 
-Solar photovoltaic distributed energy resources (PV-DER) are power electronic inverter based generation (IBG) connected to the electric power distribution system (eg. roof top solar PV systems). This environment consists of a single DER connected to a stiff voltage source as shown in the following schematic:
+Solar photovoltaic distributed energy resources (PV-DER) are power electronic inverter based generation (IBG) connected to the electric power distribution system (eg. roof top solar PV systems). This utility can be used to simulate the behaviour a single DER connected to a stiff voltage source as shown in the following schematic:
 
 ![schematic of PV-DER](PVDER_schematic.png)
 
 ## Basics
-The dynamics of the DER are modelled using dynamic phasors. One step is equivalent to one cycle (0.016 s).
+The dynamics of the DER are modelled using dynamic phasors.
 
 ## Installation
-You can install the environment using following commands:
+You can install the module using following commands:
 ```
-git clone https://github.com/sibyjackgrove/gym-SolarPVDER-environment.git
-cd gym-SolarPVDER-environment
+git clone https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility.git
+cd SolarPV-DER-simulation-utility
 pip install -e .
 ```
-## Using the environment
-The environment can be instantiated just like any other OpenAI Gym environment as show below:
+## Using the module
+The module can be imported as shown below:
 ```
-import gym
-import gym_PVDER
-env = gym.make('PVDER-v0')
+import pvder
 ```
 ## Citation
 If you use this code please cite it as:
 ```
-@misc{gym-PVDER,
-  title = {{gym-SolarPVDER-environment}: A environment for solar photovoltaic distributed energy resources},
-  author = "{Siby Jose Plathottam}",
-  howpublished = {\url{https://github.com/sibyjackgrove/gym-SolarPVDER-environment}},
-  url = "https://github.com/tensorflow/agents",
+@misc{pvder,
+  title = {{SolarPV-DER-simulation-utility}: A simulation utility for or solar photovoltaic distributed energy resources},
+  author = "{Siby Jose Plathottam,Karthikeyan Balasubramaniam}",
+  howpublished = {\url{https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility}},
+  url = "https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility",
   year = 2019,
-  note = "[Online; accessed 18-March-2019]"
+  note = "[Online; accessed 19-March-2019]"
 }
 ```
