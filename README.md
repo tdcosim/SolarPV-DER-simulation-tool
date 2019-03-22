@@ -1,3 +1,5 @@
+
+
 **Status:** Maintenance (expect bug fixes and minor updates)
 # Utilitiy for simulating dynamics of PV-DER
 
@@ -20,6 +22,10 @@ The module can be imported as shown below:
 ```
 import pvder
 ```
+Try it out in Google Colab:
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility/blob/master/examples/PV-DER_usage_example.ipynb)
+
 ## Citation
 If you use this code please cite it as:
 ```
