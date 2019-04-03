@@ -27,7 +27,7 @@ Try it out in Google Colab:
 
 ## Module details
 A schematic of the relationship between differen classes in the module is shown in the figure below:
-![schematic of software architecture](examples/software_architecture.png)
+![schematic of software architecture](docs/software_architecture.png)
 
 Dependencies: SciPy, Numpy, Matlplotlib
 
