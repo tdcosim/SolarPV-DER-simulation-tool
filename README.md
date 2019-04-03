@@ -30,6 +30,12 @@ A schematic of the relationship between differen classes in the module is shown 
 ![schematic of software architecture](examples/software_architecture.png)
 
 Dependencies: SciPy, Numpy, Matlplotlib
+
+## Who is responsible?
+- Siby Jose Plathottam splathottam@anl.gov
+- Karthikeyan Balasubramaniam kbalasubramaniam@anl.gov
+- Ning Kang kang@anl.gov
+
 ## Acknowledgement
 The authors would like to acknowledge [Shrirang Abhyankar](https://github.com/abhyshr) and Puspal Hazra for their contribution.
 
