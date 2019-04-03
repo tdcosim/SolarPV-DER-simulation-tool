@@ -10,7 +10,7 @@ Solar photovoltaic distributed energy resources (PV-DER) are power electronic in
 The dynamics of the DER are modelled using dynamic phasors. Detailed description of the concepts behind this utility can be found in the IEEE publication **Dynamic Modeling of Solar PV Systems for Distribution System Stability Analysis** and detailed list of equations can be found in the [Model specification document.](docs/PV_DER_model_specification_rev3.docx)
 
 ## Installation
-You can install the module using following commands:
+You can install the module directly from github with following commands:
 ```
 git clone https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility.git
 cd SolarPV-DER-simulation-utility
@@ -34,7 +34,6 @@ Dependencies: SciPy, Numpy, Matlplotlib
 ## Who is responsible?
 - Siby Jose Plathottam splathottam@anl.gov
 - Karthikeyan Balasubramaniam kbalasubramaniam@anl.gov
-- Ning Kang kang@anl.gov
 
 ## Acknowledgement
 The authors would like to acknowledge [Shrirang Abhyankar](https://github.com/abhyshr) and Puspal Hazra for their contribution.
