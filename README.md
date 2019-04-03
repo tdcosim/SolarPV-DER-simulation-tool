@@ -1,5 +1,4 @@
 
-
 **Status:** Maintenance (expect bug fixes and minor updates)
 # Utilitiy for simulating dynamics of PV-DER
 
@@ -8,7 +7,7 @@ Solar photovoltaic distributed energy resources (PV-DER) are power electronic in
 ![schematic of PV-DER](PVDER_schematic.png)
 
 ## Basics
-The dynamics of the DER are modelled using dynamic phasors.
+The dynamics of the DER are modelled using dynamic phasors. Detailed description of the concepts behind this utility can be found in the IEEE publication **Dynamic Modeling of Solar PV Systems for Distribution System Stability Analysis** and detailed list of equations can be found in the [Model specification document.](docs/PV_DER_model_specification_rev3.docx)
 
 ## Installation
 You can install the module using following commands:
@@ -25,6 +24,14 @@ import pvder
 Try it out in Google Colab:
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sibyjackgrove/SolarPV-DER-simulation-utility/blob/master/examples/PV-DER_usage_example.ipynb)
+
+## Module details
+A schematic of the relationship between differen classes in the module is shown in the figure below:
+![schematic of software architecture](examples/software_architecture.png)
+
+Dependencies: SciPy, Numpy, Matlplotlib
+## Acknowledgement
+The authors would like to acknowledge [Shrirang Abhyankar](https://github.com/abhyshr) and Puspal Hazra for their contribution.
 
 ## Citation
 If you use this code please cite it as:
