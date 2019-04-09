@@ -50,3 +50,7 @@ If you use this code please cite it as:
   note = "[Online; accessed 19-March-2019]"
 }
 ```
+### Copyright and License
+Copyright © 2019, UChicago Argonne, LLC
+
+Photovoltaic Distributed Energy Resource (PV-DER) Simulation Utility is distributed under the terms of [BSD-3 OSS License.](LICENSE)
