@@ -3,15 +3,15 @@ import numpy as np
 import math
 import cmath
 import six
-from utilities import SimulationUtilities
-import utility_functions as utility_functions
+from pvder.utilities import SimulationUtilities
+from pvder import utility_functions
 
 class Grid(SimulationUtilities):
     """ Class for grid"""
     
     grid_count = 0
     #Number of ODE's
-    n_grid_ODE = 6
+    n_ODE = 0
     
     #Grid voltage time constant
     Vgridrated =  20415.0 # L-G peak to peak equivalent to 25000 V L-L RMS
@@ -66,15 +66,12 @@ class Grid(SimulationUtilities):
 
         self.transmission_name = 'transmission_'+str(Grid.grid_count)
         #Grid voltage/frequency events
-        self.Vagrid_no_conversion,self.wgrid = events.grid_events(t=0.0) #Grid voltage and frequency set-point
-        self.Vagrid_no_conversion = self.Vagrid_no_conversion*(self.Vgridrated/self.Vbase)
-        #Grid voltage setpoint
-        self.Vagrid = self.grid_voltage_setpoint_conversion(self.Vagrid_no_conversion,self.wgrid)
-        #self.Vagrid = self.Vagrid_no_conversion
+        self.Vagrid,self.wgrid = events.grid_events(t=0.0) #Grid voltage and frequency set-point
+        self.Vagrid = self.Vagrid*(self.Vgridrated/self.Vbase)
         self.Vbgrid = utility_functions.Ub_calc(self.Vagrid*self.unbalance_ratio_b)
         self.Vcgrid = utility_functions.Uc_calc(self.Vagrid*self.unbalance_ratio_c)
         #Actual Grid voltage
-        self.vag = self.Vagrid_no_conversion
+        self.vag = self.Vagrid
         self.vbg = utility_functions.Ub_calc(self.vag*self.unbalance_ratio_b)
         self.vcg = utility_functions.Uc_calc(self.vag*self.unbalance_ratio_c)
         self.Vgrms = self.Vgrms_calc()
@@ -89,89 +86,23 @@ class Grid(SimulationUtilities):
     def Vgrms_calc(self):
         """Grid side terminal voltage -  RMS"""
         return utility_functions.Urms_calc(self.vag,self.vbg,self.vcg)
+  
+    def grid_model(self,t):
+        """Grid voltage change."""
         
-    def update_grid_states(self,vag,vbg,vcg):
-        """Update grid states"""
-
-        self.vag = vag
-        self.vbg = vbg
-        self.vcg = vcg
-
-    def ODE_model(self,y,t):
-        """ODE's for grid voltage."""
-        
-        vagR, vagI, vbgR, vbgI, vcgR, vcgI = y
-        
-        self.update_grid_states(vagR+1j*vagI,vbgR+1j*vbgI,vcgR+1j*vcgI)
-        #Grid conditions
         Vagrid_new,wgrid_new = self.events.grid_events(t)
         Vagrid_new = Vagrid_new*(self.Vgridrated/self.Vbase)
-
-        if abs(self.Vagrid_no_conversion- Vagrid_new) or abs(self.wgrid- wgrid_new) > 0.0:
-           utility_functions.print_to_terminal("Grid voltage changed from {:.3f} V to {:.3f} V at {:.3f}".format(self.Vagrid_no_conversion,Vagrid_new,t))
-           utility_functions.print_to_terminal("Grid frequency changed from {:.3f} Hz to {:.3f} Hz at {:.3f}".format(self.wgrid/(2.0*math.pi),wgrid_new/(2.0*math.pi),t))
-           self.Vagrid_no_conversion = Vagrid_new#*self.Vbase
-           self.wgrid = wgrid_new
-           #Conversion of grid voltage setpoint
-           self.Vagrid = self.grid_voltage_setpoint_conversion(Vagrid_new,wgrid_new)      
-           self.Vbgrid = utility_functions.Ub_calc(self.Vagrid*self.unbalance_ratio_b)
-           self.Vcgrid = utility_functions.Uc_calc(self.Vagrid*self.unbalance_ratio_c)
         
-        self.Vgrms = self.Vgrms_calc()
-        #Dynamics for grid voltage
+        if abs(self.Vagrid- Vagrid_new) or abs(self.wgrid- wgrid_new) > 0.0:
+            utility_functions.print_to_terminal("Grid voltage changed from {:.3f} V to {:.3f} V at {:.3f}".format(self.Vagrid,Vagrid_new,t))
+            utility_functions.print_to_terminal("Grid frequency changed from {:.3f} Hz to {:.3f} Hz at {:.3f}".format(self.wgrid/(2.0*math.pi),wgrid_new/(2.0*math.pi),t))
+                      
+            self.wgrid = wgrid_new
+            #Conversion of grid voltage setpoint
+            self.Vagrid = Vagrid_new
+            self.Vbgrid = utility_functions.Ub_calc(self.Vagrid*self.unbalance_ratio_b)
+            self.Vcgrid = utility_functions.Uc_calc(self.Vagrid*self.unbalance_ratio_c)  
         
-        dvagR = (1/self.Tgrid)*(self.Vagrid.real - vagR)   #Tgrid = time constant
-        dvagI = (1/self.Tgrid)*(self.Vagrid.imag - vagI)   #Tgrid = time constant
-        dvbgR = (1/self.Tgrid)*(self.Vbgrid.real - vbgR)   #Tgrid = time constant
-        dvbgI = (1/self.Tgrid)*(self.Vbgrid.imag - vbgI)   #Tgrid = time constant
-        dvcgR = (1/self.Tgrid)*(self.Vcgrid.real - vcgR)   #Tgrid = time constant
-        dvcgI = (1/self.Tgrid)*(self.Vcgrid.imag - vcgI)   #Tgrid = time constant
-        
-        #utility_functions.print_to_terminal("t:{:.4f},Vagrid {:.3f}, vag {:.3f} V".format(t,self.Vagrid,self.vag))
-        result=[dvagR,
-                dvagI,
-                dvbgR,
-                dvbgI,
-                dvcgR,
-                dvcgI]
-
-        return result
-
-    def jac_ODE_model(self,y,t):
-        """ODE's for grid voltage."""
-        
-        J=np.zeros((29,29))
-        
-        vagR, vagI, vbgR, vbgI, vcgR, vcgI = y
-        
-        self.update_grid_states(vagR+1j*vagI,vbgR+1j*vbgI,vcgR+1j*vcgI)
-        #Grid conditions
-        Vagrid_new,wgrid_new = self.events.grid_events(t)
-        Vagrid_new = Vagrid_new*(self.Vgridrated/self.Vbase)
-
-        if abs(self.Vagrid_no_conversion- Vagrid_new) or abs(self.wgrid- wgrid_new) > 0.0:
-           utility_functions.print_to_terminal("Grid voltage changed from {:.3f} V to {:.3f} V at {:.3f}".format(self.Vagrid_no_conversion,Vagrid_new,t))
-           utility_functions.print_to_terminal("Grid frequency changed from {:.3f} Hz to {:.3f} Hz at {:.3f}".format(self.wgrid/(2.0*math.pi),wgrid_new/(2.0*math.pi),t))
-           self.Vagrid_no_conversion = Vagrid_new#*self.Vbase
-           self.wgrid = wgrid_new
-           #Conversion of grid voltage setpoint
-           self.Vagrid = self.grid_voltage_setpoint_conversion(Vagrid_new,wgrid_new)      
-           self.Vbgrid = utility_functions.Ub_calc(self.Vagrid*self.unbalance_ratio_b)
-           self.Vcgrid = utility_functions.Uc_calc(self.Vagrid*self.unbalance_ratio_c)
-        
-        self.Vgrms = self.Vgrms_calc()
-        #Dynamics for grid voltage
-        
-        J[23+0,23+0]=-(1/self.Tgrid)
-        J[23+1,23+1]=-(1/self.Tgrid)
-        J[23+2,23+2]=-(1/self.Tgrid)
-        J[23+3,23+3]=-(1/self.Tgrid)
-        J[23+4,23+4]=-(1/self.Tgrid)
-        J[23+5,23+5]=-(1/self.Tgrid)
- 
-        return J
-        
-    def grid_voltage_setpoint_conversion(self,Vgrid_new,wgrid_new):
-       
-        #return (1+1j*(wgrid_new/self.wbase)*self.Tgrid)*Vgrid_new
-        return Vgrid_new
+        self.vag = self.Vagrid
+        self.vbg = self.Vbgrid
+        self.vcg = self.Vcgrid

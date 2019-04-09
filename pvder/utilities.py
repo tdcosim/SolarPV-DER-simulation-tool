@@ -49,9 +49,9 @@ class SimulationResults():
            self.S_multiplier = 1.0
            six.print_('Using per unit quantities!')
         else:
-           self.V_multiplier = self.simulation.grid_model.Vbase
-           self.I_multiplier = self.simulation.grid_model.Ibase
-           self.S_multiplier = self.simulation.grid_model.Sbase
+           self.V_multiplier = self.simulation.Vbase
+           self.I_multiplier = self.simulation.Ibase
+           self.S_multiplier = self.simulation.Sbase
            six.print_('Using SI quantities!')
     
     def group_quantities_for_plotting(self,plot_type):
@@ -106,7 +106,10 @@ class SimulationResults():
             plot_title='PCC-LV side: L-G RMS voltage'
             y_labels=_voltage_label
         
-        elif plot_type == 'voltage_HV': 
+        elif plot_type == 'voltage_HV':
+            if not self.simulation.PV_model.standAlone:
+                raise ValueError('Plot '+str(plot_type)+' is only available in Stand Alone mode!')
+                
             plot_values = [self.simulation.Vhvrms_t*self.V_multiplier,self.simulation.Vgrms_t*self.V_multiplier]
             #legends=['Vpcchv','Vgrid']
             
@@ -158,11 +161,13 @@ class SimulationResults():
             y_labels=_active_power_label   
         
         elif plot_type == 'reactive_power':
-            plot_values = [self.simulation.S_t.imag*self.S_multiplier,self.simulation.S_PCC_t.imag*self.S_multiplier,self.simulation.S_load1_t.imag*self.S_multiplier,self.simulation.S_G_t.imag*self.S_multiplier]
-            
+            plot_values = [self.simulation.S_t.imag*self.S_multiplier,self.simulation.S_PCC_t.imag*self.S_multiplier]
+            legends=[r"$Q^{inv}$",r"$Q^{PCC-LV}$"]
+            if self.simulation.PV_model.standAlone:
+                plot_values = plot_values + [self.simulation.S_load1_t.imag*self.S_multiplier,self.simulation.S_G_t.imag*self.S_multiplier]
+                legends= legends + [r"$Q^{load1}$",r"$Q^{G}$"] 
             #legends=['Q','Q_PCC','Q_load1','Q_G']
-            
-            legends=[r"$Q^{inv}$",r"$Q^{PCC-LV}$",r"$Q^{load1}$",r"$Q^{G}$"] 
+                        
             plot_title='Inverter,PCC LV,Load,& Grid voltage:Reactive power'
             y_labels=_reactive_power_label
         
@@ -270,18 +275,17 @@ class SimulationUtilities():
         self.check_simulation(infodict,t) #Check whether solver successful for all time intervals
         
         return solution,infodict
-    
+
     def solve_ODE(self):
         """Solve given system of ODE's."""
         
         timer_start = time.time()
-        six.print_("Simulation for {} started at {} s and will end at {} s".format(self.name,self.tStart,self.tStop))
+        six.print_("{}:Simulation started at {} s and will end at {} s".format(self.name,self.tStart,self.tStop))
         if self.jacFlag:
-           six.print_("Analytical Jacobian will be provided to ODE solver.")
+            six.print_("{}:Analytical Jacobian will be provided to ODE solver.".format(self.name))
         
         solution,infodict  = self.call_ODE_solver(self.ODE_model,self.jac_ODE_model,self.y0,self.t)
-        six.print_("Simulation Finished")
-        six.print_('Total simulation time is {}'.format(time.strftime("%H:%M:%S", time.gmtime(time.time()-timer_start))))
+        six.print_('{}:Simulation was completed in {}'.format(self.name,time.strftime("%H:%M:%S", time.gmtime(time.time()-timer_start))))
         
         return solution
     
@@ -293,9 +297,8 @@ class SimulationUtilities():
                  assert len(infodict_mused) == len(t)-1,  " The number of methods used should be equal to the number of time steps."
                  failure_time_point = list(map(lambda status: status == 0 or  status > 2,  infodict_mused)).index(True)
                  
-                 raise ValueError('ODE solver failed at {:.4f} s for {} with failure code:{}!\n___States at failure___\nVdc:{:.4f},Vta:{:.4f},Vpcca:{:.4f}\nPpv:{:.4f},S:{:.4f}'
-                                  .format(t[failure_time_point],self.PV_model.name,infodict_mused[failure_time_point],self.PV_model.Vdc*self.PV_model.Vdcbase,
-                                  self.PV_model.vta*self.PV_model.Vbase,self.PV_model.va*self.PV_model.Vbase,self.PV_model.Ppv*self.PV_model.Sbase,self.PV_model.S*self.PV_model.Sbase))
+                 raise ValueError('{}:ODE solver failed at {:.4f} s for {} with failure code:{}!\n___States at failure___\nVdc:{:.4f},Vta:{:.4f},Vpcca:{:.4f}\nPpv:{:.4f},S:{:.4f}'
+.format(self.name,t[failure_time_point],self.PV_model.name,infodict_mused[failure_time_point],self.PV_model.Vdc*self.PV_model.Vdcbase,self.PV_model.vta*self.PV_model.Vbase,self.PV_model.va*self.PV_model.Vbase,self.PV_model.Ppv*self.PV_model.Sbase,self.PV_model.S*self.PV_model.Sbase))
         
         elif self.DEBUG_SOLVER:
             infodict_time_steps = infodict['hu']
@@ -303,4 +306,4 @@ class SimulationUtilities():
             six.print_('Time:{},Methods:{},Time steps:{}'.format(t,infodict_mused,infodict_time_steps))
             
             if all(status == 1 or status == 2 for status in infodict_mused):
-               six.print_('Simulation successful for all time steps for {}!'.format(self.PV_model.name))
+                six.print_('{}:Simulation successful for all time steps!'.format(self.PV_model.name))             

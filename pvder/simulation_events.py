@@ -2,7 +2,7 @@ from __future__ import division
 import math
 import operator
 import six
-import utility_functions as utility_functions
+from pvder import utility_functions
 
 class SimulationEvents():
     """ Utility class for events."""
@@ -221,6 +221,7 @@ class SimulationEvents():
         """Print all the simulation events."""
         
         print('Showing all event in events instance {}'.format(self.name ))
+        print('Total solar events:{}\nTotal grid events:{}'.format(len(self.solar_events_list),len(self.grid_events_list)))
         if self.simulation_events_list:
            
            for event in self.simulation_events_list:

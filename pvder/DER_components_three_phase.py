@@ -8,12 +8,15 @@ import pdb
 import warnings
 
 from scipy.optimize import fsolve, minimize
-from grid_components import Grid
-from utilities import SimulationUtilities
-import utility_functions as utility_functions
 
+from pvder.DER_check_and_initialize import PVDER_SetupUtilities
+from pvder.DER_features import PVDER_SmartFeatures
+from pvder.DER_utilities import PVDER_ModelUtilities
+from pvder.grid_components import Grid
 
-class PV_module(object):
+from pvder import utility_functions
+
+class PV_Module(object):
     """
     Class for describing PV module."
     """
@@ -34,11 +37,12 @@ class PV_module(object):
     k = 1.38e-23        #Boltzmann's constant
     A = 1.92      #p-n junction ideality factor
     
-    module_parameters = {'50':{'Np':11,'Ns':735,'Vdcmpp0':550.0,'Vdcmpp_min': 545.0,'Vdcmpp_max': 650.0},
+    module_parameters = {'10':{'Np':2,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 650.0,'Vdcmpp_max': 800.0},
+                         '50':{'Np':11,'Ns':735,'Vdcmpp0':550.0,'Vdcmpp_min': 545.0,'Vdcmpp_max': 650.0},
                          '250':{'Np':45,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 650.0,'Vdcmpp_max': 1000.0}}
     
     def __init__(self,events,Sinverter_rated):
-        """Creates an instance of `PV module`.
+        """Creates an instance of `PV_Module`.
         
         Args:
           events: An instance of `SimulationEvents`.
@@ -49,10 +53,11 @@ class PV_module(object):
         """
         
         self.events = events
-        if Sinverter_rated in {50e3,100e3,250e3}:
-           _DER_rating = str(int(Sinverter_rated/1e3))
-           print('Creating PV module instance for DER with rating: ' + str(Sinverter_rated/1e3) + ' kVA')
+        if (type(self).__name__ == 'SolarPV_DER_SinglePhase' and Sinverter_rated in {10e3}) or\
+           (type(self).__name__ == 'SolarPV_DER_ThreePhase' and Sinverter_rated in {50e3,100e3,250e3}):
            
+           _DER_rating = str(int(Sinverter_rated/1e3))
+           print('Creating PV module instance for {} DER with rating:{} kVA'.format(type(self).__name__.replace('SolarPV_DER_',''),_DER_rating))
            self.Np = self.module_parameters[str(_DER_rating)]['Np']
            self.Ns = self.module_parameters[str(_DER_rating)]['Ns']
            self.Vdcmpp0 = self.module_parameters[str(_DER_rating)]['Vdcmpp0']
@@ -69,8 +74,7 @@ class PV_module(object):
         #PV conditions
         self.Sinsol,self.Tactual= events.solar_events(t=0.0)
         
-        self.Iph = self.Iph_calc()       
-        utility_functions.print_to_terminal('after PVCondition')
+        self.Iph = self.Iph_calc()
     
     @property    
     def Vdcmpp(self):
@@ -120,7 +124,7 @@ class PV_module(object):
         self.z = np.polyfit(_x, _y, 3)
         utility_functions.print_to_terminal('Found polynomial for MPP :{:.4f}x^3 + {:.4f}x^2 +{:.4f}x^1 + {:.4f}!'.format(self.z[0],self.z[1],self.z[2], self.z[3]))
     
-class SolarPV_DER(PV_module,Grid):
+class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,Grid):
     """
        Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
        control systems.
@@ -129,7 +133,6 @@ class SolarPV_DER(PV_module,Grid):
     #Number of ODE's
     n_ODE = 23
     
-    Vdcbase = Grid.Vbase #DC side base value is same as AC side base value
     #PLL controller parameters
     Kp_PLL = 180 #1800
     Ki_PLL = 320 #32000
@@ -148,6 +151,7 @@ class SolarPV_DER(PV_module,Grid):
                              '250':{'scale_Kp_GCC':0.1,'scale_Ki_GCC':0.1,\
                                     'scale_Kp_DC':0.01,'scale_Ki_DC' : 0.01,\
                                     'scale_Kp_Q' : 0.01,'scale_Ki_Q' : 0.01,'wp' : 20e4}}
+    Sinverter_list = inverter_ratings.keys()
     #Frequency
     winv = we = 2.0*math.pi*60.0
     fswitching  = 10e3
@@ -155,61 +159,11 @@ class SolarPV_DER(PV_module,Grid):
      #Time delay before activating logic for MPP, Volt-VAR control,  LVRT/LFRT 
     t_stable = 1.0
     
-    #Limits
-    
-    m_limit = 1.0 #Maximum duty cycle
-    
-    #Simulation time steps
-    tStart = 0.0
-    tStop = 0.5
-    tInc = 0.001
-    t = np.arange(tStart, tStop, tInc)
-    
     #Duty cycle
     m_steady_state = 0.96 #Expected duty cycle at steady state    
     
-    #Flags
-    VOLT_VAR_ENABLE = False
-    VOLT_VAR_FLAG = False
-    
-    VOLT_WATT_ENABLE = False
-    VOLT_WATT_FLAG = False
-    
-    LVRT_ENABLE = False
-    LFRT_ENABLE = False
-    
-    PRINT_INLINE = False
-    VERBOSE = False
-    MPPT_ENABLE = False
-    
-    DO_EXTRA_CALCULATIONS = False #Do calculations not essential to ODE model (useful for debugging)
-
-    #LVRT variables
-    t_LV1start = 0.0
-    t_LV2start = 0.0
-    t_reconnect = 0.0
-    LVRT_TRIP = False
-    LVRT_RECONNECT = False
-    LVRT_INSTANTANEOUS_TRIP = False
-    
-    #LFRT variables
-    LFRT_DEBUG = False
-    t_LF1start = 0.0
-    t_LF2start = 0.0
-    t_LF3start = 0.0
-    t_LF_reconnect = 0.0
-    LFRT_TRIP = False
-    LFRT_RECONNECT = False
-    
-    #Ramp control
-    RAMP_ENABLE = False
-    RAMP_FLAG = False
-    ramp_list = []
-    n_steps = 0
-    ramp_del_t = 0.5 #0.025 
-    
     def __init__(self,events,grid_model=None,\
-                             Sinverter_rated = 50.0e3,\
+                             Sinverter_rated = 50.0e3,Vrms_rated = None,
                              ia0 = 0+0j,xa0 =0+0j , ua0 = 0+0j,\
                              xDC0 = 0,xQ0 = 0,xPLL0 = 0.0,wte0 = 2*math.pi,\
                              gridVoltagePhaseA=.50+0j,\
@@ -219,7 +173,7 @@ class SolarPV_DER(PV_module,Grid):
                              standAlone=True,STEADY_STATE_INITIALIZATION=False,\
                              pvderConfig=None): 
         
-        """Creates an instance of `SolarPV_DER`.
+        """Creates an instance of `SolarPV_DER_ThreePhase`.
         
         Args:
           events: An instance of `SimulationEvents`.
@@ -239,47 +193,29 @@ class SolarPV_DER(PV_module,Grid):
         self.standAlone = standAlone
         self.gridVoltagePhaseA, self.gridVoltagePhaseB, self.gridVoltagePhaseC = gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC
         self.gridFrequency = gridFrequency
+        self.Vrms_rated = Vrms_rated
+        
         #Increment count to keep track of number of PV-DER model instances
-        SolarPV_DER.DER_count = SolarPV_DER.DER_count+1
-        self.PV_DER_ID = SolarPV_DER.DER_count
+        SolarPV_DER_ThreePhase.DER_count = SolarPV_DER_ThreePhase.DER_count+1
+        self.PV_DER_ID = SolarPV_DER_ThreePhase.DER_count
+        #Object name
+        self.name = 'PV_DER-3ph_'+str(self.PV_DER_ID)
         
         if six.PY3:
             super().__init__(events,Sinverter_rated)  #Initialize PV module class (base class)
         elif six.PY2:
-            super(SolarPV_DER,self).__init__(events,Sinverter_rated)
+            super(SolarPV_DER_ThreePhase,self).__init__(events,Sinverter_rated)
         
         self.STEADY_STATE_INITIALIZATION = STEADY_STATE_INITIALIZATION
-        
-        #Connect grid instance only if working in stand alone mode
-        if self.standAlone and grid_model is not None:
-            self.grid_model = grid_model
-        elif self.standAlone and grid_model is None:
-            raise ValueError('`Grid` instance need to provided in stand alone mode for creating `SolarPV_DER` instance`!')
-        
-        #Events object
-        self.events = events
-        #Object name
-        self.name = 'PV_DER_'+str(self.PV_DER_ID)
-        utility_functions.print_to_terminal('before Sinverter_rated')
-        if Sinverter_rated in {50e3,100e3,250e3}:
-           print('Creating PV inverter instance for DER with rating:' + str(Sinverter_rated/1e3) + ' kVA')
-           self.Sinverter_rated = Sinverter_rated #Inverter rating in kVA
-           self.Sinverter_nominal = (Sinverter_rated/Grid.Sbase) #Converting to p.u. value
-           
-           #Initialize inverter parameters according to DER rating
-           self.initialize_inverter_parameters()
-           #Initialize control loop gains according to DER rating
-           self.initialize_controller_gains()
-           
-        else:
-           raise ValueError('PV inverter parameters not available for DER with rating: ' + str(Sinverter_rated/1e3)+' kVA')
-        
-        if self.m_steady_state*(self.Vdcrated/2) < self.Varated:
-            raise ValueError('The nominal DC link voltage {:.1f} V is not sufficient for the inverter to generate the nominal voltage at PCC - LV side {:.1f} (L-G peak). Increase nominal DC link voltage to {:.1f} V.'.format(self.Vdcrated,self.Varated,math.ceil((self.Varated/self.m_steady_state)*2)))    
-        
+        self.check_grid_model(grid_model)
+        self.initialize_DER(Sinverter_rated)
+        self.check_voltage()
+
+        #LVRT settings
+        self.LVRT_initialize(pvderConfig)
         #Exhibit different behavior when used in standalone mode
         if self.standAlone:
-            self.n_total_ODE = self.n_ODE + self.grid_model.n_grid_ODE
+            self.n_total_ODE = self.n_ODE + self.grid_model.n_ODE
             self.Zload1_actual =  self.events.load_events(t=0.0)          #Load at PCC   
         
         else:
@@ -311,38 +247,39 @@ class SolarPV_DER(PV_module,Grid):
         
         #Initialize all states with steady state values at current operating point
         if self.STEADY_STATE_INITIALIZATION == True:
-           ia0,xa0,ua0,ib0,xb0,ub0,ic0,xc0,uc0,Vdc0,xDC0,xQ0,xPLL0,wte0 =  self.steady_state_calc()
+            #ia0,xa0,ua0,ib0,xb0,ub0,ic0,xc0,uc0,Vdc0,xDC0,xQ0,xPLL0,wte0
+            self.steady_state_calc()
         else:
-           ib0 = utility_functions.Ub_calc(ia0)
-           xb0 = utility_functions.Ub_calc(xa0)
-           ub0 = utility_functions.Ub_calc(ua0)
-           ic0 = utility_functions.Uc_calc(ia0)
-           xc0 = utility_functions.Uc_calc(xa0)
-           uc0 = utility_functions.Uc_calc(ua0)
+            ib0 = utility_functions.Ub_calc(ia0)
+            xb0 = utility_functions.Ub_calc(xa0)
+            ub0 = utility_functions.Ub_calc(ua0)
+            ic0 = utility_functions.Uc_calc(ia0)
+            xc0 = utility_functions.Uc_calc(xa0)
+            uc0 = utility_functions.Uc_calc(ua0)
         
-        #Phase a
-        self.ia = ia0
-        self.xa = xa0
-        self.ua = ua0
-        
-        #Phase b
-        self.ib = ib0
-        self.xb = xb0  #Shift by -120 degrees
-        self.ub = ub0
-        
-        #Phase c
-        self.ic = ic0
-        self.xc = xc0   #Shift by +120 degrees
-        self.uc = uc0
-        
-        #DC link voltage and reactive power controller
-        self.xDC = xDC0
-        self.xQ = xQ0
-        
-        #PLL
-        self.xPLL = xPLL0
-        self.wte = wte0
-        
+            #Phase a
+            self.ia = ia0
+            self.xa = xa0
+            self.ua = ua0
+
+            #Phase b
+            self.ib = ib0
+            self.xb = xb0  #Shift by -120 degrees
+            self.ub = ub0
+
+            #Phase c
+            self.ic = ic0
+            self.xc = xc0   #Shift by +120 degrees
+            self.uc = uc0
+
+            #DC link voltage and reactive power controller
+            self.xDC = xDC0
+            self.xQ = xQ0
+
+            #PLL
+            self.xPLL = xPLL0
+            self.wte = wte0
+
         #Derived voltages
         self.vta = self.vta_calc()
         self.vtb = self.vtb_calc()
@@ -354,23 +291,24 @@ class SolarPV_DER(PV_module,Grid):
         self.wgrid_measured = self.wgrid_calc()
         
         #Load current
-        self.iaload1 = self.iaload1_calc()
-        self.ibload1 = self.ibload1_calc()
-        self.icload1 = self.icload1_calc()
+        self.iaload1 = self.iphload1_calc(self.va)
+        self.ibload1 = self.iphload1_calc(self.vb)
+        self.icload1 = self.iphload1_calc(self.vc)
                 
         #Derived powers
         self.S = self.S_calc()
         self.S_PCC = self.S_PCC_calc()
-        self.S_PCCa = self.S_PCCa_calc()
-        self.S_PCCb = self.S_PCCb_calc()
-        self.S_PCCc = self.S_PCCc_calc()
+        self.S_PCCa = self.S_PCCph_calc(self.va,self.ia)
+        self.S_PCCb = self.S_PCCph_calc(self.vb,self.ib)
+        self.S_PCCc = self.S_PCCph_calc(self.vc,self.ic)
         self.S_load1 = self.S_load1_calc()
+        
         if self.standAlone:
             self.S_G = self.S_G_calc()
             
         #RMS voltages
         self.Vrms = self.Vrms_calc()
-        self.Vrms_ref =  self.Vanominal/math.sqrt(2) 
+        
         if self.DO_EXTRA_CALCULATIONS:
             self.Vtrms = self.Vtrms_calc()
             self.Vtabrms = self.Vtabrms_calc()
@@ -385,12 +323,9 @@ class SolarPV_DER(PV_module,Grid):
         self.vat,self.vbt,self.vct = utility_functions.phasor_to_time(upha = self.va,uphb = self.vb,uphc = self.vc,w=self.wgrid_measured,t=0.0)
         #Convert from 3ph time domain to d-q using Parks transformation
         self.vd,self.vq,self.v0 = utility_functions.abc_to_dq0(self.vat,self.vbt,self.vct,self.wte) #Grid voltage
-        #LVRT settings
-        self.LVRT_initialize(pvderConfig)
-
+        
         #PLL frequency
         self.we = self.we_calc()
-        utility_functions.print_to_terminal('after standAlone')
     
     @property                         #Decorator used for auto updating
     def y0(self):
@@ -399,203 +334,6 @@ class SolarPV_DER(PV_module,Grid):
                  self.ib.real, self.ib.imag, self.xb.real, self.xb.imag, self.ub.real,self.ub.imag,\
                  self.ic.real, self.ic.imag, self.xc.real, self.xc.imag, self.uc.real,self.uc.imag,\
                  self.Vdc,self.xDC,self.xQ,self.xPLL,self.wte]
-
-    def initialize_inverter_parameters(self):
-        """Initialize ratings and C, Lf, and Rf parameters."""
-        _DER_rating = str(int(self.Sinverter_rated/1e3))
-        
-        self.Vdcrated = self.inverter_ratings[_DER_rating]['Vdcrated'] #Rated DC voltage
-        self.Vdcnominal = (self.Vdcrated/self.Vdcbase)*1.0             #Converting to p.u. value
-        
-        self.Varated = self.inverter_ratings[_DER_rating]['Varated'] #L-G peak to peak equivalent to 300 V L-L RMS
-        self.Vanominal = self.Varated/Grid.Vbase #Converting to p.u. value
-        self.a = Grid.Vgridrated/self.Varated  #Transformer turns ratio
-        
-        self.Iarated = (self.Sinverter_rated/(3*(self.Varated/math.sqrt(2))))*math.sqrt(2)
-        
-        self.iref_limit = ((self.Sinverter_nominal/(3*(self.Vanominal/math.sqrt(2))))*math.sqrt(2))*self.Ioverload #Maximum current reference
-        
-        self.Rf_actual =  self.circuit_parameters[_DER_rating]['Rf_actual'] #Filter resistance
-        self.Lf_actual = self.circuit_parameters[_DER_rating]['Lf_actual']  #Filter inductance
-        self.C_actual =  self.circuit_parameters[_DER_rating]['C_actual']   #DC link capacitance
-        self.Zf_actual =  self.Rf_actual + 1j*self.Lf_actual*Grid.wbase
-        
-        self.Rf = self.Rf_actual/Grid.Zbase        # VSC Filter resistance 
-        self.Lf = self.Lf_actual/Grid.Lbase        # VSC Filter inductance
-        self.Xf = (self.Lf_actual*Grid.wbase)/Grid.Zbase # VSC Filter reactance
-        self.C = self.C_actual/Grid.Cbase          #DC link capacitor capacitance
-        self.Zf = self.Zf_actual/Grid.Zbase
-        
-        #Interconnection to PCC - HV side
-        #Actual values
-        self.Z1_actual = self.circuit_parameters[_DER_rating]['Z1_actual']
-        self.R1_actual = self.Z1_actual.real
-        self.L1_actual = self.Z1_actual.imag/(2*math.pi*60.0)
-        
-        #Per-unit values
-        self.R1 = self.R1_actual/Grid.Zbase  #Line/transformer resistance
-        self.L1 = self.L1_actual/Grid.Lbase  #Line/transformer inductance
-        self.Z1 =self.Z1_actual/Grid.Zbase    #Line/transformer impedance
-        
-        self.transformer_name = 'transformer_'+str(SolarPV_DER.DER_count)
-        
-        self.check_PV_DER_parameters()  #Check PV-DER parameters
-        
-    def initialize_controller_gains(self):
-        """Initialize controller settings."""
-        #Current controller parameters
-        _DER_rating = str(int(self.Sinverter_rated/1e3))
-        self. Kp_GCC = 300/self.controller_parameters[_DER_rating]['scale_Kp_GCC'] #Current controller Proportional constant
-        self.Ki_GCC = 70/self.controller_parameters[_DER_rating]['scale_Ki_GCC']  #Current controller Integral constant
-        self.wp =  self.controller_parameters[_DER_rating]['wp']      #First order filter gain for GCC
-        
-        #Power (active and reactive) controller parameters
-        self.Kp_DC = -1.0/self.controller_parameters[_DER_rating]['scale_Kp_DC']   #Active power controller Proportional constant
-        self.Ki_DC = -0.5/self.controller_parameters[_DER_rating]['scale_Ki_DC'] #Active power controller Integral constant
-        self.Kp_Q = 0.01/self.controller_parameters[_DER_rating]['scale_Kp_Q']  #Reactive power controller Proportional constant
-        self.Ki_Q = 0.5/self.controller_parameters[_DER_rating]['scale_Ki_Q']   #Reactive power controller Integral constant
-    
-    def show_PV_DER_states(self,quantity='voltage'):
-        """Display values of voltage and current quantities."""
-        if quantity not in {'voltage','current','power'}:
-            raise ValueError('Unknown quantity: ' + str(plot_type))
-        print('______{} - {}_____\n'.format(self.name,quantity.capitalize()))
-        if quantity ==  'voltage':
-            print('Vdc:{:.2f}\nVta:{:.2f} V,Vtb:{:.2f} V,Vtb:{:.2f} V\nVtrms:{:.2f} V\nVtn:{:.2f} V'.format(self.Vdc*self.Vbase,self.vta*self.Vbase,self.vtb*self.Vbase,self.vtc*self.Vbase,self.Vtrms*self.Vbase,(self.vta+self.vtb+self.vtc)*self.Vbase))
-        elif quantity ==  'current':
-            print('ia:{:.2f} A,ib:{:.2f} A,ic:{:.2f} A\nIrms:{:.2f} V\nIn:{:.2f} A'.format(self.ia*self.Ibase,self.ib*self.Ibase,self.ic*self.Ibase,self.Irms*self.Ibase,(self.ia+self.ib+self.ic)*self.Ibase))
-        elif quantity ==  'power':
-            print('Ppv:{:.2f} W\nS:{:.2f} W\nS_PCC:{:.2f} W'.format(self.Ppv*self.Sbase,self.S*self.Sbase,self.S_PCC*self.Sbase))
-    
-    
-    def show_PV_DER_parameters(self,quantity='voltages'):
-        """Display rated values."""
-        
-        if quantity not in {'inverter_ratings','controller_gains','circuit_parameters'}:
-            raise ValueError('Unknown quantity: ' + str(plot_type))
-        
-        if quantity ==  'inverter_ratings':
-            print('Vdcrated:{:.3f}'.format(self.Vdcrated))
-            print('Vtrated (L-G peak):{:.3f} V\nVrated (L-G peak):{:.3f} V'.format((self.Vdcrated/2)*self.m_steady_state,self.Varated))
-        
-        elif quantity == 'circuit_parameters':
-            print('Cdc:{:.9f} F\nLf:{:.6f} H\nRf:{:.3f} Ohm'.format(self.C*self.Cbase,self.Lf*self.Lbase,self.Rf*self.Zbase))
-        
-        elif quantity == 'controller_parameters':
-            print('Current controller:\nKp_GCC:{:.3f}, Ki_GCC:{:.3f}, wp:{:.3f}'.format(self.Kp_GCC,self.Ki_GCC,self.wp))
-            print('DC link voltage controller:\nKp_DC:{:.3f}, Ki_DC:{:.3f}'.format(self.Kp_DC,self.Ki_DC))
-            print('Reactive power controller:\nKp_Q:{:.3f}, Ki_Q:{:.3f}'.format(self.Kp_Q,self.Ki_Q))
-            print('PLL controller:\nKp_PLL:{:.3f}, Ki_PLL:{:.3f}'.format(self.Kp_PLL,self.Ki_PLL))
-    
-    def check_PV_DER_parameters(self):
-        """Method to check whether DER parameter's are feasible."""
-        
-        _del_I1max = 0.1*self.Iarated
-        _Lf_min = self.Vdcrated/(16*self.fswitching*_del_I1max)
-        _del_I1max_actual = self.Vdcrated/(16*self.fswitching*self.Lf_actual)
-        if _del_I1max_actual > _del_I1max:   #Check if ripple current is less than 10 %
-           print('Filter inductance {:.5} H is acceptable since AC side current ripple is {:.2}% (< 10%)'.format(_Lf_min,_del_I1max_actual/self.Iarated))
-        else:
-           print('Warning:Filter inductance {:.5} H results in AC side current ripple of {:.2}% (> 10%)'.format(_Lf_min,_del_I1max_actual/self.Iarated))
-        
-        _I_ripple = (0.25*self.Vdcrated)/(self.Lf_actual*self.fswitching)  #Maximum ripple voltage (p-p) at DC link
-        _V_ripple = self.Vdcrated/(32*self.Lf_actual*self.C_actual*(self.fswitching**2))  #Maximum ripple voltage (p-p) at DC link
-        _V_ripple_percentage = (_V_ripple/self.Vdcrated)*100
-        if _V_ripple_percentage <= 1.0:   #Check if voltage ripple on DC link is less than 1%
-           print('DC link capacitance of {} F is acceptable since voltage ripple is only {:.2}% (< 1%)'.format(self.C_actual,_V_ripple_percentage))
-        
-        else:
-           _V_ripple_ideal = self.Vdcrated*0.01  #1% ripple is acceptable
-           _C = self.Vdcrated/(32*self.Lf_actual*_V_ripple_ideal*(self.fswitching**2))
-           #warnings.warn('Warning:DC link capacitance of {} F results in DC link voltage ripple of {:.3}% (> 1%)!Please use at least {} F.'.format(self.C_actual,_V_ripple_percentage,_C))
-           print('Warning:DC link capacitance of {} F results in DC link voltage ripple of {:.3}% (> 1%)!Please use at least {} F.'.format(self.C_actual,_V_ripple_percentage,_C))
-    
-    def validate_model(self,PRINT_ERROR = True):
-        """Compare error between RMS quantities and Phasor quantities."""
-        
-        #Calculation with phasor quantities
-        self.Pf_phasor = self.S_calc().real-self.S_PCC_calc().real  #Active power consumed by filter resistor
-        self.Qf_phasor = self.S_calc().imag-self.S_PCC_calc().imag  #Reactive power consumed by filter inductor 
-        
-        #Caculation with RMS quantities        
-        self.Pf_RMS = 3*((self.Irms)**2)*self.Rf   #Active power consumed by filter resistor
-        self.Qf_RMS = 3*((self.Irms)**2)*self.Xf   #Reactive power consumed by filter inductor 
-        
-        #Calculation with phasor quantities
-        self.Pt_phasor = self.S_calc().real   #Active power output at inverter terminal
-        self.Qt_phasor = self.S_calc().imag   #Reactive power output at inverter terminal
-                
-        #Caculation with RMS quantities 
-        ra1,pha1 = cmath.polar(self.vta)
-        ra2,pha2 = cmath.polar(self.ia)
-        rb1,phb1 = cmath.polar(self.vtb)
-        rb2,phb2 = cmath.polar(self.ib) 
-        rc1,phc1 = cmath.polar(self.vtc)
-        rc2,phc2 = cmath.polar(self.ic)
-        
-        self.Pt_RMS = (abs(self.vta)/math.sqrt(2))*(abs(self.ia)/math.sqrt(2))*math.cos(pha1-pha2) +\
-                      (abs(self.vtb)/math.sqrt(2))*(abs(self.ib)/math.sqrt(2))*math.cos(phb1-phb2) +\
-                      (abs(self.vtc)/math.sqrt(2))*(abs(self.ic)/math.sqrt(2))*math.cos(phc1-phc2)#Active power output at inverter terminal
-        
-        self.Qt_RMS = (abs(self.vta)/math.sqrt(2))*(abs(self.ia)/math.sqrt(2))*math.sin(pha1-pha2) +\
-                      (abs(self.vtb)/math.sqrt(2))*(abs(self.ib)/math.sqrt(2))*math.sin(phb1-phb2) +\
-                      (abs(self.vtc)/math.sqrt(2))*(abs(self.ic)/math.sqrt(2))*math.sin(phc1-phc2)#Reactive power output
-        
-        #self.Pt_RMS = 3*(self.Vtrms)*(self.Irms)*math.cos(ph1-ph2) #Active power output at inverter terminal
-        #self.Qt_RMS = 3*(self.Vtrms)*(self.Irms)*math.sin(ph1-ph2) #Reactive power output at inverter terminal
-        
-        if PRINT_ERROR:
-            print('Active power output error:{:.4f}\nReactive power output error:{:.4f}'.format(abs(self.Pt_phasor-self.Pt_RMS),abs(self.Qt_phasor-self.Qt_RMS)))    
-            print('Inverter filter active power loss error:{:.4f}\nInverter filter reactive power loss error:{:.4f}'.format(abs(self.Pf_phasor-self.Pf_RMS),abs(self.Qf_phasor-self.Qf_RMS)))   
-    
-    #PLL equation (inverter frequency)
-    def we_calc(self):
-        """Calculate inverter frequency from PLL."""
-        
-        return  self.Kp_PLL*(self.vd) + self.xPLL + 2*math.pi*60.0
-    
-    #Controller outer loop equations (Current set-point)
-    
-    def ia_ref_calc(self):
-        """Phase A current reference"""
-        return self.xDC + self.Kp_DC*(self.Vdc_ref - self.Vdc) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)) #PI controller equation
-           
-    def ib_ref_calc(self):
-        """Phase B current reference"""
-        
-        return utility_functions.Ub_calc(self.ia_ref)
-    
-    def ic_ref_calc(self):
-        """Phase C current reference"""
-        
-        return utility_functions.Uc_calc(self.ia_ref)
-    
-    #Average duty cycle - Phase A
-    @property                         #Decorator used for auto updating
-    def ma(self):
-        """Phase A duty cycle"""
-        
-        return self.Kp_GCC*self.ua + self.xa #PI controller equation
-        #return utility_functions.m_calc(self.Kp_GCC,self.ua,self.xa)
-    
-    #Average duty cycle - Phase B
-    @property                         #Decorator used for auto updating
-    def mb(self):
-        """Phase B duty cycle"""
-        
-        return self.Kp_GCC*self.ub + self.xb #PI controller equation
-    
-    #Average duty cycle - Phase C
-    @property                         #Decorator used for auto updating
-    def mc(self):
-        """Phase C duty cycle"""
-        
-        return self.Kp_GCC*self.uc + self.xc #PI controller equation
-    
-    @property                         #Decorator used for auto updating
-    def Vdc_actual(self):
-        """Actual DC link voltage"""
-        return min(self.Vdcrated,self.Vdc*self.Vdcbase)  #Calculate actual voltage
     
     #Apparent power output at inverter terminal
     def S_calc(self):
@@ -619,95 +357,7 @@ class SolarPV_DER(PV_module,Grid):
         """Power absorbed/produced by grid voltage source."""
     
         return (1/2)*((-(self.ia-(self.va/self.Zload1))/self.a).conjugate()*self.grid_model.vag+(-(self.ib-(self.vb/self.Zload1))/self.a).conjugate()*self.grid_model.vbg+(-(self.ic-(self.vc/self.Zload1))/self.a).conjugate()*self.grid_model.vcg)
-    
-    def S_PCCa_calc(self):
-        """Inverter apparent power output - phase a"""
-        
-        return (1/2)*(self.va*self.ia.conjugate())*1.0
-    
-    def S_PCCb_calc(self):
-        """Inverter apparent power output - phase b"""
-        
-        return (1/2)*(self.vb*self.ib.conjugate())*1.0
-    
-    def S_PCCc_calc(self):
-        """Inverter apparent power output - phase c"""
-        
-        return (1/2)*(self.vc*self.ic.conjugate())*1.0	
-    
-    def vta_calc(self):
-        """Inverter terminal voltage -  Phase A"""
-        
-        return self.ma*(self.Vdc/2)
-        
-    def vtb_calc(self):
-        """Inverter terminal voltage -  Phase B"""
-        
-        return self.mb*(self.Vdc/2)
-    
-    def vtc_calc(self):
-        """Inverter terminal voltage -  Phase C"""
-        
-        return self.mc*(self.Vdc/2)
-    
-    def va_calc(self):
-        """PCC - LV side - Phase A"""
-        
-        if self.standAlone:
-            val=((self.grid_model.vag+(self.ia/self.a)*self.grid_model.Z2)/(self.a) +self.ia*self.Z1)*((self.Zload1*self.a*self.a)/((self.a*self.a*(self.Z1+self.Zload1))+self.grid_model.Z2))
-        
-        else:
-            val=self.gridVoltagePhaseA
-        
-        return val
-    
-    
-    #@property
-    def vb_calc(self):
-        """PCC - LV side - Phase B"""
-        
-        if self.standAlone:
-        
-            val = ((self.grid_model.vbg+(self.ib/self.a)*self.grid_model.Z2)/(self.a) +self.ib*self.Z1)*((self.Zload1*self.a*self.a)/((self.a*self.a*(self.Z1+self.Zload1))+self.grid_model.Z2))
-        else:
-            val=self.gridVoltagePhaseB
-        
-        return val
-    
-    #@property
-    def vc_calc(self):
-        """PCC - LV side - Phase C"""
-        
-        if self.standAlone:
-            
-            val = ((self.grid_model.vcg+(self.ic/self.a)*self.grid_model.Z2)/(self.a) +self.ic*self.Z1)*((self.Zload1*self.a*self.a)/((self.a*self.a*(self.Z1+self.Zload1))+self.grid_model.Z2))
-        else:
-            val=self.gridVoltagePhaseC
-        
-        return val
-    
-    def wgrid_calc(self):
-        """Frequency of grid voltage source."""
-        if self.standAlone:
-           val = self.grid_model.wgrid
-        else:
-           val = self.gridFrequency
-        return val
-    
-    def iaload1_calc(self):
-        """Current counsumed by load connected at PCC LV side -  Phase A."""
-        
-        return self.va/self.Zload1
-    
-    def ibload1_calc(self):
-        """Current counsumed by load connected at PCC LV side -  Phase B."""
-        
-        return self.vb/self.Zload1
-    
-    def icload1_calc(self):
-        """Current counsumed by load connected at PCC LV side -  Phase C."""
-        
-        return self.vc/self.Zload1
+
     #@property
     def Vtrms_calc(self):
         """Inverter terminal voltage -  RMS"""
@@ -734,18 +384,6 @@ class SolarPV_DER(PV_module,Grid):
         
         return abs(self.va-self.vb)/math.sqrt(2)
     
-    def MPP_table(self):
-        """Method to output Vdc reference corresponding to MPP at different insolation levels values."""
-        
-        if self.USE_POLYNOMIAL_MPP == True:
-             _Vdcmpp = np.polyval(self.z , self.Sinsol)
-        else:
-            _Vdcmpp = self.Vdcrated
-
-        _Vdcmpp=  max(min(_Vdcmpp,self.Vdcmpp_max),self.Vdcmpp_min)
-        
-        return _Vdcmpp/self.Vdcbase
-    
     def update_inverter_states(self,ia,xa,ua,ib,xb,ub,ic,xc,uc,Vdc,xDC,xQ,xPLL,wte):
         """Update inverter states"""
         
@@ -768,65 +406,6 @@ class SolarPV_DER(PV_module,Grid):
         self.xPLL = xPLL
         self.wte = wte
         
-    def Vdc_ramp(self,t):
-        """Method to ramp up Vdc setpoint changes."""
-        _del_Vdc = 0.5
-        _min_Vdc_ramp = 5.0/self.Vdcbase
-        
-        
-        if self.RAMP_ENABLE == True and t > self.t_stable:
-             
-            if len(self.ramp_list) == 0 and self.Vdc_ref != self.Vdc_ref_new and abs(self.Vdc_ref - self.Vdc_ref_new) > _min_Vdc_ramp:
-                self.n_steps = 0
-                self.t_ramp_start = t
-                print('Vdc_ref will ramp from {:.2f} to {:.2f} starting at {:.4f} s'.format(self.Vdc_ref*self.Vdcbase,self.Vdc_ref_new*self.Vdcbase,self.t_ramp_start))
-
-                if self.Vdc_ref_new  < self.Vdc_ref:
-                    self.ramp_list = np.append(np.arange(self.Vdc_ref*self.Vdcbase,self.Vdc_ref_new*self.Vdcbase,-_del_Vdc),self.Vdc_ref_new*self.Vdcbase)
-                    #utility_functions.print_to_terminal('Creating smaller to larger ramp_list:{}'.format(self.ramp_list))
-                else:
-                    self.ramp_list = np.append(np.arange(self.Vdc_ref*self.Vdcbase,self.Vdc_ref_new*self.Vdcbase,_del_Vdc),self.Vdc_ref_new*self.Vdcbase)
-                    #utility_functions.print_to_terminal('Creating larger to smaller ramp_list:{}'.format(self.ramp_list))
-                
-                self.ramp_list = np.delete(self.ramp_list, 0)
-                self.ramp_list = self.ramp_list/self.Vdcbase
-                utility_functions.print_to_terminal('Creating new ramp_list:{} of length {}'.format(self.ramp_list*self.Vdcbase,len(self.ramp_list)))
-                
-               
-                self.Vdc_ref =  self.ramp_list[0]
-                self.n_steps = self.n_steps+1
-                self.RAMP_FLAG = True
-                utility_functions.print_to_terminal('Vdc ramp started at {:.3f} s and is expected to end at {:.3f} s'.format(t,t+len(self.ramp_list)*self.ramp_del_t))
-                #utility_functions.print_to_terminal('Ramp delta t is {} s'.format(self.ramp_del_t))
-                utility_functions.print_to_terminal('Ramp step:{},Vdc_ref is updated to {:.4f} at {:.4f}!'.format(self.n_steps,self.Vdc_ref*self.Vdcbase,t))
-                
-            elif len(self.ramp_list) >= 1 and self.Vdc_ref != self.Vdc_ref_new:
-                  
-                if t> self.t_ramp_start + self.ramp_del_t*self.n_steps:
-                    self.ramp_list = np.delete(self.ramp_list, 0)
-                    self.Vdc_ref =  self.ramp_list[0]
-                   
-                    self.n_steps = self.n_steps+1
-                    #utility_functions.print_to_terminal('Ramp step:{},Vdc_ref is updated to {:.4f} at {:.4f}!'.format(self.n_steps,self.Vdc_ref*self.Vdcbase,t))
-                   
-                    if self.Vdc_ref == self.Vdc_ref_new:
-                        self.ramp_list = np.delete(self.ramp_list, 0)
-                else:
-                    self.Vdc_ref = self.Vdc_ref 
-                
-            elif len(self.ramp_list) == 0 and self.n_steps !=0 :
-                self.Vdc_ref =   self.Vdc_ref_new
-                print('Ramp list has been emptied at {:.4f}! Vdc_ref is {:.4f} and Vdc is {:.4f} !'.format(t,self.Vdc_ref*self.Vdcbase,self.Vdc*self.Vdcbase))
-                self.n_steps =0 
-                self.RAMP_FLAG = False
-            else:
-                if abs(self.Vdc_ref - self.Vdc_ref_new) < 2.0/self.Vdcbase:
-                   self.Vdc_ref =   self.Vdc_ref_new
-                else:
-                   self.Vdc_ref =   self.Vdc_ref
-        else:
-            self.Vdc_ref = self.Vdc_ref
-    
     def ODE_model(self,y,t):
         """Derivatives for the equation."""
         
@@ -889,15 +468,15 @@ class SolarPV_DER(PV_module,Grid):
             self.Vtabrms = self.Vtabrms_calc()        
             self.Vabrms = self.Vabrms_calc()        
             self.Irms = self.Irms_calc()
-            self.S_PCCa = self.S_PCCa_calc()
-            self.S_PCCb = self.S_PCCb_calc()
-            self.S_PCCc = self.S_PCCc_calc()
+            self.S_PCCa = self.S_PCCph_calc(self.va,self.ia)
+            self.S_PCCb = self.S_PCCph_calc(self.vb,self.ib)
+            self.S_PCCc = self.S_PCCph_calc(self.vc,self.ic)
         
         #Update load current in stand alone mode
         if self.standAlone:
-            self.iaload1 = self.iaload1_calc()
-            self.ibload1 = self.ibload1_calc()
-            self.icload1 = self.icload1_calc()
+            self.iaload1 = self.iphload1_calc(self.va)
+            self.ibload1 = self.iphload1_calc(self.vb)
+            self.icload1 = self.iphload1_calc(self.vc)
             
             self.S_G = self.S_G_calc()
             self.S_load1 = self.S_load1_calc()
@@ -1182,9 +761,9 @@ class SolarPV_DER(PV_module,Grid):
         
         if self.standAlone:
             #Update load current in stand alone mode
-            self.iaload1 = self.iaload1_calc()
-            self.ibload1 = self.ibload1_calc()
-            self.icload1 = self.icload1_calc()
+            self.iaload1 = self.iphload1_calc(self.va)
+            self.ibload1 = self.iphload1_calc(self.vb)
+            self.icload1 = self.iphload1_calc(self.vc)
             
             self.S_G = self.S_G_calc()
             self.S_load1 = self.S_load1_calc()
@@ -1617,375 +1196,5 @@ class SolarPV_DER(PV_module,Grid):
         
         return J
     
-    def power_error_calc(self,x):
-        """Function for power."""
-        maR = x[0]
-        maI = x[1]
-    
-        ma = maR + 1j*maI
-        mb = utility_functions.Ub_calc(ma)
-        mc = utility_functions.Uc_calc(ma)
-    
-        vta = ma*(self.Vdc/2)
-        vtb = mb*(self.Vdc/2)
-        vtc = mc*(self.Vdc/2)
-    
-        ia = (vta - self.gridVoltagePhaseA)/(self.Rf + 1j*(self.winv/self.wbase)*self.Lf)
-        ib = (vtb - self.gridVoltagePhaseB)/(self.Rf + 1j*(self.winv/self.wbase)*self.Lf)
-        ic = (vtc - self.gridVoltagePhaseC)/(self.Rf + 1j*(self.winv/self.wbase)*self.Lf)
-    
-        St = (vta*ia.conjugate() + vtb*ib.conjugate() + vtc*ic.conjugate())/2
-        S_PCC = (self.gridVoltagePhaseA*ia.conjugate() + self.gridVoltagePhaseB*ib.conjugate() + self.gridVoltagePhaseC*ic.conjugate())/2
+   
 
-        Ploss_filter = ((abs(ia)/math.sqrt(2))**2)*self.Rf + ((abs(ib)/math.sqrt(2))**2)*self.Rf + ((abs(ic)/math.sqrt(2))**2)*self.Rf
-    
-        P_PCC_error = ((S_PCC.real + Ploss_filter)   - self.Ppv)**2
-        Q_PCC_error = (S_PCC.imag - self.Q_ref)**2   
-    
-        return P_PCC_error  + Q_PCC_error
-    
-    def steady_state_calc(self):
-        """Return steady state values."""
-        
-        #Find duty cycle that minimize steady state error
-        print('Solving for steady state at current operating point.')
-        x0 = np.array([0.89,0.0])
-        result = minimize(self.power_error_calc, x0, method='nelder-mead',options={'xtol': 1e-8, 'disp': True})
-        
-        if result.success == False:
-           raise ValueError('Steady state solution did not converge! Change operating point or disable steady state flag and try again.')
-        
-        ma0 = result.x[0] + 1j*result.x[1]
-        mb0 = utility_functions.Ub_calc(ma0)
-        mc0 = utility_functions.Uc_calc(ma0)
-        
-        ua0 = 0.0+0.0j
-        ub0 = 0.0+0.0j
-        uc0 = 0.0+0.0j
-        
-        xa0 = ma0
-        xb0 = mb0
-        xc0 = mc0
-        
-        vta0 = ma0*(self.Vdc/2)
-        vtb0 = mb0*(self.Vdc/2)
-        vtc0 = mc0*(self.Vdc/2)
-        
-        ia0 = (vta0 - self.gridVoltagePhaseA)/(self.Rf + 1j*(self.winv/self.wbase)*self.Lf)
-        ib0 = (vtb0 - self.gridVoltagePhaseB)/(self.Rf + 1j*(self.winv/self.wbase)*self.Lf)
-        ic0 = (vtc0 - self.gridVoltagePhaseC)/(self.Rf + 1j*(self.winv/self.wbase)*self.Lf)
-        
-        xDC0 = ia0.real
-        xQ0 = ia0.imag
-        
-        xPLL0 = 0.0
-        wte0 = 2*math.pi
-        
-        St0 = (vta0*ia0.conjugate() + vtb0*ib0.conjugate() + vtc0*ic0.conjugate())/2
-        S_PCC0 = (self.gridVoltagePhaseA*ia0.conjugate() + self.gridVoltagePhaseB*ib0.conjugate() + self.gridVoltagePhaseC*ic0.conjugate())/2
-        
-        print('Steady state values for operating point defined by Ppv:{:.2f} W, Vdc:{:.2f} V, va:{:.2f} V found at:'.format(self.Ppv*self.Sbase,self.Vdc*self.Vdcbase,self.gridVoltagePhaseA*self.Vbase))
-        print('Pt:{:.2f} W,Qt:{:.2f} VAR'.format(St0.real*self.Sbase,St0.imag*self.Sbase))
-        print('P_PCC:{:.2f} W,Q_PCC:{:.2f} VAR'.format(S_PCC0.real*self.Sbase,S_PCC0.imag*self.Sbase))
-        print('ma:{:.2f}'.format(ma0))
-        print('vta:{:.2f}'.format(vta0*self.Vbase))
-        print('ia:{:.2f}'.format(ia0*self.Ibase))
-        print('Voltage sum:{:.4f}'.format(vta0+vtb0+vtc0))
-        
-        return [ia0,xa0,ua0,\
-                ib0,xb0,ub0,\
-                ic0,xc0,uc0,\
-                self.Vdc,xDC0,xQ0,xPLL0,wte0]
-    
-    def Volt_VAR_logic(self,t):
-        """Function for volt_var control."""
-        
-        assert (self.VOLT_VAR_ENABLE and self.VOLT_WATT_ENABLE) == False, "Volt-VAR and Volt-Watt cannot be active at the same time"
-        
-        #Volt-VAR logic
-        V1_Volt_VAR = self.Vrms_ref - 0.04*self.Vrms_ref #From IEEE 1547-2018 Catergy B (Table 8 - page 39)
-        V2_Volt_VAR = self.Vrms_ref - 0.01*self.Vrms_ref #From IEEE 1547-2018 Catergy B (Table 8 - page 39)
-        V3_Volt_VAR = self.Vrms_ref + 0.01*self.Vrms_ref #From IEEE 1547-2018 Catergy B (Table 8 - page 39)
-        V4_Volt_VAR = self.Vrms_ref + 0.04*self.Vrms_ref #From IEEE 1547-2018 Catergy B (Table 8 - page 39)       
-        
-        #Select RMS voltage source
-        _Vrms_measured = self.Vrms
-        
-        _del_V = 0.02
-        if self.VOLT_VAR_ENABLE == True and (_Vrms_measured < V2_Volt_VAR or _Vrms_measured > V3_Volt_VAR) and t>self.t_stable:
-            if self.VOLT_VAR_FLAG == True:
-                if (_Vrms_measured > V1_Volt_VAR - _del_V and _Vrms_measured < V4_Volt_VAR + _del_V):
-                    
-                    Qref = self.Qsetpoint_calc(t)                    
-                    
-                else:
-                    utility_functions.print_to_terminal("Volt-VAR control with reference voltage {:.3f} is deactivated at {:.3f} s for {:.3f} V".format(self.Vrms_ref*self.Vbase,t,_Vrms_measured*self.Vbase))
-                    Qref = 0.0
-                    self.VOLT_VAR_FLAG = False
-            else:
-                if ( _Vrms_measured >= V1_Volt_VAR and  _Vrms_measured < V4_Volt_VAR):
-                    utility_functions.print_to_terminal("Volt-VAR control with reference voltage {:.3f} is activated at {:.3f} s for {:.3f} V".format(self.Vrms_ref*self.Vbase,t,_Vrms_measured*self.Vbase))
-                    self.VOLT_VAR_FLAG = True
-                    Qref = self.Qsetpoint_calc(t)
-                else:
-                    utility_functions.print_to_terminal("Volt-VAR control not activated at {:.3f} s since {:.3f} V is outside range!".format(t,_Vrms_measured*self.Vbase))
-                    Qref = 0.0
-        else: 
-            Qref = 0.0
-        
-        return Qref
-    
-    def Qsetpoint_calc(self,t):
-        """Function to calculate Qsetpoint."""
-        _del_V_to_Q = 200.0 #100.0
-        
-        _Vrms_measured = self.Vrms
-        
-        self.Qlimit = math.sqrt(math.pow(self.Sinverter_nominal,2)-math.pow(max(min(self.S.real,self.Sinverter_nominal),-self.Sinverter_nominal),2)) - self.Xf*(abs(self.ia)/math.sqrt(2))**2 #Find Qlimit based on current power output
-        
-        #utility_functions.print_to_terminal("Q is {:.3f} while Qlimit is {:.3f} at {:.3f} s".format(self.S_PCC.imag*self.Sbase,self.Qlimit*self.Sbase,t))
-        
-        if _Vrms_measured < self.Vrms_ref:
-                Qref = min(self.Qlimit,(self.Vrms_ref -self.Vrms_ref*0.01-_Vrms_measured)*_del_V_to_Q)
-                                
-        elif _Vrms_measured > self.Vrms_ref:
-                Qref = max(-self.Qlimit,(self.Vrms_ref + self.Vrms_ref*0.01-_Vrms_measured)*_del_V_to_Q)
-        return Qref
-    
-    def LVRT_initialize(self,pvderConfig=None):
-        """Function to initialize LVRT settings."""
-        if pvderConfig is None:
-            pvderConfig = {}
-            pvderConfig['scaling_factor']=10
-            pvderConfig['V_LV1']=0.70
-            pvderConfig['V_LV2']=0.88
-            pvderConfig['t_LV1_limit']=10.0
-            pvderConfig['t_LV2_limit']=20.0
-            pvderConfig['LVRT_INSTANTANEOUS_TRIP']=False
-
-        #IEEE 1547-2018 standards
-        scaling_factor = pvderConfig['scaling_factor']
-        self.V_LV0 = 0.50*self.Vrms_ref  #From IEEE 1557-2018 Category III (Table 16)   
-        self.V_LV1 = pvderConfig['V_LV1']*self.Vrms_ref  #From IEEE 1557-2018 Category III (Table 16)   
-        self.V_LV2 = pvderConfig['V_LV2']*self.Vrms_ref  #From IEEE 1557-2018  Category III (Table 16)
-        self.t_LV0_limit = 1.0/scaling_factor      #Time limit for LV0 zone from IEEE 1557-2018 Category III  (Table 16, page 48)
-        self.t_LV1_limit = pvderConfig['t_LV1_limit']/scaling_factor      #Time limit for LV2 zone from IEEE 1557-2018 Category III  (Table 16, page 48)
-        self.t_LV2_limit = pvderConfig['t_LV2_limit']/scaling_factor       #Time limit for LV2 zone from IEEE 1557-2018 Category III (Table 16, page 48) 
-        
-        self.t_reconnect_limit = self.t_LV2_limit  #Time lag before reconnecting
-        
-        if pvderConfig['LVRT_INSTANTANEOUS_TRIP']:
-            self.t_LV0_limit = self.t_LV1_limit = self.t_LV1_limit = 1/60 #Disconnect within one cycle
-
-        assert (self.V_LV1 < self.V_LV2 and self.t_LV1_limit < self.t_LV2_limit) == True, "Voltage level 2 should be greater than Voltage level 1"
-
-        #V1 to V2 - zone 2,V1 < - zone 1
-    
-    def LVRT(self,t):
-        """Function to implement LVRT trip and reconnect logic."""    
-        #Select RMS voltage source
-        _Vrms_measured = self.Vrms   #Select PCC - LV side voltage     
-
-        if self.LVRT_ENABLE == True and t > self.t_stable and self.LVRT_TRIP == False:
-
-            if self.t_LV1start == 0.0 or self.t_LV2start == 0.0:
-                if self.t_LV1start == 0.0 and _Vrms_measured < self.V_LV1:
-                    self.t_LV1start = t
-                    utility_functions.print_LVRT_events(t,_Vrms_measured/self.Vrms_ref,self.t_LV1start,event_name='LV1_start')
-
-                if self.t_LV2start == 0.0 and self.Vrms < self.V_LV2:
-                    self.t_LV2start = t
-                    utility_functions.print_LVRT_events(t,_Vrms_measured/self.Vrms_ref,self.t_LV2start,event_name='LV2_start')
-
-            if self.t_LV1start > 0.0 or self.t_LV2start > 0.0:
-
-                if  _Vrms_measured >= self.V_LV1  or  _Vrms_measured >= self.V_LV2:
-                    if  _Vrms_measured >= self.V_LV1 and self.t_LV1start > 0.0:
-                        utility_functions.print_LVRT_events(t,_Vrms_measured/self.Vrms_ref,self.t_LV1start,event_name='LV1_reset')
-                        self.t_LV1start = 0.0
-                    if  _Vrms_measured >= self.V_LV2 and self.t_LV2start > 0.0:
-                        utility_functions.print_LVRT_events(t,_Vrms_measured/self.Vrms_ref,self.t_LV2start,event_name='LV2_reset')   
-                        self.t_LV2start = 0.0
-
-                if t-self.t_LV1start >= self.t_LV1_limit and self.t_LV1start > 0.0:   #Trip inverter if any limit breached
-                        utility_functions.print_LVRT_events(t,_Vrms_measured/self.Vrms_ref,self.t_LV1start,event_name='inverter_trip_LV1')
-                        #six.print_(t-self.t_LV1start,self.t_LV1_limit)  #debug script
-                        self.LVRT_TRIP = True
-                        self.t_LV1start = 0.0
-                        self.t_LV2start = 0.0
-                        self.t_reconnect = 0.0
-                elif t-self.t_LV2start >= self.t_LV2_limit and self.t_LV2start > 0.0:
-                        utility_functions.print_LVRT_events(t,_Vrms_measured/self.Vrms_ref,self.t_LV2start,event_name='inverter_trip_LV2')
-                        self.LVRT_TRIP = True
-                        self.t_LV1start = 0.0
-                        self.t_LV2start = 0.0
-                        self.t_reconnect = 0.0
-
-                if _Vrms_measured < self.V_LV1 and self.t_LV1start > 0.0:
-                        utility_functions.print_LVRT_events(t,_Vrms_measured/self.Vrms_ref,self.t_LV1start,event_name='LV1_zone') #,verbose = False
-                elif _Vrms_measured < self.V_LV2 and self.t_LV2start > 0.0:
-                        utility_functions.print_LVRT_events(t,_Vrms_measured/self.Vrms_ref,self.t_LV2start,event_name='LV2_zone')
-                        #six.print_(self.t_LV2start)
-
-        elif self.LVRT_ENABLE == True and t > self.t_stable and self.LVRT_TRIP == True:
-            
-            #Select RMS voltage source
-            _Vrms_measured = self.Vrms   #Select PCC - LV side voltage     
-
-            if self.t_reconnect > 0.0:
-                if  _Vrms_measured < self.V_LV2:
-                    utility_functions.print_LVRT_events(t, _Vrms_measured/self.Vrms_ref,self.t_reconnect,event_name='reconnect_reset')
-                    self.t_reconnect = 0.0
-                elif  _Vrms_measured >= self.V_LV2 and t-self.t_reconnect >= self.t_reconnect_limit:
-                    utility_functions.print_LVRT_events(t, _Vrms_measured/self.Vrms_ref,self.t_reconnect,event_name='inverter_reconnection')
-                    self.LVRT_TRIP = False             #Reset trip flag
-                    self.LVRT_RECONNECT = True        #Set reconnect flag
-                    self.t_reconnect = 0.0    #Reset timer
-                elif _Vrms_measured >= self.V_LV2 and t-self.t_reconnect < self.t_reconnect_limit:
-                    utility_functions.print_LVRT_events(t, _Vrms_measured/self.Vrms_ref,self.t_reconnect,event_name='reconnect_zone')
-
-
-            elif self.t_reconnect == 0.0:
-                if  _Vrms_measured >= self.V_LV2:
-                    self.t_reconnect = t
-                    utility_functions.print_LVRT_events(t, _Vrms_measured/self.Vrms_ref,self.t_reconnect,event_name='reconnect_start')
-                else:
-                    utility_functions.print_LVRT_events(t, _Vrms_measured/self.Vrms_ref,event_name='inverter_tripped')
-
-        else:
-            self.t_LV1start = 0.0
-            self.t_LV2start = 0.0
-            self.LVRT_TRIP = False
-    
-    def PV_DER_disconnect(self):
-        """Function to disconnect PV DER from grid.""" 
-        self.VOLT_VAR_ENABLE = False
-        self.VOLT_WATT_ENABLE = False
-        
-        self.Q_ref = 0.0  #Set reactive power reference to zero
-        self.Vdc_ref = self.Vdc  #Maintain DC link voltage
-        self.Ppv = 0.0     #Disconnect PV panel
-        
-        self.ia_ref = 0.0 + 1j*0.0
-        self.ib_ref = 0.0 + 1j*0.0
-        self.ic_ref = 0.0 + 1j*0.0
-
-    
-    def FRT(self,t):
-        """Frequency ride through and trip logic. """
-        t_reconnect_limit = 3.0   #Time lag before reconnecting
-        """
-        #ERCOT standards from NERC PRC - 024
-        F_LF0 = 57.5  #From NERC PRC - 024
-        F_LF1 = 58.0  #From NERC PRC - 024
-        F_LF2 = 58.4  #From NERC PRC - 024
-        F_LF3 = 59.4  #From NERC PRC - 024
-        t_LF1_limit = 2.0      #Time limit for LF1 zone
-        t_LF2_limit = 30.0      #Time limit for LF2 zone
-        t_LF3_limit = 540.0      #Time limit for LF2 zone
-        """
-        #IEEE 1547-2018 standards
-        F_LF1 = 57.0  #From IEEE 1557-2018 Category III    
-        F_LF2 = 58.8  #From IEEE 1557-2018 Category III    
-        t_LF1_limit = 0.16      #Time limit for LF1 zone From IEEE 1557-2018 Category III (Table 19 and figure H10)   
-        t_LF2_limit = 299.0      #Time limit for LF2 zone From IEEE 1557-2018 Category III (Table 19 and figure H10)
-        
-        #Dummy variables to preserve logic
-        F_LF3 = 0.0
-        t_LF3_limit = 0.0
-               
-        del_f =0.02
-        assert (F_LF1 < F_LF2) and (t_LF1_limit < t_LF2_limit) == True, "Frequency level 2 should be greater than frequency level 1"
-
-        #Use grid frequency as estimated by PLL
-        fgrid = self.we/(2.0*math.pi)
-        
-        if self.LFRT_ENABLE == True and t >  self.t_stable and self.LFRT_TRIP == False:
-            
-            if self.LFRT_DEBUG == True:
-                text_string = '{time_stamp:.4f} -- fgrid:{f1:.3f} Hz, t_LF1start:{t1:.3f} s, t_LF2start:{t2:.3f} s, t_LF3start:{t3:.3f} s'\
-                               .format(time_stamp=t,f1 = fgrid,t1=self.t_LF1start,t2=self.t_LF2start,t3=self.t_LF3start)
-                utility_functions.print_to_terminal(text_string)
-            
-            if self.t_LF1start == 0.0 or self.t_LF2start == 0.0 or self.t_LF3start == 0.0:
-            
-                if self.t_LF1start == 0.0 and fgrid < F_LF1:
-                    self.t_LF1start = t
-                    utility_functions.print_LFRT_events(t,fgrid,self.t_LF1start,event_name='LF1_start')
-                
-                if self.t_LF2start == 0.0 and fgrid < F_LF2:
-                    self.t_LF2start = t
-                    utility_functions.print_LFRT_events(t,fgrid,self.t_LF2start,event_name='LF2_start')
-                
-                if self.t_LF3start == 0.0 and fgrid < F_LF3:
-                    self.t_LF3start = t
-                    utility_functions.print_LFRT_events(t,fgrid,self.t_LF3start,event_name='LF3_start')
-                
-            if self.t_LF1start > 0.0 or self.t_LF2start > 0.0 or self.t_LF3start > 0.0:
-                
-                if fgrid >= F_LF1+del_f  or fgrid >= F_LF2+del_f or fgrid >= F_LF3+del_f:
-                    if fgrid >= F_LF1+del_f and self.t_LF1start > 0.0:
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF1start,event_name='LF1_reset')
-                        self.t_LF1start = 0.0
-                    if fgrid >= F_LF2+del_f and self.t_LF2start > 0.0:
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF2start,event_name='LF2_reset')   
-                        self.t_LF2start = 0.0
-                    if fgrid >= F_LF3+del_f and self.t_LF3start > 0.0:
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF3start,event_name='LF3_reset')   
-                        self.t_LF3start = 0.0
-                
-                if t-self.t_LF1start >= t_LF1_limit and self.t_LF1start > 0.0:   #Trip inverter if any limit breached
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF1start,event_name='inverter_trip_LF1')
-                        #six.print_(t-self.t_LF1start)
-                        self.LFRT_trip_signals()
-                        
-                elif t-self.t_LF2start >= t_LF2_limit and self.t_LF2start > 0.0:
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF2start,event_name='inverter_trip_LF2')
-                        self.LFRT_trip_signals()
-                        
-                elif t-self.t_LF3start >= t_LF3_limit and self.t_LF3start > 0.0:
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF3start,event_name='inverter_trip_LF3')
-                        self.LFRT_trip_signals()
-                        
-                if fgrid < F_LF1 and self.t_LF1start > 0.0:
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF1start,event_name='LF1_zone') #,verbose = False
-                if fgrid < F_LF2 and self.t_LF2start > 0.0:
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF2start,event_name='LF2_zone')
-                if fgrid < F_LF3 and self.t_LF3start > 0.0:
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF3start,event_name='LF3_zone')
-                        #six.print_(self.t_LF2start)
-
-        elif self.LFRT_ENABLE == True and t > self.t_stable and self.LFRT_TRIP == True:
-
-            if self.t_LF_reconnect > 0.0:
-                if fgrid < F_LF3:
-                    utility_functions.print_LFRT_events(t,fgrid,self.t_LF_reconnect,event_name='reconnect_reset')
-                    self.t_LF_reconnect = 0.0
-                elif fgrid >= F_LF3 and t-self.t_LF_reconnect >= t_reconnect_limit:
-                    utility_functions.print_LFRT_events(t,fgrid,self.t_LF_reconnect,event_name='inverter_reconnection')
-                    self.LFRT_TRIP = False             #Reset trip flag
-                    self.LFRT_RECONNECT = True        #Set reconnect flag
-                    self.t_LF_reconnect = 0.0    #Reset timer
-                elif fgrid >= F_LF3 and t-self.t_LF_reconnect < t_reconnect_limit:
-                     utility_functions.print_LFRT_events(t,fgrid,self.t_LF_reconnect,event_name='reconnect_zone')
-            elif self.t_LF_reconnect == 0.0:
-                if fgrid >= F_LF3:
-                    self.t_LF_reconnect = t
-                    utility_functions.print_LFRT_events(t,fgrid,self.t_LF_reconnect,event_name='reconnect_start')
-                else:
-                    utility_functions.print_LFRT_events(t,fgrid,event_name='inverter_tripped')
-
-        else:
-            self.t_LF1start = 0.0
-            self.t_LF2start = 0.0
-            self.t_LF3start = 0.0
-            self.LFRT_TRIP = False
-    
-    def LFRT_trip_signals(self):
-        """ Trip Signals. """
-        
-        self.LFRT_TRIP = True
-        self.t_LF1start = 0.0
-        self.t_LF2start = 0.0
-        self.t_LF3start = 0.0
-        self.t_LF_reconnect = 0.0

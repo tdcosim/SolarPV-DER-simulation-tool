@@ -13,7 +13,7 @@ def Urms_time_series(ua,ub,uc):
     
     assert len(ua) == len(ub) == len(uc),  " The number of phasor quantities should be equal"
     
-    return np.sqrt((np.square(np.abs(ua))+np.square(np.abs(ub))+np.square(np.abs(uc)))/3.0)
+    return np.sqrt((np.square(np.abs(ua))+np.square(np.abs(ub))+np.square(np.abs(uc)))/3.0)/math.sqrt(2)
 #@jit(nopython=True)
 def Ppv_calc(Iph,Np,Ns,Vdc_actual,Tactual,Sbase):
     """Function to calculate PV module power output."""
@@ -70,7 +70,7 @@ def phasor_to_time(upha = 1+1j*0.0,uphb = -0.5-1j*0.867,uphc = -0.5+1j*0.867,w=2
     uc = rc*pow(math.e,1j*(w*t+phc-(math.pi/2))).real
     return ua,ub,uc   
 
-def phasor_to_time_domain(uph,w,t):
+def phasor_to_time_1phase(uph,w,t):
     """Convert a,b,c quantities (time series) from phasor domain to time domain."""
     
     r,ph = cmath.polar(uph)
@@ -93,6 +93,24 @@ def dq0_to_abc(ud,uq,u0,wt=2*math.pi):
     uc = ud*math.cos(wt+(2/3)*math.pi) - uq*math.sin(wt+(2/3)*math.pi) + u0
 
     return ua,ub,uc
+
+def alpha_beta_to_d_q(ualpha,ubeta,wt):
+    """Convert alpha-beta to d-q."""
+    
+    Us = (ualpha + 1j*ubeta)*pow(math.e,-1j*(wt))
+    #Us = (ualpha + 1j*ubeta)*pow(math.e,-1j*(wt-(math.pi/2)))
+    
+    ud = Us.real
+    uq = Us.imag
+    
+    #print(ud,uq)
+    #ud = ualpha*math.sin(wt) - ubeta*math.cos(wt)
+    #uq = ualpha*math.cos(wt) + ubeta*math.sin(wt)
+    
+    #ud = ualpha*math.cos(wt) + ubeta*math.sin(wt)
+    #uq = -ualpha*math.sin(wt) + ubeta*math.cos(wt)
+    
+    return ud,uq
 
 def phasor_to_symmetrical(upha,uphb,uphc):
     """Convert to zero sequence."""     
