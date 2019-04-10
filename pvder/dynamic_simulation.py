@@ -8,9 +8,9 @@ import pdb
 import six
 
 ####from graphviz import Digraph
-from grid_components import Grid
-from utilities import SimulationUtilities
-import utility_functions as utility_functions
+from pvder.grid_components import Grid
+from pvder.utilities import SimulationUtilities
+from pvder import utility_functions
 
 class ModelUtilities():
     """Class for model wide utilities."""

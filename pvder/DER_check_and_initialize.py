@@ -3,8 +3,8 @@ import math
 import numpy as np
 from scipy.optimize import fsolve, minimize
 
-from grid_components import Grid
-import utility_functions as utility_functions
+from pvder.grid_components import Grid
+from pvder import utility_functions
 
 class PVDER_SetupUtilities():
     """

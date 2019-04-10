@@ -1,6 +1,6 @@
 from __future__ import division
 
-import utility_functions as utility_functions
+from pvder import utility_functions
 
 class PVDER_SmartFeatures():
     """Class for describing smart inverter inverter features of PV-DER."""
