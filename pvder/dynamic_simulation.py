@@ -8,17 +8,21 @@ import pdb
 import six
 
 ####from graphviz import Digraph
-from pvder.grid_components import Grid
-from pvder.utilities import SimulationUtilities
-from pvder import utility_functions
+from grid_components import Grid
+from utilities import SimulationUtilities
+import utility_functions as utility_functions
 
 class ModelUtilities():
     """Class for model wide utilities."""
     
-    def __init__(self,grid_model,PV_model,simulation):
+    def __init__(self,PV_model,simulation,grid_model=None):
         self.PV_model = PV_model
-        self.grid_model = grid_model
+        
         self.simulation = simulation
+        if self.PV_model.standAlone and grid_model is not None:
+            self.grid_model = grid_model
+        elif self.PV_model.standAlone and grid_model is None:
+            raise ValueError('`Grid` instance need to provided in stand alone mode for creating `GridSimulation` instance!')
     
     def draw_model(self,display_value_type='per_unit'):
         """Draw and render the model using graphs."""
@@ -120,26 +124,14 @@ class GridSimulation(Grid,SimulationUtilities):
         y1 = y[0:self.PV_model.n_ODE]
         
         if self.PV_model.standAlone:
-            self.grid_model.grid_model(t)
+            self.grid_model.steady_state_model(t)
             
         y = self.PV_model.ODE_model(y1,t)
         
-        """
-        if not self.PV_model.standAlone:
-           y1 = y[0:self.PV_model.n_ODE]
-           y = self.PV_model.ODE_model(y1,t) 
-        
-        else:
-           #y1 = y[0:self.PV_model.n_ODE]
-           #y2 = y[self.PV_model.n_ODE:]
-           #y = self.PV_model.ODE_model(y1,t) + self.grid_model.ODE_model(y2,t)
-           
-        """ 
         if self.DEBUG_SIMULATION:
             self.debug_simulation(t)
 
         return y
-
         
     def jac_ODE_model(self,y,t):
         """ Combine all derivatives."""
@@ -147,18 +139,10 @@ class GridSimulation(Grid,SimulationUtilities):
         y1 = y[0:self.PV_model.n_ODE]
         
         if self.PV_model.standAlone:
-            self.grid_model.grid_model(t)
+            self.grid_model.steady_state_model(t)
             
         y = self.PV_model.jac_ODE_model(y1,t)
-        """
-        if not self.PV_model.standAlone:
-            y1 = y[0:self.PV_model.n_ODE]
-            y = self.PV_model.jac_ODE_model(y1,t)
-        else:
-            y1 = y[0:self.PV_model.n_ODE]
-            y2 = y[self.PV_model.n_ODE:]
-            y = self.PV_model.jac_ODE_model(y1,t) + self.grid_model.jac_ODE_model(y2,t)
-        """
+
         return y
         
     def debug_simulation(self,t):

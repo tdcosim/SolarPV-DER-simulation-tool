@@ -9,12 +9,12 @@ import warnings
 
 from scipy.optimize import fsolve, minimize
 
-from pvder.DER_check_and_initialize import PVDER_SetupUtilities
-from pvder.DER_features import PVDER_SmartFeatures
-from pvder.DER_utilities import PVDER_ModelUtilities
-from pvder.grid_components import Grid
+from DER_check_and_initialize import PVDER_SetupUtilities
+from DER_features import PVDER_SmartFeatures
+from DER_utilities import PVDER_ModelUtilities
+from grid_components import Grid
 
-from pvder import utility_functions
+import utility_functions as utility_functions
 
 class PV_Module(object):
     """
@@ -207,7 +207,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
             super(SolarPV_DER_ThreePhase,self).__init__(events,Sinverter_rated)
         
         self.STEADY_STATE_INITIALIZATION = STEADY_STATE_INITIALIZATION
-        self.check_grid_model(grid_model)
+        self.attach_grid_model(grid_model)
         self.initialize_DER(Sinverter_rated)
         self.check_voltage()
 

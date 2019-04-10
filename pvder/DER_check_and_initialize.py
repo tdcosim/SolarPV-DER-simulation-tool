@@ -3,8 +3,8 @@ import math
 import numpy as np
 from scipy.optimize import fsolve, minimize
 
-from pvder.grid_components import Grid
-from pvder import utility_functions
+from grid_components import Grid
+import utility_functions as utility_functions
 
 class PVDER_SetupUtilities():
     """
@@ -90,7 +90,7 @@ class PVDER_SetupUtilities():
         self.Kp_Q = 0.01/self.controller_parameters[_DER_rating]['scale_Kp_Q']  #Reactive power controller Proportional constant
         self.Ki_Q = 0.5/self.controller_parameters[_DER_rating]['scale_Ki_Q']   #Reactive power controller Integral constant    
     
-    def check_grid_model(self,grid_model):
+    def attach_grid_model(self,grid_model):
         
         #Connect grid instance only if working in stand alone mode
         if self.standAlone and grid_model is not None:
@@ -98,7 +98,7 @@ class PVDER_SetupUtilities():
         elif self.standAlone and grid_model is None:
             raise ValueError('`Grid` instance need to be provided in stand alone mode for creating `SolarPV_DER` instance`!')
         else: #Grid model is not connected
-            pass
+            print('{self.name}:No grid model attached since PV-DER instance is not stand alone!')
                              
     def check_voltage(self):
                              

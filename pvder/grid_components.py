@@ -3,8 +3,8 @@ import numpy as np
 import math
 import cmath
 import six
-from pvder.utilities import SimulationUtilities
-from pvder import utility_functions
+from utilities import SimulationUtilities
+import utility_functions as utility_functions
 
 class Grid(SimulationUtilities):
     """ Class for grid"""
@@ -87,7 +87,7 @@ class Grid(SimulationUtilities):
         """Grid side terminal voltage -  RMS"""
         return utility_functions.Urms_calc(self.vag,self.vbg,self.vcg)
   
-    def grid_model(self,t):
+    def steady_state_model(self,t):
         """Grid voltage change."""
         
         Vagrid_new,wgrid_new = self.events.grid_events(t)
