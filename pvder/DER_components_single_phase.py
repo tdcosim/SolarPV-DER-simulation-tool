@@ -81,9 +81,11 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
           ValueError: If parameters corresponding to `Sinverter_rated` are not available.
           ValueError: If rated DC link voltage is not sufficient.
         """
+        
         self.standAlone = standAlone
-        self.gridVoltagePhaseA, self.gridVoltagePhaseB, self.gridVoltagePhaseC = gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC
-        self.gridFrequency = gridFrequency
+        if not self.standAlone:
+            self.gridVoltagePhaseA, self.gridVoltagePhaseB, self.gridVoltagePhaseC = gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC
+            self.gridFrequency = gridFrequency
         self.Vrms_rated = Vrms_rated
        
         #Increment count to keep track of number of PV-DER model instances
@@ -101,33 +103,11 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         self.attach_grid_model(grid_model)
         self.initialize_DER(Sinverter_rated)
         self.check_voltage()
-        
-        #Exhibit different behavior when used in standalone mode
-        if self.standAlone:
-            self.n_total_ODE = self.n_ODE + self.grid_model.n_ODE
-            self.Zload1_actual =  self.events.load_events(t=0.0)          #Load at PCC   
-        
-        else:
-            self.n_total_ODE = self.n_ODE
-            self.Zload1_actual =  10e6+1j*0.0     #Using a large value of impedance to represent a no load condition
-        
-        self.Rload1_actual = self.Zload1_actual.real
-        self.Lload1_actual = self.Z1_actual.imag/(2*math.pi*60.0)
-        
-        #Per-unit values
-        self.Rload1 = self.Rload1_actual/Grid.Zbase  #resistance in per unit value
-        self.Lload1 = self.Lload1_actual/Grid.Lbase  #inductance in per unit value
-        self.Zload1 = self.Zload1_actual/Grid.Zbase
+        #LVRT settings
+        self.LVRT_initialize(pvderConfig)
         
         #Reference
-        self.Q_ref = 0.0
-        
-        if self.MPPT_ENABLE:
-            self.Vdc_ref = self.Vdcmpp/self.Vdcbase
-            self.Vdc_ref_new = self.Vdcmpp/self.Vdcbase
-        else:
-            self.Vdc_ref = self.Vdcnominal
-            self.Vdc_ref_new = self.Vdcnominal
+        self.Q_ref = self.get_Qref()
         
         #DC link voltage
         self.Vdc = self.Vdc_ref
@@ -168,14 +148,14 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
             self.S_G = self.S_G_calc()
             
         #RMS voltages
+        self.Vtrms = self.Vtrms_calc()
         self.Vrms = self.Vrms_calc()
-        self.Vrms_ref =  self.Vanominal/math.sqrt(2) 
+        self.Irms = self.Irms_calc()#Inverter RMS current
+        
         if self.DO_EXTRA_CALCULATIONS:
-            self.Vtrms = self.Vtrms_calc()
             self.Vtabrms = self.Vtabrms_calc()
             self.Vabrms = self.Vabrms_calc()
-            #Inverter RMS current
-            self.Irms = self.Irms_calc()
+
         #Reference currents
         self.ia_ref = self.ia_ref_calc()
         
@@ -185,9 +165,6 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         
         #Convert from alpha-beta domain to d-q domain using Parks transformation
         self.vd,self.vq = utility_functions.alpha_beta_to_d_q(self.valpha,self.vbeta,self.wte)
-        
-        #LVRT settings
-        self.LVRT_initialize(pvderConfig)
         
         #PLL frequency
         self.we = self.we_calc()        
@@ -318,11 +295,8 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
             self.S_load1 = self.S_load1_calc()
         
         #Get reactive power set-point
-        if self.VOLT_VAR_ENABLE == True:
-            self.Q_ref = self.Volt_VAR_logic(t)
-        else:
-            self.Q_ref = 0.0 
-        
+        self.Q_ref = self.get_Qref()
+        """
         #Get DC link voltage set point
         if self.MPPT_ENABLE == True:
             self.Vdc_ref_new = self.MPP_table()
@@ -331,7 +305,8 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         
         if self.RAMP_ENABLE:
             self.Vdc_ramp(t)
-        
+        """
+        self.Vdc_ref = self.get_Vdc_ref(t)
         #Get current controller setpoint
         self.ia_ref = self.ia_ref_calc()
         
@@ -502,11 +477,8 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
             self.S_load1 = self.S_load1_calc()
         
         #Get reactive power set-point
-        if self.VOLT_VAR_ENABLE == True:
-            self.Q_ref = self.Volt_VAR_logic(t)
-        else:
-            self.Q_ref = 0.0 
-        
+        self.Q_ref = self.get_Qref()  
+        """
         #Get DC link voltage set point
         if self.MPPT_ENABLE == True:
             self.Vdc_ref_new = self.MPP_table()
@@ -515,7 +487,8 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         
         if self.RAMP_ENABLE:
             self.Vdc_ramp(t)
-        
+        """
+        self.Vdc_ref = self.get_Vdc_ref(t)
         #Get current controller setpoint
         self.ia_ref = self.ia_ref_calc()
         

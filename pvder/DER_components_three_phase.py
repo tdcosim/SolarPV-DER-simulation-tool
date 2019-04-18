@@ -38,7 +38,7 @@ class PV_Module(object):
     A = 1.92      #p-n junction ideality factor
     
     module_parameters = {'10':{'Np':2,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 650.0,'Vdcmpp_max': 800.0},
-                         '50':{'Np':11,'Ns':735,'Vdcmpp0':550.0,'Vdcmpp_min': 545.0,'Vdcmpp_max': 650.0},
+                         '50':{'Np':11,'Ns':735,'Vdcmpp0':550.0,'Vdcmpp_min': 520.0,'Vdcmpp_max': 650.0},
                          '250':{'Np':45,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 650.0,'Vdcmpp_max': 1000.0}}
     
     def __init__(self,events,Sinverter_rated):
@@ -191,8 +191,10 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
           ValueError: If rated DC link voltage is not sufficient.
         """
         self.standAlone = standAlone
-        self.gridVoltagePhaseA, self.gridVoltagePhaseB, self.gridVoltagePhaseC = gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC
-        self.gridFrequency = gridFrequency
+        if not self.standAlone:
+            self.gridVoltagePhaseA, self.gridVoltagePhaseB, self.gridVoltagePhaseC = gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC
+            self.gridFrequency = gridFrequency
+        
         self.Vrms_rated = Vrms_rated
         
         #Increment count to keep track of number of PV-DER model instances
@@ -210,36 +212,13 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         self.attach_grid_model(grid_model)
         self.initialize_DER(Sinverter_rated)
         self.check_voltage()
-
         #LVRT settings
         self.LVRT_initialize(pvderConfig)
-        #Exhibit different behavior when used in standalone mode
-        if self.standAlone:
-            self.n_total_ODE = self.n_ODE + self.grid_model.n_ODE
-            self.Zload1_actual =  self.events.load_events(t=0.0)          #Load at PCC   
-        
-        else:
-            self.n_total_ODE = self.n_ODE
-            self.Zload1_actual =  10e6+1j*0.0     #Using a large value of impedance to represent a no load condition
-        
-        self.Rload1_actual = self.Zload1_actual.real
-        self.Lload1_actual = self.Z1_actual.imag/(2*math.pi*60.0)
-        
-        #Per-unit values
-        self.Rload1 = self.Rload1_actual/Grid.Zbase  #resistance in per unit value
-        self.Lload1 = self.Lload1_actual/Grid.Lbase  #inductance in per unit value
-        self.Zload1 = self.Zload1_actual/Grid.Zbase
+        self.reset_reference_counters()
         
         #Reference
-        self.Q_ref = 0.0
-        
-        if self.MPPT_ENABLE:
-            self.Vdc_ref = self.Vdcmpp/self.Vdcbase
-            self.Vdc_ref_new = self.Vdcmpp/self.Vdcbase
-        else:
-            self.Vdc_ref = self.Vdcnominal
-            self.Vdc_ref_new = self.Vdcnominal
-        
+        self.Q_ref = self.get_Qref()   
+       
         #DC link voltage
         self.Vdc = self.Vdc_ref
         #PV module power output
@@ -308,13 +287,13 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
             
         #RMS voltages
         self.Vrms = self.Vrms_calc()
+        self.Vtrms = self.Vtrms_calc()
+        self.Irms = self.Irms_calc()     #Inverter RMS current
         
         if self.DO_EXTRA_CALCULATIONS:
-            self.Vtrms = self.Vtrms_calc()
             self.Vtabrms = self.Vtabrms_calc()
             self.Vabrms = self.Vabrms_calc()
-            #Inverter RMS current
-            self.Irms = self.Irms_calc()
+            
         #Reference currents
         self.ia_ref = self.ia_ref_calc()
         self.ib_ref = self.ib_ref_calc()
@@ -481,21 +460,16 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
             self.S_G = self.S_G_calc()
             self.S_load1 = self.S_load1_calc()
         
-        #Get reactive power set-point
-        if self.VOLT_VAR_ENABLE == True:
-            self.Q_ref = self.Volt_VAR_logic(t)
-        else:
-            self.Q_ref = 0.0 
-        
+        self.Q_ref = self.get_Qref()
         #Get DC link voltage set point
-        if self.MPPT_ENABLE == True:
-            self.Vdc_ref_new = self.MPP_table()
-        else:
-            self.Vdc_ref_new = self.Vdcnominal
+        #if self.MPPT_ENABLE == True:
+        #    self.Vdc_ref_new = self.MPP_table()
+        #else:
+        #    self.Vdc_ref_new = self.Vdcnominal
+        #if self.RAMP_ENABLE:
+        #    self.Vdc_ramp(t)
         
-        if self.RAMP_ENABLE:
-            self.Vdc_ramp(t)
-        
+        self.Vdc_ref = self.get_Vdc_ref(t)
         #Get current controller setpoint
         self.ia_ref = self.ia_ref_calc()
         self.ib_ref = self.ib_ref_calc()
@@ -522,13 +496,13 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
             self.FRT(t)
             if self.LFRT_TRIP == True and self.LFRT_RECONNECT == False:
                self.PV_DER_disconnect() 
-        
+        #print(self.S.imag*self.Sbase,self.S_PCC.imag*self.Sbase)
         #Phase a inverter output current
         diaR = (1/self.Lf)*(-self.Rf*self.ia.real - self.va.real + self.vta.real) + (self.winv/self.wbase)*self.ia.imag 
         diaI = (1/self.Lf)*(-self.Rf*self.ia.imag - self.va.imag + self.vta.imag) - (self.winv/self.wbase)*self.ia.real  
        
         #Current controller dynamics
-        if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
+        if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
             if np.sign(self.Ki_GCC*self.ua.real) == np.sign(self.xa.real):
                 dxaR = 0.0
             else:
@@ -542,7 +516,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
             dxaR = self.Ki_GCC*self.ua.real
             dxaI = self.Ki_GCC*self.ua.imag
             
-        if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
+        if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
             if np.sign( (self.wp)*(-self.ua.real +  self.ia_ref.real - self.ia.real)) == np.sign(self.ua.real):
                 duaR = 0.0
             else:
@@ -769,11 +743,8 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
             self.S_load1 = self.S_load1_calc()
         
         #Get reactive power set-point
-        if self.VOLT_VAR_ENABLE == True:
-            self.Q_ref = self.Volt_VAR_logic(t)
-        else:
-            self.Q_ref = 0.0 
-        
+        self.Q_ref = self.get_Qref()  
+        """
         #Get DC link voltage set point
         if self.MPPT_ENABLE == True:
             self.Vdc_ref_new = self.MPP_table()
@@ -782,7 +753,8 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         
         if self.RAMP_ENABLE:
             self.Vdc_ramp(t)
-        
+        """
+        self.Vdc_ref = self.get_Vdc_ref(t)
         #Get current controller setpoint
         self.ia_ref = self.ia_ref_calc()
         self.ib_ref = self.ib_ref_calc()

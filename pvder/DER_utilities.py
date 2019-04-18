@@ -1,6 +1,8 @@
 from __future__ import division
+import operator
 import math
 import cmath
+import numpy as np
 
 from pvder.grid_components import Grid
 from pvder import utility_functions
@@ -28,11 +30,17 @@ class PVDER_ModelUtilities(Grid):
     MPPT_ENABLE = False
     
     DO_EXTRA_CALCULATIONS = False #Do calculations not essential to ODE model (useful for debugging)
+    Qref_EXTERNAL = False #Allow direct manipulation of Qref from outside ODE model.
+    
+    Vdc_ref_list = []
+    Vdc_ref_total = len(Vdc_ref_list) #Get total events
+    Vdc_ref_counter = 0
+    del_Vdc_ref = 1.0
         
     @property                         #Decorator used for auto updating
     def Vdc_actual(self):
         """Actual DC link voltage"""
-        return min(self.Vdcrated,self.Vdc*self.Vdcbase)  #Calculate actual voltage
+        return min(self.Vdcmpp_max,self.Vdc*self.Vdcbase)  #Calculate actual voltage
     
     #Average duty cycle - Phase A
     @property                         #Decorator used for auto updating
@@ -150,6 +158,16 @@ class PVDER_ModelUtilities(Grid):
         
         return  self.Kp_PLL*(self.vd) + self.xPLL + 2*math.pi*60.0
     
+    def get_Qref(self):
+        """Output reactive power set-point."""
+        if self.VOLT_VAR_ENABLE == True:
+            _Qref= self.Volt_VAR_logic(t)
+        elif self.Qref_EXTERNAL:
+            _Qref = self.Q_ref
+        else:
+            _Qref = 1.0/self.Sbase
+        return _Qref
+    
     def S_PCCph_calc(self,vph,iph):
         """Inverter apparent power output - phase a/b/c"""
         
@@ -157,9 +175,12 @@ class PVDER_ModelUtilities(Grid):
         #return (1/2)*(self.va*self.ia.conjugate())*1.0
     
     def show_PV_DER_states(self,quantity='voltage'):
-        """Display values of voltage and current quantities."""
+        """Display values of states in the DER model quantities.
+        Args:
+          quantity: A string ('voltage','current','power','duty cycle') specifying the electrical quantity to be displayed.
+        """
         
-        if quantity not in {'voltage','current','power','duty_cycle'}:
+        if quantity not in {'voltage','current','power','duty cycle'}:
             raise ValueError('Unknown quantity: ' + str(quantity))
         print('\n______{} - {}_____'.format(self.name,quantity.capitalize()))
         
@@ -178,13 +199,16 @@ class PVDER_ModelUtilities(Grid):
         elif quantity ==  'power':
             print('Ppv:{:.1f} W\nS:{:.1f} VA\nS_PCC:{:.1f} VA'.format(self.Ppv*self.Sbase,self.S*self.Sbase,self.S_PCC*self.Sbase)) 
         
-        elif quantity ==  'duty_cycle':
+        elif quantity ==  'duty cycle':
             print('ma:{:.2f}'.format(self.ma))
             if type(self).__name__ == 'SolarPV_DER_ThreePhase':
-                print('mb:{:.2f},mc:{:.2f}\nm0:{:.2f}'.format(self.ib,self.ic,(self.ma+self.mb+self.mc)))
+                print('mb:{:.2f},mc:{:.2f}\nm0:{:.2f}'.format(self.mb,self.mc,(self.ma+self.mb+self.mc)))
     
     def show_PV_DER_parameters(self,quantity='inverter_ratings'):
-        """Display rated values."""
+        """Display rated values.
+        Args:
+          quantity: A string ('inverter_ratings','controller_gains','circuit_parameters') specifying the parameter to be displayed.
+        """
         
         if quantity not in {'inverter_ratings','controller_gains','circuit_parameters'}:
             raise ValueError('Unknown quantity: ' + str(quantity))
@@ -196,7 +220,7 @@ class PVDER_ModelUtilities(Grid):
         elif quantity == 'circuit_parameters':
             print('Cdc:{:.9f} F\nLf:{:.6f} H\nRf:{:.3f} Ohm'.format(self.C*self.Cbase,self.Lf*self.Lbase,self.Rf*self.Zbase))
         
-        elif quantity == 'controller_parameters':
+        elif quantity == 'controller_gains':
             print('Current controller:\nKp_GCC:{:.3f}, Ki_GCC:{:.3f}, wp:{:.3f}'.format(self.Kp_GCC,self.Ki_GCC,self.wp))
             print('DC link voltage controller:\nKp_DC:{:.3f}, Ki_DC:{:.3f}'.format(self.Kp_DC,self.Ki_DC))
             print('Reactive power controller:\nKp_Q:{:.3f}, Ki_Q:{:.3f}'.format(self.Kp_Q,self.Ki_Q))
@@ -262,61 +286,74 @@ class PVDER_ModelUtilities(Grid):
         _Vdcmpp=  max(min(_Vdcmpp,self.Vdcmpp_max),self.Vdcmpp_min)
         
         return _Vdcmpp/self.Vdcbase
-    
-    def Vdc_ramp(self,t):
-        """Method to ramp up Vdc setpoint changes."""
-        _del_Vdc = 0.5
-        _min_Vdc_ramp = 5.0/self.Vdcbase        
+  
+    def add_Vdc_ref(self,t,Vdc_ref):
+        """Add new solar event."""
         
-        if self.RAMP_ENABLE == True and t > self.t_stable:
-             
-            if len(self.ramp_list) == 0 and self.Vdc_ref != self.Vdc_ref_new and abs(self.Vdc_ref - self.Vdc_ref_new) > _min_Vdc_ramp:
-                self.n_steps = 0
-                self.t_ramp_start = t
-                print('Vdc_ref will ramp from {:.2f} to {:.2f} starting at {:.4f} s'.format(self.Vdc_ref*self.Vdcbase,self.Vdc_ref_new*self.Vdcbase,self.t_ramp_start))
-
-                if self.Vdc_ref_new  < self.Vdc_ref:
-                    self.ramp_list = np.append(np.arange(self.Vdc_ref*self.Vdcbase,self.Vdc_ref_new*self.Vdcbase,-_del_Vdc),self.Vdc_ref_new*self.Vdcbase)
-                    #utility_functions.print_to_terminal('Creating smaller to larger ramp_list:{}'.format(self.ramp_list))
-                else:
-                    self.ramp_list = np.append(np.arange(self.Vdc_ref*self.Vdcbase,self.Vdc_ref_new*self.Vdcbase,_del_Vdc),self.Vdc_ref_new*self.Vdcbase)
-                    #utility_functions.print_to_terminal('Creating larger to smaller ramp_list:{}'.format(self.ramp_list))
-                
-                self.ramp_list = np.delete(self.ramp_list, 0)
-                self.ramp_list = self.ramp_list/self.Vdcbase
-                utility_functions.print_to_terminal('Creating new ramp_list:{} of length {}'.format(self.ramp_list*self.Vdcbase,len(self.ramp_list)))                
-               
-                self.Vdc_ref =  self.ramp_list[0]
-                self.n_steps = self.n_steps+1
-                self.RAMP_FLAG = True
-                utility_functions.print_to_terminal('Vdc ramp started at {:.3f} s and is expected to end at {:.3f} s'.format(t,t+len(self.ramp_list)*self.ramp_del_t))
-                #utility_functions.print_to_terminal('Ramp delta t is {} s'.format(self.ramp_del_t))
-                utility_functions.print_to_terminal('Ramp step:{},Vdc_ref is updated to {:.4f} at {:.4f}!'.format(self.n_steps,self.Vdc_ref*self.Vdcbase,t))
-                
-            elif len(self.ramp_list) >= 1 and self.Vdc_ref != self.Vdc_ref_new:
-                  
-                if t> self.t_ramp_start + self.ramp_del_t*self.n_steps:
-                    self.ramp_list = np.delete(self.ramp_list, 0)
-                    self.Vdc_ref =  self.ramp_list[0]
-                   
-                    self.n_steps = self.n_steps+1
-                    #utility_functions.print_to_terminal('Ramp step:{},Vdc_ref is updated to {:.4f} at {:.4f}!'.format(self.n_steps,self.Vdc_ref*self.Vdcbase,t))
-                   
-                    if self.Vdc_ref == self.Vdc_ref_new:
-                        self.ramp_list = np.delete(self.ramp_list, 0)
-                else:
-                    self.Vdc_ref = self.Vdc_ref 
-                
-            elif len(self.ramp_list) == 0 and self.n_steps !=0 :
-                self.Vdc_ref =   self.Vdc_ref_new
-                print('Ramp list has been emptied at {:.4f}! Vdc_ref is {:.4f} and Vdc is {:.4f} !'.format(t,self.Vdc_ref*self.Vdcbase,self.Vdc*self.Vdcbase))
-                self.n_steps =0 
-                self.RAMP_FLAG = False
-            else:
-                if abs(self.Vdc_ref - self.Vdc_ref_new) < 2.0/self.Vdcbase:
-                   self.Vdc_ref =   self.Vdc_ref_new
-                else:
-                   self.Vdc_ref =   self.Vdc_ref
-        else:
-            self.Vdc_ref = self.Vdc_ref     
+        t = float(t)
+        Vdc_ref = float(Vdc_ref)
+        
+        if Vdc_ref <self.Vdcmpp_min or Vdc_ref > self.Vdcmpp_max:
+            raise ValueError('{} V is not a valid value for DC link voltage!'.format(Vdc_ref))       
+        
+        for ref in self.Vdc_ref_list:
+            if t==ref['t']:
+                print('Removing existing Vdc_ref at {:.2f}!'.format(event['t']))
+                self.Vdc_ref_list.remove(ref)   # in {}Remove exi,self.events_IDsting event at same time stamp
+        
+        print('Adding new Vdc reference at {:.2f} s'.format(t))
+        self.Vdc_ref_list.append({'t':t,'Vdc_ref':Vdc_ref/self.Vdcbase})  #Append new event to existing event list
+        self.Vdc_ref_list.sort(key=operator.itemgetter('t'))  #Sort new events list
+        self.Vdc_ref_total = len(self.Vdc_ref_list) #Get total events
     
+    def get_Vdc_ref(self,t):
+        """Output Vdc reference."""
+        if self.Vdc_ref_list: #Check whether list is empty
+            
+            if t<self.Vdc_ref_list[0]['t']: 
+                Vdc_ref = self.Vdc_ref
+                                
+            elif t<self.Vdc_ref_list[self.Vdc_ref_counter]['t']  and self.Vdc_ref_counter >=1:
+                Vdc_ref = self.Vdc_ref_list[self.Vdc_ref_counter-1]['Vdc_ref']
+               
+            elif t>=self.Vdc_ref_list[self.Vdc_ref_counter]['t']:
+                Vdc_ref = self.Vdc_ref_list[self.Vdc_ref_counter]['Vdc_ref']
+                
+                self.Vdc_ref_counter = min(self.Vdc_ref_total-1,self.Vdc_ref_counter+1)
+        else:
+            Vdc_ref = self.Vdc_ref
+            
+        return Vdc_ref
+    
+    def Vdc_ref_ramp(self,tstart,Vdc_ref_target):
+        """Create a ramp signal for voltage reference that ramps at 1 V/s.
+        Args:
+           tstart: A scalr specifying start time of ramp in seconds.
+           Vdc_ref_target: A scalar specifying target Vdc reference seconds in volts.
+        """
+        
+        Vdc_ref_start = self.get_Vdc_ref(t=tstart)*self.Vdcbase
+        if abs(Vdc_ref_start-Vdc_ref_target) <= self.del_Vdc_ref:
+            self.add_Vdc_ref(t=tstart,Vdc_ref=Vdc_ref_target)
+            
+        else:
+            Vdc_ref_range = np.arange(Vdc_ref_start+self.del_Vdc_ref,Vdc_ref_target+self.del_Vdc_ref,self.del_Vdc_ref)
+            trange = np.arange(tstart,tstart+len(Vdc_ref_range),1.0)
+            for i,Vdc_ref in enumerate(Vdc_ref_range):
+                self.add_Vdc_ref(t=trange[i],Vdc_ref=Vdc_ref)
+            
+    def show_references(self):
+        """Print references."""
+        
+        print('Showing all references in {}!'.format(self.name))
+        print('Total references:{}'.format(len(self.Vdc_ref_list)))
+        if self.Vdc_ref_list:
+            for ref in self.Vdc_ref_list:
+                print('t:{:.3f},Vdc_ref:{:.3f} V'.format(ref['t'],ref['Vdc_ref']*self.Vdcbase))
+        else:
+            print("No Vdc references!!!")
+    
+    def reset_reference_counters(self):
+        self.Vdc_ref_counter = 0
+        
+        print('Reference event counters reset!')

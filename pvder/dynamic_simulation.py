@@ -6,10 +6,11 @@ import time
 
 import pdb
 import six
+import logging
 
 ####from graphviz import Digraph
 from pvder.grid_components import Grid
-from pvder.utilities import SimulationUtilities
+from pvder.simulation_utilities import SimulationUtilities
 from pvder import utility_functions
 
 class ModelUtilities():
@@ -69,8 +70,8 @@ class GridSimulation(Grid,SimulationUtilities):
     DEBUG_CURRENTS = False
     DEBUG_POWER = False
     DEBUG_PLL = True
-    
-    def __init__(self,PV_model,events,grid_model=None,tStop = 0.5,tInc = 0.001):
+        
+    def __init__(self,PV_model,events,grid_model=None,tStop = 0.5,tInc = 0.001,LOOP_MODE = False,COLLECT_SOLUTION=True):
         """Creates an instance of `GridSimulation`.
         
         Args:
@@ -79,8 +80,10 @@ class GridSimulation(Grid,SimulationUtilities):
           grid_model: An instance of `GridModel` (only need to be suppled in stand alone simulation).
           tStop: A scalar specifying the end time for simulation.
           tInc: A scalar specifying the time step for simulation.
+          LOOP_MODE: A boolean specifying whether simulation is run in loop.
         """
-        
+        if LOOP_MODE:
+            assert not PV_model.standAlone, 'Loop mode can only be true if PV-DER model is stand alone.'
         #Increment count to keep track of number of simulation instances
         GridSimulation.sim_count = GridSimulation.sim_count+1
         self.sim_ID = GridSimulation.sim_count
@@ -89,8 +92,13 @@ class GridSimulation(Grid,SimulationUtilities):
         
         self.tStop = tStop
         self.tInc = tInc
+        self.t = self.t_calc()
         self.PV_model = PV_model
         self.simulation_events = events
+        
+        self.LOOP_MODE = LOOP_MODE
+        self.COLLECT_SOLUTION = COLLECT_SOLUTION
+        
         if self.PV_model.standAlone and grid_model is not None:
             self.grid_model = grid_model
         elif self.PV_model.standAlone and grid_model is None:
@@ -100,21 +108,34 @@ class GridSimulation(Grid,SimulationUtilities):
         self.simulation_events.remove_solar_event(3.0)
         self.simulation_events.remove_load_event(4.0)
         self.simulation_events.remove_grid_event(5.0)
+        
+        if not self.PV_model.standAlone:
+            self._t_t = np.array(0.0)
+            self._Vdc_t = np.array(self.PV_model.Vdc)
+            self._Irms_t = np.array(self.PV_model.Irms)
+            self._Ppv_t = np.array(self.PV_model.Ppv)
+            self._S_PCC_t = np.array(self.PV_model.S_PCC)
+            self._S_t = np.array(self.PV_model.S)
+            self._Vtrms_t = np.array(self.PV_model.Vtrms)
+            self._Vrms_t = np.array(self.PV_model.Vrms)
+        
+        #Set logging leve - {INFO,DEBUG,WARNING}
+        logging.getLogger().setLevel(logging.INFO)
     
     @property
     def y0(self):
         """ Combine all initial conditions."""
-        """
-        if not self.PV_model.standAlone:
-           y0 = self.PV_model.y0
-        else:
-           y0 = self.PV_model.y0+ self.grid_model.y0
-        """
+
         y0 = self.PV_model.y0
+        
+        #y0 = [self.iaR_t[-1], self.iaI_t[-1], self.xaR_t[-1], self.xaI_t[-1], self.uaR_t,self.uaI_t[-1],\
+        #      self.ibR_t[-1], self.ibI_t[-1], self.xbR_t[-1], self.xbI_t[-1], self.ubR_t,self.ubI_t[-1],\
+        #      self.icR_t[-1], self.icI_t[-1], self.xcR_t[-1], self.xcI_t[-1], self.ucR_t,self.ucI_t[-1],\
+        #      self.Vdc_t[-1],self.xDC_t[-1],self.xQ_t[-1],self.xPLL_t[-1],self.wte_t[-1]]
         return y0
     
-    @property
-    def t(self):
+    #@property
+    def t_calc(self):
         """Vector of time steps for simulation"""
         return np.arange(self.tStart, self.tStop, self.tInc)
 
@@ -243,11 +264,9 @@ class GridSimulation(Grid,SimulationUtilities):
             self.Vrms_t = utility_functions.Urms_time_series(self.va_t,self.vb_t,self.vc_t)
             self.Irms_t = utility_functions.Urms_time_series(self.ia_t,self.ib_t,self.ic_t)       
        
-        self.Vgrms_t = utility_functions.Urms_time_series(self.vag_t,self.vbg_t,self.vcg_t)
         if self.PV_model.standAlone:
+            self.Vgrms_t = utility_functions.Urms_time_series(self.vag_t,self.vbg_t,self.vcg_t)
             self.Vhvrms_t= utility_functions.Urms_time_series(self.vaHV_t,self.vbHV_t,self.vcHV_t)
-        else:
-            self.Vhvrms_t= self.Vgrms_t        
         
     def time_series_vgrid(self):
         """Time series grid frequency."""
@@ -278,48 +297,34 @@ class GridSimulation(Grid,SimulationUtilities):
         """Time series grid frequency."""
         
         self.wgrid_t = []
-        for i,t in enumerate(self.t):   #Loop through grid events and calculate wgrid at each time step
-            if self.PV_model.standAlone:
+        if self.PV_model.standAlone:
+            for i,t in enumerate(self.t):   #Loop through grid events and calculate wgrid at each time step
                 _,self.grid_model.wgrid =  self.simulation_events.grid_events(t)
                 self.wgrid_t.append(self.grid_model.wgrid)
-            else:
-                self.wgrid_t.append(self.PV_model.wgrid_measured)  
+            self.simulation_events.reset_event_counters() #reset event counters    
+        else:
+            self.wgrid_t = np.repeat(self.PV_model.wgrid_measured,len(self.t))
+        
         self.wgrid_t = np.asarray(self.wgrid_t)
-        self.simulation_events.reset_event_counters() #reset event counters
-    
+        
     def time_series_d_q(self):
         """Calculate time series d-q quantities."""
-        
-        self.vdg_t = []
-        self.vqg_t = []
         
         self.vd_t = []
         self.vq_t = []
         
         for i,t in enumerate(self.t):     #Loop through time steps and calculate d-q values at each time step
             
-            self.PV_model.vagt = utility_functions.phasor_to_time_domain(self.vag_t[i],self.wgrid_t[i],t)
-            self.PV_model.vbgt = utility_functions.phasor_to_time_domain(self.vbg_t[i],self.wgrid_t[i],t)
-            self.PV_model.vcgt = utility_functions.phasor_to_time_domain(self.vcg_t[i],self.wgrid_t[i],t)
-            
             self.PV_model.vat = utility_functions.phasor_to_time_domain(self.va_t[i],self.wgrid_t[i],t)
             self.PV_model.vbt = utility_functions.phasor_to_time_domain(self.vb_t[i],self.wgrid_t[i],t)
             self.PV_model.vct = utility_functions.phasor_to_time_domain(self.vc_t[i],self.wgrid_t[i],t)
             
             self.PV_model.wte = self.wte_t[i]
-            
-            self.PV_model.vdg,self.PV_model.vqg,self.PV_model.v0g = utility_functions.abc_to_dq0(self.PV_model.vagt,self.PV_model.vbgt,self.PV_model.vcgt,self.PV_model.wte)
-            self.vdg_t.append(self.PV_model.vdg)
-            self.vqg_t.append(self.PV_model.vqg)
-            
+          
             self.PV_model.vd,self.PV_model.vq,self.PV_model.v0 = utility_functions.abc_to_dq0(self.PV_model.vat,self.PV_model.vbt,self.PV_model.vct,self.PV_model.wte)
             self.vd_t.append(self.PV_model.vd)
             self.vq_t.append(self.PV_model.vq)
             
-        
-        self.vdg_t = np.asarray(self.vdg_t)
-        self.vqg_t = np.asarray(self.vqg_t)
-        
         self.vd_t = np.asarray(self.vd_t)
         self.vq_t = np.asarray(self.vq_t)
 
@@ -328,7 +333,7 @@ class GridSimulation(Grid,SimulationUtilities):
         
         self.we_t = []
         for i,t in enumerate(self.t):       #Loop through time steps and calculate we at each time step
-            self.PV_model.vdg = self.vdg_t[i]
+            
             self.PV_model.vd = self.vd_t[i]
             self.PV_model.xPLL = self.xPLL_t[i]
             self.we_t.append(self.PV_model.we_calc())
@@ -363,65 +368,89 @@ class GridSimulation(Grid,SimulationUtilities):
            self.Ppv_t.append(self.PV_model.Ppv_calc(self.PV_model.Vdc_actual))
         self.Sinsol_t = np.asarray(self.Sinsol_t)
         self.Ppv_t = np.asarray(self.Ppv_t)
-        self.simulation_events.reset_event_counters() #reset event counters
+        if not self.LOOP_MODE:
+            self.simulation_events.reset_event_counters() #reset event counters
     
     def time_series_S(self):
         """Calculate time series apparent power."""
         
         if type(self.PV_model).__name__ == 'SolarPV_DER_SinglePhase':
             self.S_t = (1/2)*(self.vta_t*self.ia_t.conjugate())
-            self.S_PCC_t = (1/2)*(self.va_t*self.ia_t.conjugate())
-            self.S_load1_t = (1/2)*(self.va_t*(-(self.va_t/self.Zload1_t)).conjugate())
+            self.S_PCC_t = (1/2)*(self.va_t*self.ia_t.conjugate())            
             
             if self.PV_model.standAlone:
                 self.S_G_t = (1/2)*(-(self.ia_t - (self.va_t/self.Zload1_t))/self.PV_model.a).conjugate()*self.vag_t
-                
+                self.S_load1_t = (1/2)*(self.va_t*(-(self.va_t/self.Zload1_t)).conjugate())
+        
         elif type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
             self.S_t = (1/2)*(self.vta_t*self.ia_t.conjugate() + self.vtb_t*self.ib_t.conjugate() + self.vtc_t*self.ic_t.conjugate())
             self.S_PCC_t = (1/2)*(self.va_t*self.ia_t.conjugate()+self.vb_t*self.ib_t.conjugate()+self.vc_t*self.ic_t.conjugate())
-            self.S_load1_t = (1/2)*(self.va_t*(-(self.va_t/self.Zload1_t)).conjugate() + self.vb_t*(-(self.vb_t/self.Zload1_t)).conjugate() + self.vc_t*(-(self.vc_t/self.Zload1_t)).conjugate())
-            
+             
             if self.PV_model.standAlone:
                 self.S_G_t = (1/2)*(-(self.ia_t - (self.va_t/self.Zload1_t))/self.PV_model.a).conjugate()*self.vag_t + (-(self.ib_t -(self.vb_t/self.Zload1_t))/self.PV_model.a).conjugate()*self.vbg_t + (-(self.ic_t -(self.vc_t/self.Zload1_t))/self.PV_model.a).conjugate()*self.vcg_t
+                self.S_load1_t = (1/2)*(self.va_t*(-(self.va_t/self.Zload1_t)).conjugate() + self.vb_t*(-(self.vb_t/self.Zload1_t)).conjugate() + self.vc_t*(-(self.vc_t/self.Zload1_t)).conjugate())
     
     def time_series_phase_angle(self):
         """Calculate time series phase angle between grid and inverter voltage."""
-        assert len(self.va_t) == len(self.va_t) == len(self.va_t) == len(self.vag_t) == len(self.vbg_t) == len(self.vcg_t) != None, "States must be available from simulation."
+        assert len(self.va_t) == len(self.vta_t) != None, "States must be available from simulation."
         
         self.phi_at_t = np.angle(self.vta_t)
-        self.phi_bt_t = np.angle(self.vtb_t)
-        self.phi_ct_t = np.angle(self.vtc_t)
-        
         self.phi_a_t = np.angle(self.va_t)
-        self.phi_b_t = np.angle(self.vb_t)
-        self.phi_c_t = np.angle(self.vc_t)
         
-        self.phi_aHV_t = np.angle(self.vaHV_t)
-        self.phi_bHV_t = np.angle(self.vbHV_t)
-        self.phi_cHV_t = np.angle(self.vcHV_t)
+        if self.PV_model.standAlone:
+            self.phi_aHV_t = np.angle(self.vaHV_t)
+            self.phi_ag_t = np.angle(self.vag_t)        
         
-        self.phi_ag_t = np.angle(self.vag_t)
-        self.phi_bg_t = np.angle(self.vbg_t)
-        self.phi_cg_t = np.angle(self.vcg_t)
-    
+        if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+            self.phi_bt_t = np.angle(self.vtb_t)
+            self.phi_ct_t = np.angle(self.vtc_t)
+            self.phi_b_t = np.angle(self.vb_t)
+            self.phi_c_t = np.angle(self.vc_t)
+            if self.PV_model.standAlone:
+                self.phi_bHV_t = np.angle(self.vbHV_t)
+                self.phi_cHV_t = np.angle(self.vcHV_t)
+                self.phi_bg_t = np.angle(self.vbg_t)
+                self.phi_cg_t = np.angle(self.vcg_t)
+        
     def time_series_power_transfer(self):
         """Calculate time series power transfer between grid and PCC."""
         self.P_transfer = (self.Vhvrms_t*self.Vgrms_t*np.sin(self.phi_aHV_t-self.phi_ag_t))/np.abs(self.grid_model.Z2)
+    
+    def collect_solution(self,solution,t=None):
+        """Collect solution."""
+        if self.LOOP_MODE:
+            self.t = t
+            self.collect_full_trajectory(solution)
+            self.collect_last_states()
+        else:
+            self.collect_full_trajectory(solution)
+    
+    def collect_last_states(self):
+        """Collect states at last time step."""
         
-    def run_simulation(self):
-        """Call the ODE solver and collect states."""
+        self._t_t = np.append(self._t_t,self.t[-1])
+        self._Vdc_t = np.append(self._Vdc_t,self.Vdc_t[-1])
+        self._Irms_t = np.append(self._Irms_t,self.Irms_t[-1])        
+
+        self._Vtrms_t = np.append(self._Vtrms_t,self.Vtrms_t[-1])
+        self._Vrms_t = np.append(self._Vrms_t,self.Vrms_t[-1])        
         
-        solution  = self.solve_ODE()
+        self._Ppv_t = np.append(self._Ppv_t,self.Ppv_t[-1])
+        self._S_t = np.append(self._S_t,self.S_t[-1])
+        self._S_PCC_t = np.append(self._S_PCC_t,self.S_PCC_t[-1])
+
+    def collect_full_trajectory(self,solution):
+        """Collect full solution from solver."""
         
-        self.simulation_events.reset_event_counters() #Reset grid and solar event counters
         #Collect states
+        self.t_t  = self.t #Time stamps
         #Phase a states
         self.iaR_t = solution[:,0]
         self.iaI_t = solution[:,1]
         self.xaR_t = solution[:,2]
         self.xaI_t = solution[:,3]
         self.uaR_t = solution[:,4]
-        self.uaI_t = solution[:,5]
+        self.uaI_t = solution[:,5]              
         
         if type(self.PV_model).__name__ == 'SolarPV_DER_SinglePhase':
             #DC link voltage variables
@@ -460,31 +489,7 @@ class GridSimulation(Grid,SimulationUtilities):
             self.xPLL_t = solution[:,21]
             #Frequency integration to get angle
             self.wte_t = solution[:,22]
-        
-        #Grid voltage
-        if self.PV_model.standAlone:
-            self.time_series_vgrid()
-            """
-            self.vagR_t = solution[:,self.PV_model.n_ODE+self.grid_model.n_ODE]
-            self.vagI_t = solution[:,self.PV_model.n_ODE+self.grid_model.n_ODE+1]
-            self.vbgR_t = solution[:,self.PV_model.n_ODE+self.grid_model.n_ODE+2]
-            self.vbgI_t = solution[:,self.PV_model.n_ODE+self.grid_model.n_ODE+3]
-            self.vcgR_t = solution[:,self.PV_model.n_ODE+self.grid_model.n_ODE+4]
-            self.vcgI_t = solution[:,self.PV_model.n_ODE+self.grid_model.n_ODE+5]
-            """
-        else:
-            self.vagR_t = np.repeat(self.PV_model.gridVoltagePhaseA.real,len(self.t))
-            self.vagI_t = np.repeat(self.PV_model.gridVoltagePhaseA.imag,len(self.t))
-            self.vbgR_t = np.repeat(self.PV_model.gridVoltagePhaseB.real,len(self.t))
-            self.vbgI_t = np.repeat(self.PV_model.gridVoltagePhaseB.imag,len(self.t))
-            self.vcgR_t = np.repeat(self.PV_model.gridVoltagePhaseC.real,len(self.t))
-            self.vcgI_t = np.repeat(self.PV_model.gridVoltagePhaseC.imag,len(self.t))
-            
-            #Time series grid voltage
-            self.vag_t = self.vagR_t + 1j*self.vagI_t
-            self.vbg_t = self.vbgR_t + 1j*self.vbgI_t
-            self.vcg_t = self.vcgR_t + 1j*self.vcgI_t
-        
+
         #Time series current
         self.ia_t = self.iaR_t + 1j*self.iaI_t
         #Time series u
@@ -505,11 +510,16 @@ class GridSimulation(Grid,SimulationUtilities):
             assert len(self.ua_t) == len(self.ub_t) == len(self.uc_t) == len(self.xa_t) == len(self.xb_t) == len(self.xc_t) != None, "States must be available from simulation."
             
         #Time series PCC voltage
-        self.time_series_Zload1()
         self.time_series_duty_cycle()
+        
+        #Exhibit different behavior in stand alone mode
+        if self.PV_model.standAlone:
+            self.time_series_vgrid() #Grid voltage
+            self.time_series_Zload1()        
         
         self.time_series_inv_terminal_voltage()
         self.time_series_PCC_LV_side_voltage()
+        
         if self.PV_model.standAlone:
             self.time_series_PCC_HV_side_voltage()
         
@@ -517,11 +527,61 @@ class GridSimulation(Grid,SimulationUtilities):
         self.time_series_RMS()
         self.time_series_Ppv()
         
-        #self.time_series_phase_angle()
+        self.time_series_phase_angle()
         #self.time_series_power_transfer()
         self.time_series_wgrid()
         #self.time_series_d_q()
         #self.time_series_PLL()
-        six.print_("All states collected!")
-
-
+        
+        logging.debug("All states collected!")
+    
+    def invert_arrays(self):
+        """Temporary arrangment."""
+        self.t_t = self._t_t
+        self.Vdc_t = self._Vdc_t
+                
+        self.Vtrms_t = self._Vtrms_t
+        self.Vrms_t = self._Vrms_t
+                
+        self.Irms_t = self._Irms_t
+        
+        self.Ppv_t  = self._Ppv_t 
+        self.S_t =  self._S_t 
+        self.S_PCC_t = self._S_PCC_t        
+        
+    def run_simulation(self,gridVoltagePhaseA=None,gridVoltagePhaseB=None,gridVoltagePhaseC=None,y0=None,t=None):
+        """Call the ODE solver and collect states."""
+        
+        #solution  = self.solve_ODE(t)
+        
+        if self.LOOP_MODE:
+            if type(gridVoltagePhaseA) == complex and y0 != None and t != None:
+                self.PV_model.gridVoltagePhaseA = gridVoltagePhaseA
+                self.PV_model.gridVoltagePhaseB = gridVoltagePhaseB
+                self.PV_model.gridVoltagePhaseC = gridVoltagePhaseC
+        
+            else:
+                raise ValueError('Grid voltage (complex scalar), initial states (y0), and time steps (t) should be provided in loop mode.')
+            
+            if t[0] == 0.0:
+                self.t = t
+                six.print_("{}:Simulation started in loop mode with a step size of {:.4f} s!".format(self.name,self.t[-1]-self.t[0]))
+                if self.jacFlag:
+                    six.print_("{}:Analytical Jacobian will be provided to ODE solver.".format(self.name))
+            solution,_  = self.call_ODE_solver(self.ODE_model,self.jac_ODE_model,y0,t)
+            
+        else:
+            self.t = self.t_calc()
+            timer_start = time.time()
+            six.print_("{}:Simulation started at {} s and will end at {} s".format(self.name,self.tStart,self.tStop))
+            if self.jacFlag:
+                six.print_("{}:Analytical Jacobian will be provided to ODE solver.".format(self.name))
+        
+            solution,_  = self.call_ODE_solver(self.ODE_model,self.jac_ODE_model,self.y0,self.t)
+            six.print_('{}:Simulation was completed in {}'.format(self.name,time.strftime("%H:%M:%S", time.gmtime(time.time()-timer_start))))
+            
+            self.simulation_events.reset_event_counters() #Reset grid and solar event counters
+            self.PV_model.reset_reference_counters() #Reset counters for reference change events
+        
+        if self.COLLECT_SOLUTION:
+            self.collect_solution(solution,t=t)

@@ -60,8 +60,11 @@ class SimulationResults():
         if plot_type not in {'power','active_power','active_power_Ppv_Pac_PCC','active_power_Pac_PCC','reactive_power','reactive_power_Q_PCC','reactive_power_Q_PCC_smoothed','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','voltage_Vpcclv_smoothed','current','phase_angle','frequency'}:
             raise ValueError('Unknown plot type: ' + str(plot_type))
         
-        time = self.simulation.t
+        if self.simulation.LOOP_MODE:
+            self.simulation.invert_arrays()
+        time = self.simulation.t_t    
         self.change_units()
+        
         if self.PER_UNIT == True:
            _voltage_label = 'V (p.u.)'
            _current_label = 'A (p.u.)'
@@ -76,7 +79,10 @@ class SimulationResults():
            _reactive_power_label = 'Reactive Power (VAR)'
            
         if plot_type == 'voltage':
-            plot_values = [self.simulation.Vdc_t*self.V_multiplier,self.simulation.Vtrms_t*self.V_multiplier,self.simulation.Vrms_t*self.V_multiplier,self.simulation.Vhvrms_t*self.V_multiplier,self.simulation.Vgrms_t*self.V_multiplier,self.simulation.vdg_t*self.V_multiplier]
+            plot_values = [self.simulation.Vdc_t*self.V_multiplier,self.simulation.Vtrms_t*self.V_multiplier,self.simulation.Vrms_t*self.V_multiplier,self.simulation.vdg_t*self.V_multiplier]
+            if self.simulation.PV_model.standAlone:
+               plot_values = plot_values + [self.simulation.Vhvrms_t*self.V_multiplier,self.simulation.Vgrms_t*self.V_multiplier]
+            
             #legends=['DC link voltage','Inverter terminal voltage','PCC LV side voltage','PCC HV side voltage','Grid voltage','Grid voltage - d component']
             legends=[r"$V_{DC}$",r"$v^{inv}_{rms}$",r"$v^{PCC-LV}_{rms}$",r"$v^{PCC-HV}_{rms}$",r"$v^{grid}_{rms}$",r"$v^{grid}_{d}$"]
             
@@ -126,7 +132,11 @@ class SimulationResults():
         
         elif plot_type == 'power':
             plot_values = [self.simulation.Ppv_t*self.S_multiplier,self.simulation.S_t.real*self.S_multiplier,self.simulation.S_t.imag*self.S_multiplier,
- self.simulation.S_PCC_t.real*self.S_multiplier,self.simulation.S_PCC_t.imag*self.S_multiplier,self.simulation.S_load1_t.real*self.S_multiplier,self.simulation.S_G_t.real*self.S_multiplier]
+ self.simulation.S_PCC_t.real*self.S_multiplier,self.simulation.S_PCC_t.imag*self.S_multiplier]
+            
+            if self.simulation.PV_model.standAlone:
+                plot_values = plot_values + [self.simulation.S_load1_t.real*self.S_multiplier,self.simulation.S_G_t.real*self.S_multiplier]
+            
             #legends=['Ppv','Pac','Q','Pac_PCC','Q_PCC','Pac_load1','Pac_G']
             
             legends=[r"$P^{PV}_{DC}$",r"$P^{inv}_{AC}$",r"$Q^{inv}$",r"$P^{PCC-LV}_{AC}$",r"$Q^{PCC-LV}$",r"$P^{load1}_{AC}$",r"$P^{G}_{AC}$"] 
@@ -134,8 +144,9 @@ class SimulationResults():
             y_labels=_power_label
         
         elif plot_type == 'active_power':
-            plot_values = [self.simulation.Ppv_t*self.S_multiplier,self.simulation.S_t.real*self.S_multiplier,self.simulation.S_PCC_t.real*self.S_multiplier,self.simulation.S_load1_t.real*self.S_multiplier,self.simulation.S_G_t.real*self.S_multiplier]
-            
+            plot_values = [self.simulation.Ppv_t*self.S_multiplier,self.simulation.S_t.real*self.S_multiplier,self.simulation.S_PCC_t.real*self.S_multiplier]
+            if self.simulation.PV_model.standAlone:
+                plot_values = plot_values + [self.simulation.S_load1_t.real*self.S_multiplier,self.simulation.S_G_t.real*self.S_multiplier]
             #legends=['Ppv','Pac','Pac_PCC','Pac_load1','Pac_G']
             
             legends=[r"$P^{PV}_{DC}$",r"$P^{inv}_{AC}$",r"$P^{PCC-LV}_{AC}$",r"$P^{load1}_{AC}$",r"$P^{G}_{AC}$"] 
@@ -195,6 +206,7 @@ class SimulationResults():
             plot_title='Grid voltage source and PLL: Frequency'
             y_labels='radians/s'
         
+        plot_title = self.simulation.PV_model.name + ' -- ' + plot_title
         return time,plot_values,legends,plot_title,y_labels
 
     def plot_DER_simulation(self,plot_type = 'power'):
@@ -213,6 +225,7 @@ class SimulationResults():
         fig = plt.figure(self.figure_index, figsize=(8,8))
         
         for i in range(len(plot_values)):
+            
             plt.plot(time_values[i],plot_values[i],label=legends[i])
         
         plt.ylabel(y_labels,weight = "bold", fontsize=self.font_size)
@@ -275,9 +288,9 @@ class SimulationUtilities():
         self.check_simulation(infodict,t) #Check whether solver successful for all time intervals
         
         return solution,infodict
-
+    """
     def solve_ODE(self):
-        """Solve given system of ODE's."""
+        Solve given system of ODE's.
         
         timer_start = time.time()
         six.print_("{}:Simulation started at {} s and will end at {} s".format(self.name,self.tStart,self.tStop))
@@ -288,7 +301,7 @@ class SimulationUtilities():
         six.print_('{}:Simulation was completed in {}'.format(self.name,time.strftime("%H:%M:%S", time.gmtime(time.time()-timer_start))))
         
         return solution
-    
+    """
     def check_simulation(self,infodict,t):
         """Check whether the ODE solver failed at any time step."""
         infodict_mused = infodict['mused']
@@ -297,13 +310,13 @@ class SimulationUtilities():
                  assert len(infodict_mused) == len(t)-1,  " The number of methods used should be equal to the number of time steps."
                  failure_time_point = list(map(lambda status: status == 0 or  status > 2,  infodict_mused)).index(True)
                  
-                 raise ValueError('{}:ODE solver failed at {:.4f} s for {} with failure code:{}!\n___States at failure___\nVdc:{:.4f},Vta:{:.4f},Vpcca:{:.4f}\nPpv:{:.4f},S:{:.4f}'
-.format(self.name,t[failure_time_point],self.PV_model.name,infodict_mused[failure_time_point],self.PV_model.Vdc*self.PV_model.Vdcbase,self.PV_model.vta*self.PV_model.Vbase,self.PV_model.va*self.PV_model.Vbase,self.PV_model.Ppv*self.PV_model.Sbase,self.PV_model.S*self.PV_model.Sbase))
+                 raise ValueError('{}:ODE solver failed at {:.6f} s for {} with failure code:{}!\n___States at failure___\nVdc:{:.4f},Vta:{:.4f},Vpcca:{:.4f}\nia:{:.4f}\nPpv:{:.4f},S:{:.4f},\nma:{:.4f},xDC:{:.4f},xQ:{:.4f}'
+.format(self.name,t[failure_time_point],self.PV_model.name,infodict_mused[failure_time_point],self.PV_model.Vdc*self.PV_model.Vdcbase,self.PV_model.vta*self.PV_model.Vbase,self.PV_model.va*self.PV_model.Vbase,self.PV_model.ia*self.PV_model.Ibase,self.PV_model.Ppv*self.PV_model.Sbase,self.PV_model.S*self.PV_model.Sbase,self.PV_model.ma,self.PV_model.xDC,self.PV_model.xQ))
         
         elif self.DEBUG_SOLVER:
             infodict_time_steps = infodict['hu']
             assert len(infodict_mused) == len(infodict_time_steps) == len(t)-1,  " The number of methods used should be equal to the number of time steps."
-            six.print_('Time:{},Methods:{},Time steps:{}'.format(t,infodict_mused,infodict_time_steps))
+            six.print_('{}:Time:{},Methods:{},Time steps:{}'.format(self.PV_model.name,t,infodict_mused,infodict_time_steps))
             
             if all(status == 1 or status == 2 for status in infodict_mused):
                 six.print_('{}:Simulation successful for all time steps!'.format(self.PV_model.name))             

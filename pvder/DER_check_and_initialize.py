@@ -10,7 +10,7 @@ class PVDER_SetupUtilities():
     """
        Utility class for error checking during model initialization.
     """
-   
+    
     def initialize_DER(self,Sinverter_rated):
         
         if str(int(Sinverter_rated/1e3)) in self.Sinverter_list:
@@ -43,6 +43,13 @@ class PVDER_SetupUtilities():
         self.Vanominal = self.Varated/Grid.Vbase #Converting to p.u. value
         self.Vrms_ref =  self.Vanominal/math.sqrt(2) 
         
+        if self.MPPT_ENABLE:
+            self.Vdc_ref = self.Vdcmpp/self.Vdcbase
+            self.Vdc_ref_new = self.Vdcmpp/self.Vdcbase
+        else:
+            self.Vdc_ref = self.Vdcnominal
+            self.Vdc_ref_new = self.Vdcnominal
+        
         if type(self).__name__ == 'SolarPV_DER_SinglePhase':
             self.Iarated = (self.Sinverter_rated/(self.Varated/math.sqrt(2)))*math.sqrt(2)
         elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
@@ -72,23 +79,48 @@ class PVDER_SetupUtilities():
         self.L1 = self.L1_actual/Grid.Lbase  #Line/transformer inductance
         self.Z1 =self.Z1_actual/Grid.Zbase    #Line/transformer impedance
         
+        #Exhibit different behavior when used in standalone mode
+        if self.standAlone:
+            self.n_total_ODE = self.n_ODE + self.grid_model.n_ODE
+            self.Zload1_actual =  self.events.load_events(t=0.0)          #Load at PCC   
+        
+        else:
+            self.n_total_ODE = self.n_ODE
+            self.Zload1_actual =  10e6+1j*0.0     #Using a large value of impedance to represent a no load condition
+        
+        self.Rload1_actual = self.Zload1_actual.real
+        self.Lload1_actual = self.Z1_actual.imag/(2*math.pi*60.0)
+        
+        #Per-unit values
+        self.Rload1 = self.Rload1_actual/Grid.Zbase  #resistance in per unit value
+        self.Lload1 = self.Lload1_actual/Grid.Lbase  #inductance in per unit value
+        self.Zload1 = self.Zload1_actual/Grid.Zbase
+        
         self.transformer_name = 'transformer_'+str(self.PV_DER_ID)
         
         self.check_PV_DER_parameters()  #Check PV-DER parameters
         
     def initialize_controller_gains(self):
         """Initialize controller settings."""
+        
+        _Kp_GCC = 300
+        _Ki_GCC = 100
+        
+        _Kp_DC = -0.1
+        _Ki_DC = -0.5
+        _Kp_Q =  0.01
+        _Ki_Q = 0.5
         #Current controller parameters
         _DER_rating = str(int(self.Sinverter_rated/1e3))
-        self. Kp_GCC = 300/self.controller_parameters[_DER_rating]['scale_Kp_GCC'] #Current controller Proportional constant
-        self.Ki_GCC = 70/self.controller_parameters[_DER_rating]['scale_Ki_GCC']  #Current controller Integral constant
+        self.Kp_GCC = _Kp_GCC/self.controller_parameters[_DER_rating]['scale_Kp_GCC'] #Current controller Proportional constant
+        self.Ki_GCC = _Ki_GCC/self.controller_parameters[_DER_rating]['scale_Ki_GCC']  #Current controller Integral constant
         self.wp =  self.controller_parameters[_DER_rating]['wp']      #First order filter gain for GCC
         
         #Power (active and reactive) controller parameters
-        self.Kp_DC = -1.0/self.controller_parameters[_DER_rating]['scale_Kp_DC']   #Active power controller Proportional constant
-        self.Ki_DC = -0.5/self.controller_parameters[_DER_rating]['scale_Ki_DC'] #Active power controller Integral constant
-        self.Kp_Q = 0.01/self.controller_parameters[_DER_rating]['scale_Kp_Q']  #Reactive power controller Proportional constant
-        self.Ki_Q = 0.5/self.controller_parameters[_DER_rating]['scale_Ki_Q']   #Reactive power controller Integral constant    
+        self.Kp_DC = _Kp_DC/self.controller_parameters[_DER_rating]['scale_Kp_DC']   #Active power controller Proportional constant
+        self.Ki_DC = _Ki_DC/self.controller_parameters[_DER_rating]['scale_Ki_DC'] #Active power controller Integral constant
+        self.Kp_Q = _Kp_Q/self.controller_parameters[_DER_rating]['scale_Kp_Q']  #Reactive power controller Proportional constant
+        self.Ki_Q = _Ki_Q/self.controller_parameters[_DER_rating]['scale_Ki_Q']   #Reactive power controller Integral constant    
     
     def attach_grid_model(self,grid_model):
         
@@ -98,7 +130,7 @@ class PVDER_SetupUtilities():
         elif self.standAlone and grid_model is None:
             raise ValueError('`Grid` instance need to be provided in stand alone mode for creating `SolarPV_DER` instance`!')
         else: #Grid model is not connected
-            print('{self.name}:No grid model attached since PV-DER instance is not stand alone!')
+            print('{}:No grid model attached since PV-DER instance is not stand alone!'.format(self.name))
                              
     def check_voltage(self):
                              
@@ -106,7 +138,10 @@ class PVDER_SetupUtilities():
             raise ValueError('The rated PCC-LV voltage {} V has more than 10% deviation from the voltage input from external program {} V!'.format(self.Vanominal, abs(self.gridVoltagePhaseA)))
                              
         if self.m_steady_state*(self.Vdcrated/2) < self.Varated:
-            raise ValueError('The nominal DC link voltage {:.1f} V is not sufficient for the inverter to generate the nominal voltage at PCC - LV side {:.1f} (L-G peak). Increase nominal DC link voltage to {:.1f} V.'.format(self.Vdcrated,self.Varated,math.ceil((self.Varated/self.m_steady_state)*2)))
+            raise ValueError('The nominal DC link voltage {:.1f} V is not sufficient for the inverter to generate the nominal voltage at PCC - LV side {:.1f} V (L-G peak). Increase nominal DC link voltage to {:.1f} V.'.format(self.Vdcrated,self.Varated,math.ceil((self.Varated/self.m_steady_state)*2)))
+        
+        if self.m_steady_state*(self.Vdcmpp_min/2) < self.Varated:
+            raise ValueError('The minimum DC link voltage {:.1f} V is not sufficient for the inverter to generate the nominal voltage at PCC - LV side {:.1f} V (L-G peak). Increase minimum DC link voltage to {:.1f} V.'.format(self.Vdcmpp_min,self.Varated,math.ceil((self.Varated/self.m_steady_state)*2)))
             
     def check_PV_DER_parameters(self):
         """Method to check whether DER parameter's are feasible."""
@@ -229,7 +264,7 @@ class PVDER_SetupUtilities():
         print('Steady state values for operating point defined by Ppv:{:.2f} W, Vdc:{:.2f} V, va:{:.2f} V found at:'.format(self.Ppv*self.Sbase,self.Vdc*self.Vdcbase,self.va*self.Vbase))
             
         self.show_PV_DER_states(quantity='power')
-        self.show_PV_DER_states(quantity='duty_cycle')
+        self.show_PV_DER_states(quantity='duty cycle')
         self.show_PV_DER_states(quantity='voltage')
         self.show_PV_DER_states(quantity='current')
         #print('Pt:{:.2f} W,Qt:{:.2f} VAR'.format(St0.real*self.Sbase,St0.imag*self.Sbase))
