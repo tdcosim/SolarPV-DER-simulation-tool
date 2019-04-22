@@ -9,9 +9,9 @@ import six
 import logging
 
 ####from graphviz import Digraph
-from pvder.grid_components import Grid
-from pvder.simulation_utilities import SimulationUtilities
-from pvder import utility_functions
+from grid_components import Grid
+from simulation_utilities import SimulationUtilities
+import utility_functions as utility_functions
 
 class ModelUtilities():
     """Class for model wide utilities."""
@@ -69,7 +69,7 @@ class GridSimulation(Grid,SimulationUtilities):
     DEBUG_VOLTAGES = False
     DEBUG_CURRENTS = False
     DEBUG_POWER = False
-    DEBUG_PLL = True
+    DEBUG_PLL = False
         
     def __init__(self,PV_model,events,grid_model=None,tStop = 0.5,tInc = 0.001,LOOP_MODE = False,COLLECT_SOLUTION=True):
         """Creates an instance of `GridSimulation`.
@@ -181,10 +181,10 @@ class GridSimulation(Grid,SimulationUtilities):
             utility_functions.print_to_terminal('Sinsol:{:.3f},Q_ref:{:.3f},Ppv:{:.3f},S:{:.3f},S_PCC:{:.3f},S_load1:{:.3f},S_G:{:.3f}'.format(self.PV_model.Sinsol,self.PV_model.Q_ref,self.PV_model.Ppv,self.PV_model.S,self.PV_model.S_PCC,self.PV_model.S_load1,self.PV_model.S_G))
         
         if self.DEBUG_CONTROLLERS:
-            utility_functions.print_to_terminal('xdc:{:.3f},xQ:{:.3f},ua:{:.3f},xa:{:.3f},ma:{:.3f}'. format(self.PV_model.xdc,self.PV_model.xQ,self.PV_model.ua,self.PV_model.xa,self.PV_model.ma))
+            utility_functions.print_to_terminal('xDC:{:.3f},xQ:{:.3f},ua:{:.3f},xa:{:.3f},ma:{:.3f}'. format(self.PV_model.xdc,self.PV_model.xQ,self.PV_model.ua,self.PV_model.xa,self.PV_model.ma))
             
         if self.DEBUG_PLL:
-            utility_functions.print_to_terminal("we:{:.3f}, wte:{:.3f} rad, vdg: {:.3f} V, vqg {:.3f} V, vd: {:.3f} V, vq {:.3f} V".format(self.PV_model.we,self.PV_model.wte,self.PV_model.vdg,self.PV_model.vqg,self.PV_model.vd,self.PV_model.vq))
+            utility_functions.print_to_terminal("we:{:.3f}, wte:{:.3f} rad, vd: {:.3f} V, vq {:.3f} V".format(self.PV_model.we,self.PV_model.wte,self.PV_model.vd,self.PV_model.vq))
     
     def time_series_PCC_HV_side_voltage(self):
         """Calculate time series PCC voltage."""
