@@ -9,9 +9,9 @@ import six
 import logging
 
 ####from graphviz import Digraph
-from grid_components import Grid
-from simulation_utilities import SimulationUtilities
-import utility_functions as utility_functions
+from pvder.grid_components import Grid
+from pvder.simulation_utilities import SimulationUtilities
+from pvder import utility_functions
 
 class ModelUtilities():
     """Class for model wide utilities."""
