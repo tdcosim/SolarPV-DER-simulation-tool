@@ -17,11 +17,17 @@ cd SolarPV-DER-simulation-utility
 pip install -e .
 ```
 ## Using the module
-The module can be imported as shown below:
+The module can be imported as a normal python module:
 ```
 import pvder
 ```
-The following cl
+The following features are available currently:
+1. Single phase or three phase DER models.
+2. Run simulation in stand alone mode with internal grid voltage source model.
+3. Run simulation in loop mode where grid voltage is supplied every time step by outside program.
+4. Introduce solar insolation events (in all modes), grid voltage, and frequency change events (in stand alone mode).
+5. Enable Low voltage ride through (LVRT) and Volt-VAR control logic. 
+
 ### Using the stand alone single phase DER model with 10 kW power rating
 The following steps are required:
 1. First import the following classes:
@@ -83,6 +89,9 @@ A schematic of the relationship between differen classes in the module is shown 
 ![schematic of software architecture](docs/software_architecture.png)
 
 Dependencies: SciPy, Numpy, Matlplotlib
+
+## Issues
+Please feel free to raise an issue when bugs are encountered or if you are need further documentation.
 
 ## Who is responsible?
 - Siby Jose Plathottam splathottam@anl.gov
