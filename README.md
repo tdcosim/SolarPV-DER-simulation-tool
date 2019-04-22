@@ -1,5 +1,5 @@
 
-**Status:** Maintenance (expect bug fixes and minor updates)
+**Status:** Expect regular updates and bug fixes.
 # Utilitiy for simulating dynamics of PV-DER
 
 Solar photovoltaic distributed energy resources (PV-DER) are power electronic inverter based generation (IBG) connected to the electric power distribution system (eg. roof top solar PV systems). This utility can be used to simulate the behaviour a single DER connected to a stiff voltage source as shown in the following schematic:
@@ -20,6 +20,59 @@ pip install -e .
 The module can be imported as shown below:
 ```
 import pvder
+```
+The following cl
+### Using the stand alone single phase DER model with 10 kW power rating
+The following steps are required:
+1. First import the following classes:
+```
+from pvder.DER_components_single_phase import SolarPV_DER_SinglePhase
+from pvder.grid_components import Grid
+from pvder.dynamic_simulation import GridSimulation
+from pvder.simulation_events import SimulationEvents
+from pvder.simulation_utilities import SimulationResults
+```
+1. Create a **_SimulationEvents_** object: This object is used to add or remove disturbance events occurs during the simulation.
+```
+events = SimulationEvents()
+```
+2. Create a **Grid** object: This object describes the steady state model for the grid voltage source. It needs to be supplied with an **_SimulationEvents_** object.
+```
+grid = Grid(events=events)
+```
+3. Create a **SolarPV_DER_SinglePhase** or **SolarPV_DER_ThreePhase** object: This object describes the dynamic DER model. It needs both an **_SimulationEvents_** object and a **Grid** object. The power rating of the DER are should also be provided.
+```
+PV_DER = SolarPV_DER_SinglePhase(grid_model=grid,events=events,Sinverter_rated = 10.0e3,standAlone = True)
+```
+4. Create a **GridSimulation** object: This object runs the simulation and stores the solution. It takes **_SimulationEvents_**, **Grid** and, **SolarPV_DER_SinglePhase** objects as arguments.
+```
+sim = GridSimulation(grid_model=grid,PV_model=PV_DER,events = events)
+```
+5. Create a **SimulationResults** object: This object is used to visualize the simulation results.
+```
+results = SimulationResults(simulation = sim)
+```
+6. Add an event (for e.g. solar insolation change at 10.0 s:
+```
+events.add_solar_event(10,90)
+```
+7. Specify simulation flags (for e.g. set the DEBUG_SIMULATION and DEBUG_POWER flag to true to observe the power at each time step.):
+```
+sim.DEBUG_SIMULATION = False
+sim.DEBUG_POWER = False
+```
+8. Specify simulation stop time (for e.g. 20.0 s):
+```
+sim.tStop = 20.0
+```
+9. Run the simulation:
+```
+sim.run_simulation()
+```
+10. Visualize the results (for e.g. the power output at PCC-LV side):
+```
+results.PER_UNIT = False
+results.plot_DER_simulation(plot_type='active_power_Ppv_Pac_PCC')#
 ```
 Try it out in Google Colab:
 
