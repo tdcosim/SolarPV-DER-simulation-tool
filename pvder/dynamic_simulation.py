@@ -57,7 +57,7 @@ class ModelUtilities():
         dot.edge('Transmission_Line', 'Grid')
         dot.render('model_graphs/model.gv', view=True)
 
-class GridSimulation(Grid,SimulationUtilities):
+class DynamicSimulation(Grid,SimulationUtilities):
     """ Utility class for running simulations."""
     
     sim_count = 0
@@ -82,11 +82,11 @@ class GridSimulation(Grid,SimulationUtilities):
           tInc: A scalar specifying the time step for simulation.
           LOOP_MODE: A boolean specifying whether simulation is run in loop.
         """
-        if LOOP_MODE:
-            assert not PV_model.standAlone, 'Loop mode can only be true if PV-DER model is stand alone.'
+        #if LOOP_MODE:
+        #    assert not PV_model.standAlone, 'Loop mode can only be true if PV-DER model is stand alone.'
         #Increment count to keep track of number of simulation instances
-        GridSimulation.sim_count = GridSimulation.sim_count+1
-        self.sim_ID = GridSimulation.sim_count
+        DynamicSimulation.sim_count = DynamicSimulation.sim_count+1
+        self.sim_ID = DynamicSimulation.sim_count
         #Object name
         self.name = 'sim_'+str(self.sim_ID)
         
@@ -109,15 +109,8 @@ class GridSimulation(Grid,SimulationUtilities):
         self.simulation_events.remove_load_event(4.0)
         self.simulation_events.remove_grid_event(5.0)
         
-        if not self.PV_model.standAlone:
-            self._t_t = np.array(0.0)
-            self._Vdc_t = np.array(self.PV_model.Vdc)
-            self._Irms_t = np.array(self.PV_model.Irms)
-            self._Ppv_t = np.array(self.PV_model.Ppv)
-            self._S_PCC_t = np.array(self.PV_model.S_PCC)
-            self._S_t = np.array(self.PV_model.S)
-            self._Vtrms_t = np.array(self.PV_model.Vtrms)
-            self._Vrms_t = np.array(self.PV_model.Vrms)
+        if self.LOOP_MODE:
+            self.reset_stored_trajectories()
         
         #Set logging leve - {INFO,DEBUG,WARNING}
         logging.getLogger().setLevel(logging.INFO)
@@ -137,8 +130,21 @@ class GridSimulation(Grid,SimulationUtilities):
     #@property
     def t_calc(self):
         """Vector of time steps for simulation"""
+        if (self.tStop - self.tStart) <= self.tInc:
+            self.tStop =  self.tStart + self.tInc + 0.000001
         return np.arange(self.tStart, self.tStop, self.tInc)
-
+    
+    def reset_stored_trajectories(self):
+        """Reset for plotting."""
+        self._t_t = np.array(0.0)
+        self.Vdc_t = self._Vdc_t = np.array(self.PV_model.Vdc)
+        self.Irms_t = self._Irms_t = np.array(self.PV_model.Irms)
+        self.Ppv_t = self._Ppv_t = np.array(self.PV_model.Ppv)
+        self.S_PCC_t = self._S_PCC_t = np.array(self.PV_model.S_PCC)
+        self.S_t = self._S_t = np.array(self.PV_model.S)
+        self.Vtrms_t = self._Vtrms_t = np.array(self.PV_model.Vtrms)
+        self.Vrms_t = self._Vrms_t = np.array(self.PV_model.Vrms)
+    
     def ODE_model(self,y,t):
         """ Combine all derivatives."""
         
@@ -428,16 +434,16 @@ class GridSimulation(Grid,SimulationUtilities):
     def collect_last_states(self):
         """Collect states at last time step."""
         
-        self._t_t = np.append(self._t_t,self.t[-1])
-        self._Vdc_t = np.append(self._Vdc_t,self.Vdc_t[-1])
-        self._Irms_t = np.append(self._Irms_t,self.Irms_t[-1])        
+        self._t_t = np.append(self._t_t,self.t[1:])
+        self._Vdc_t = np.append(self._Vdc_t,self.Vdc_t[1:])
+        self._Irms_t = np.append(self._Irms_t,self.Irms_t[1:])        
 
-        self._Vtrms_t = np.append(self._Vtrms_t,self.Vtrms_t[-1])
-        self._Vrms_t = np.append(self._Vrms_t,self.Vrms_t[-1])        
+        self._Vtrms_t = np.append(self._Vtrms_t,self.Vtrms_t[1:])
+        self._Vrms_t = np.append(self._Vrms_t,self.Vrms_t[1:])        
         
-        self._Ppv_t = np.append(self._Ppv_t,self.Ppv_t[-1])
-        self._S_t = np.append(self._S_t,self.S_t[-1])
-        self._S_PCC_t = np.append(self._S_PCC_t,self.S_PCC_t[-1])
+        self._Ppv_t = np.append(self._Ppv_t,self.Ppv_t[1:])
+        self._S_t = np.append(self._S_t,self.S_t[1:])
+        self._S_PCC_t = np.append(self._S_PCC_t,self.S_PCC_t[1:])
 
     def collect_full_trajectory(self,solution):
         """Collect full solution from solver."""
@@ -572,6 +578,7 @@ class GridSimulation(Grid,SimulationUtilities):
             
         else:
             self.t = self.t_calc()
+            print(self.tStart, self.tStop, self.tInc,self.t)
             timer_start = time.time()
             six.print_("{}:Simulation started at {} s and will end at {} s".format(self.name,self.tStart,self.tStop))
             if self.jacFlag:
