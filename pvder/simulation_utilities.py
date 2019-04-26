@@ -289,16 +289,17 @@ class SimulationResults():
     
 class SimulationUtilities():
     """ Utility class for dynamic simulations."""
+    max_steps = 500
     
     def call_ODE_solver(self,derivatives,jacobian,y,t):
         """Call the SciPy ODE solver."""
         
         if self.jacFlag:
             solution,infodict = odeint(derivatives,y,t,Dfun=jacobian,full_output=1,printmessg=True,\
-                                       hmax = 1/120.,mxstep=50,atol=1e-4,rtol=1e-4)
+                                       hmax = 1/120.,mxstep=self.max_steps,atol=1e-4,rtol=1e-4)
         else:
             solution,infodict =  odeint(derivatives,y,t,full_output=1,printmessg=True,\
-                                       hmax = 1/120.,mxstep=50,atol=1e-4,rtol=1e-4)
+                                       hmax = 1/120.,mxstep=self.max_steps,atol=1e-4,rtol=1e-4)
         #return odeint(derivatives,y,t,full_output=1,printmessg=True,\
         #hmax =1/120.,mxstep=1000)#atol=1.49012e-6
         
