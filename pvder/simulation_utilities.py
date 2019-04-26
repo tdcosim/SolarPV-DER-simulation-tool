@@ -57,7 +57,7 @@ class SimulationResults():
     def group_quantities_for_plotting(self,plot_type):
         """Plot power from simulation."""
         
-        if plot_type not in {'power','active_power','active_power_Ppv_Pac_PCC','active_power_Pac_PCC','reactive_power','reactive_power_Q_PCC','reactive_power_Q_PCC_smoothed','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','voltage_Vpcclv_smoothed','current','phase_angle','frequency'}:
+        if plot_type not in {'power','active_power','active_power_Ppv_Pac_PCC','active_power_Pac_PCC','reactive_power','reactive_power_Q_PCC','reactive_power_Q_PCC_smoothed','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','voltage_Vpcclv_smoothed','current','phase_angle','frequency','duty_cycle'}:
             raise ValueError('Unknown plot type: ' + str(plot_type))
         
         if self.simulation.LOOP_MODE:
@@ -206,7 +206,24 @@ class SimulationResults():
             plot_title='Grid voltage source and PLL: Frequency'
             y_labels='radians/s'
         
+        elif plot_type == 'duty_cycle':
+            plot_values = [self.simulation.ma_absolute_t]
+            #legends = [r"$\m^{absolute}_{a}$"]
+            legends = ["ma"]
+            if type(self.simulation.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+                plot_values = plot_values + [self.simulation.mb_absolute_t,self.simulation.mc_absolute_t]
+                #legends = legends + [r"$\m^{absolute}_{b}$",r"$\mc^{absolute}_{c}$"]
+                legends = legends + ["mb","mc"]
+                #legends=['m absolute']
+                        
+            plot_title = 'Inverter: Duty cycle'
+            y_labels = 'p.u.'
+        
         plot_title = self.simulation.PV_model.name + ' -- ' + plot_title
+        
+        for plot_value in plot_values:
+            assert (plot_value.size == time.size) and time.size > 1, 'Number of time points should be greater than one and equal to number of value points!'
+        
         return time,plot_values,legends,plot_title,y_labels
 
     def plot_DER_simulation(self,plot_type = 'power'):

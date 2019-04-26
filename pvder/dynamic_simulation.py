@@ -138,6 +138,10 @@ class DynamicSimulation(Grid,SimulationUtilities):
         """Reset for plotting."""
         self._t_t = np.array(0.0)
         self.Vdc_t = self._Vdc_t = np.array(self.PV_model.Vdc)
+        self.ma_absolute_t = self._ma_absolute_t = np.array(abs(self.PV_model.ma))
+        self.mb_absolute_t = self._mb_absolute_t = np.array(abs(self.PV_model.mb))
+        self.mc_absolute_t = self._mc_absolute_t = np.array(abs(self.PV_model.mc))
+        
         self.Irms_t = self._Irms_t = np.array(self.PV_model.Irms)
         self.Ppv_t = self._Ppv_t = np.array(self.PV_model.Ppv)
         self.S_PCC_t = self._S_PCC_t = np.array(self.PV_model.S_PCC)
@@ -214,6 +218,8 @@ class DynamicSimulation(Grid,SimulationUtilities):
         self.maR_t = self.ma_t.real 
         self.maI_t = self.ma_t.imag
         
+        self.ma_absolute_t = utility_functions.Uabsolute_time_series(self.ma_t)
+                
         if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
             self.mb_t =  utility_functions.m_time_series(self.ub_t,self.xb_t,self.PV_model.Kp_GCC)
             self.mc_t =  utility_functions.m_time_series(self.uc_t,self.xc_t,self.PV_model.Kp_GCC)
@@ -222,6 +228,9 @@ class DynamicSimulation(Grid,SimulationUtilities):
             self.mbI_t = self.mb_t.imag
             self.mcR_t = self.mc_t.real 
             self.mcI_t = self.mc_t.imag
+            
+            self.mb_absolute_t = utility_functions.Uabsolute_time_series(self.mb_t)
+            self.mc_absolute_t = utility_functions.Uabsolute_time_series(self.mc_t)
 
     def time_series_PCC_LV_side_voltage(self):
         """Calculate time series PCC voltage."""
@@ -296,8 +305,8 @@ class DynamicSimulation(Grid,SimulationUtilities):
         self.vag_t = np.asarray(self.vag_t)
         self.vbg_t = np.asarray(self.vbg_t)
         self.vcg_t = np.asarray(self.vcg_t)
-        
-        self.simulation_events.reset_event_counters() #reset event counters
+        if not self.LOOP_MODE:
+            self.simulation_events.reset_event_counters() #reset event counters
     
     def time_series_wgrid(self):
         """Time series grid frequency."""
@@ -307,7 +316,8 @@ class DynamicSimulation(Grid,SimulationUtilities):
             for i,t in enumerate(self.t):   #Loop through grid events and calculate wgrid at each time step
                 _,self.grid_model.wgrid =  self.simulation_events.grid_events(t)
                 self.wgrid_t.append(self.grid_model.wgrid)
-            self.simulation_events.reset_event_counters() #reset event counters    
+            if not self.LOOP_MODE:
+                self.simulation_events.reset_event_counters() #reset event counters    
         else:
             self.wgrid_t = np.repeat(self.PV_model.wgrid_measured,len(self.t))
         
@@ -360,7 +370,8 @@ class DynamicSimulation(Grid,SimulationUtilities):
             
             self.Zload1_t.append(_Zload1)
         self.Zload1_t = np.asarray(self.Zload1_t)
-        self.simulation_events.reset_event_counters() #reset event counters
+        if not self.LOOP_MODE:
+           self.simulation_events.reset_event_counters() #reset event counters
     
     def time_series_Ppv(self):
         """Calculate time series Solar PV power output."""
@@ -424,18 +435,24 @@ class DynamicSimulation(Grid,SimulationUtilities):
     
     def collect_solution(self,solution,t=None):
         """Collect solution."""
+        
         if self.LOOP_MODE:
             self.t = t
             self.collect_full_trajectory(solution)
             self.collect_last_states()
         else:
             self.collect_full_trajectory(solution)
-    
+        print('Stored solution for {} time points starting at {:.3f} s and ending at {:.3f} s!'.format(len(self.t),self.t[0],self.t[-1]))
+        
     def collect_last_states(self):
         """Collect states at last time step."""
         
         self._t_t = np.append(self._t_t,self.t[1:])
         self._Vdc_t = np.append(self._Vdc_t,self.Vdc_t[1:])
+        self._ma_absolute_t = np.append(self._ma_absolute_t,self.ma_absolute_t[1:])
+        self._mb_absolute_t = np.append(self._mb_absolute_t,self.mb_absolute_t[1:])
+        self._mc_absolute_t = np.append(self._mc_absolute_t,self.mc_absolute_t[1:])
+        
         self._Irms_t = np.append(self._Irms_t,self.Irms_t[1:])        
 
         self._Vtrms_t = np.append(self._Vtrms_t,self.Vtrms_t[1:])
@@ -545,6 +562,10 @@ class DynamicSimulation(Grid,SimulationUtilities):
         """Temporary arrangment."""
         self.t_t = self._t_t
         self.Vdc_t = self._Vdc_t
+        
+        self.ma_absolute_t = self._ma_absolute_t
+        self.mb_absolute_t = self._mb_absolute_t
+        self.mc_absolute_t = self._mc_absolute_t
                 
         self.Vtrms_t = self._Vtrms_t
         self.Vrms_t = self._Vrms_t
@@ -578,7 +599,7 @@ class DynamicSimulation(Grid,SimulationUtilities):
             
         else:
             self.t = self.t_calc()
-            print(self.tStart, self.tStop, self.tInc,self.t)
+            
             timer_start = time.time()
             six.print_("{}:Simulation started at {} s and will end at {} s".format(self.name,self.tStart,self.tStop))
             if self.jacFlag:

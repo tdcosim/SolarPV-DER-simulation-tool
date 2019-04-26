@@ -14,6 +14,12 @@ def Urms_time_series(ua,ub,uc):
     assert len(ua) == len(ub) == len(uc),  " The number of phasor quantities should be equal"
     
     return np.sqrt((np.square(np.abs(ua))+np.square(np.abs(ub))+np.square(np.abs(uc)))/3.0)/math.sqrt(2)
+
+def Uabsolute_time_series(u):
+    """Function to calculate rms value of phasor quantities."""
+    
+    return np.abs(u)
+
 #@jit(nopython=True)
 def Ppv_calc(Iph,Np,Ns,Vdc_actual,Tactual,Sbase):
     """Function to calculate PV module power output."""
