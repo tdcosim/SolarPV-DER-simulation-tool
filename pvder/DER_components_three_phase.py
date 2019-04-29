@@ -12,7 +12,7 @@ from scipy.optimize import fsolve, minimize
 from pvder.DER_check_and_initialize import PVDER_SetupUtilities
 from pvder.DER_features import PVDER_SmartFeatures
 from pvder.DER_utilities import PVDER_ModelUtilities
-from pvder.grid_components import Grid
+from pvder.grid_components import BaseValues
 
 from pvder import utility_functions
 
@@ -95,7 +95,7 @@ class PV_Module(object):
        self.Iph = self.Iph_calc()
        self.Ipv = (self.Np*self.Iph)-(self.Np*self.Irs*(math.exp((self.q*Vdc_actual)/(self.k*self.Tactual*self.A*self.Ns))-1))   #Faster  with Pure Python functions
        
-       return max(0,(self.Ipv*Vdc_actual))/Grid.Sbase
+       return max(0,(self.Ipv*Vdc_actual))/BaseValues.Sbase
        
        #return utility_functions.Ppv_calc(self.Iph,self.Np,self.Ns,Vdc_actual,self.Tactual,Grid.Sbase)
     
@@ -112,7 +112,7 @@ class PV_Module(object):
         for S in _Srange:
             self.Sinsol = S
             _Vdcmpp = self.Vdcmpp
-            _Ppvmpp = self.Ppv_calc(self.Vdcmpp)*Grid.Sbase
+            _Ppvmpp = self.Ppv_calc(self.Vdcmpp)*BaseValues.Sbase
             
             _Sinsol_list.append(S)
             _Vdcmpp_list.append(_Vdcmpp)
@@ -124,7 +124,7 @@ class PV_Module(object):
         self.z = np.polyfit(_x, _y, 3)
         utility_functions.print_to_terminal('Found polynomial for MPP :{:.4f}x^3 + {:.4f}x^2 +{:.4f}x^1 + {:.4f}!'.format(self.z[0],self.z[1],self.z[2], self.z[3]))
     
-class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,Grid):
+class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,BaseValues):
     """
        Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
        control systems.
@@ -166,22 +166,22 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
                              Sinverter_rated = 50.0e3,Vrms_rated = None,
                              ia0 = 0+0j,xa0 =0+0j , ua0 = 0+0j,\
                              xDC0 = 0,xQ0 = 0,xPLL0 = 0.0,wte0 = 2*math.pi,\
-                             gridVoltagePhaseA=.50+0j,\
-                             gridVoltagePhaseB=-.25-.43301270j,\
-                             gridVoltagePhaseC=-.25+.43301270j,\
-                             gridFrequency = 2*math.pi*60.0,\
+                             gridVoltagePhaseA = None,\
+                             gridVoltagePhaseB = None,\
+                             gridVoltagePhaseC = None,\
+                             gridFrequency = None,\
                              standAlone=True,STEADY_STATE_INITIALIZATION=False,\
-                             pvderConfig=None): 
+                             pvderConfig=None): #.50+0j,.25-.43301270j,-.25+.43301270j,2*math.pi*60.0
         
         """Creates an instance of `SolarPV_DER_ThreePhase`.
         
         Args:
           events: An instance of `SimulationEvents`.
           grid_model: An instance of `GridModel`(only need to be suppled for stand alone simulation).
-          Sinverter_rated: A scalar specifying the rated power of the DER.
-          ia0,xa0,ua0: Complex scalars specifying the initial value of inverter states in the DER instance.
+          Sinverter_rated: A scalar specifying the rated power (VA) of the DER.
+          ia0,xa0,ua0: Complex scalars (p.u.) specifying the initial value of inverter states in the DER instance.
           xDC0,xQ0,xPLL0,wte0: Real scalars specifying the initial value of inverter states in the DER instance.
-          gridVoltatePhaseA,gridVoltatePhaseA,gridVoltatePhaseA = Complex scalar specifying initial voltage at PCC - LV side from external program.
+          gridVoltatePhaseA,gridVoltatePhaseA,gridVoltatePhaseA = Complex scalar specifying initial voltage phasor (V) at PCC - LV side from external program (only need to be suppled if model is not stand alone).
           standAlone: A boolean specifying if the DER instance is a stand alone simulation or part of a larger simulation.
           STEADY_STATE_INITIALIZATION: A boolean specifying whether states in the DER instance will be initialized to steady state values.
           pvderConfig: A dictionary containing configuration parameters that may be supplied from an external program.
@@ -191,10 +191,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
           ValueError: If rated DC link voltage is not sufficient.
         """
         self.standAlone = standAlone
-        if not self.standAlone:
-            self.gridVoltagePhaseA, self.gridVoltagePhaseB, self.gridVoltagePhaseC = gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC
-            self.gridFrequency = gridFrequency
-        
+        self.initialize_grid_voltage(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
         self.Vrms_rated = Vrms_rated
         
         #Increment count to keep track of number of PV-DER model instances
@@ -209,102 +206,32 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
             super(SolarPV_DER_ThreePhase,self).__init__(events,Sinverter_rated)
         
         self.STEADY_STATE_INITIALIZATION = STEADY_STATE_INITIALIZATION
+        
         self.attach_grid_model(grid_model)
         self.initialize_DER(Sinverter_rated)
-        self.check_voltage()
-        #LVRT settings
-        self.LVRT_initialize(pvderConfig)
+        
+        
+        self.LVRT_initialize(pvderConfig) #LVRT settings
         self.reset_reference_counters()
         
         #Reference
-        self.Q_ref = self.get_Qref()   
+        self.Q_ref = self.get_Qref(t=0.0)   
        
         #DC link voltage
         self.Vdc = self.Vdc_ref
         #PV module power output
         self.Ppv = self.Ppv_calc(self.Vdc_actual)
         
-        #Initialize all states with steady state values at current operating point
-        if self.STEADY_STATE_INITIALIZATION == True:
-            #ia0,xa0,ua0,ib0,xb0,ub0,ic0,xc0,uc0,Vdc0,xDC0,xQ0,xPLL0,wte0
-            self.steady_state_calc()
-        else:
-            ib0 = utility_functions.Ub_calc(ia0)
-            xb0 = utility_functions.Ub_calc(xa0)
-            ub0 = utility_functions.Ub_calc(ua0)
-            ic0 = utility_functions.Uc_calc(ia0)
-            xc0 = utility_functions.Uc_calc(xa0)
-            uc0 = utility_functions.Uc_calc(ua0)
-        
-            #Phase a
-            self.ia = ia0
-            self.xa = xa0
-            self.ua = ua0
+        self.initialize_states(ia0,xa0,ua0,xDC0,xQ0,xPLL0,wte0) #initialize_states
 
-            #Phase b
-            self.ib = ib0
-            self.xb = xb0  #Shift by -120 degrees
-            self.ub = ub0
-
-            #Phase c
-            self.ic = ic0
-            self.xc = xc0   #Shift by +120 degrees
-            self.uc = uc0
-
-            #DC link voltage and reactive power controller
-            self.xDC = xDC0
-            self.xQ = xQ0
-
-            #PLL
-            self.xPLL = xPLL0
-            self.wte = wte0
-
-        #Derived voltages
-        self.vta = self.vta_calc()
-        self.vtb = self.vtb_calc()
-        self.vtc = self.vtc_calc()
-        self.va = self.va_calc()
-        self.vb = self.vb_calc()
-        self.vc = self.vc_calc()
-        #Grid frequency
-        self.wgrid_measured = self.wgrid_calc()
-        
-        #Load current
-        self.iaload1 = self.iphload1_calc(self.va)
-        self.ibload1 = self.iphload1_calc(self.vb)
-        self.icload1 = self.iphload1_calc(self.vc)
-                
-        #Derived powers
-        self.S = self.S_calc()
-        self.S_PCC = self.S_PCC_calc()
-        self.S_PCCa = self.S_PCCph_calc(self.va,self.ia)
-        self.S_PCCb = self.S_PCCph_calc(self.vb,self.ib)
-        self.S_PCCc = self.S_PCCph_calc(self.vc,self.ic)
-        self.S_load1 = self.S_load1_calc()
-        
-        if self.standAlone:
-            self.S_G = self.S_G_calc()
-            
-        #RMS voltages
-        self.Vrms = self.Vrms_calc()
-        self.Vtrms = self.Vtrms_calc()
-        self.Irms = self.Irms_calc()     #Inverter RMS current
-        
-        if self.DO_EXTRA_CALCULATIONS:
-            self.Vtabrms = self.Vtabrms_calc()
-            self.Vabrms = self.Vabrms_calc()
+        self.update_voltages()
+        self.update_power()        
+        self.update_RMS()
             
         #Reference currents
-        self.ia_ref = self.ia_ref_calc()
-        self.ib_ref = self.ib_ref_calc()
-        self.ic_ref = self.ic_ref_calc()
-        #Convert to time domain
-        self.vat,self.vbt,self.vct = utility_functions.phasor_to_time(upha = self.va,uphb = self.vb,uphc = self.vc,w=self.wgrid_measured,t=0.0)
-        #Convert from 3ph time domain to d-q using Parks transformation
-        self.vd,self.vq,self.v0 = utility_functions.abc_to_dq0(self.vat,self.vbt,self.vct,self.wte) #Grid voltage
+        self.update_iref()       
         
-        #PLL frequency
-        self.we = self.we_calc()
+        self.update_inverter_frequency(t=0.0)
     
     @property                         #Decorator used for auto updating
     def y0(self):
@@ -385,6 +312,74 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         self.xPLL = xPLL
         self.wte = wte
         
+    def update_voltages(self):
+        """Update voltages."""
+        
+        #Update inverter terminal voltage
+        self.vta = self.vta_calc()
+        self.vtb = self.vtb_calc()
+        self.vtc = self.vtc_calc()
+                
+        #Update PCC LV side voltage
+        self.va = self.va_calc()
+        self.vb = self.vb_calc()
+        self.vc = self.vc_calc()        
+   
+    def update_RMS(self):
+        """Update RMS voltages."""
+        
+        self.Vtrms = self.Vtrms_calc()
+        self.Vrms = self.Vrms_calc()
+        self.Irms = self.Irms_calc()
+        
+        #Update RMS values
+        if self.DO_EXTRA_CALCULATIONS:
+            self.Vtabrms = self.Vtabrms_calc()        
+            self.Vabrms = self.Vabrms_calc()        
+            
+    def update_power(self):
+        """Update RMS voltages."""
+        
+        #Update power output
+        self.S = self.S_calc()
+        self.S_PCC = self.S_PCC_calc()
+        
+        if self.DO_EXTRA_CALCULATIONS:
+            self.S_PCCa = self.S_PCCph_calc(self.va,self.ia)
+            self.S_PCCb = self.S_PCCph_calc(self.vb,self.ib)
+            self.S_PCCc = self.S_PCCph_calc(self.vc,self.ic)
+        
+        if self.standAlone:  #Update load current and grid voltage source power only in stand alone mode
+            self.iaload1 = self.iphload1_calc(self.va)
+            self.ibload1 = self.iphload1_calc(self.vb)
+            self.icload1 = self.iphload1_calc(self.vc)
+            
+            self.S_G = self.S_G_calc()
+            self.S_load1 = self.S_load1_calc()       
+    
+    def update_iref(self):
+        """Update reference reference current."""
+    
+        #Get current controller setpoint
+        self.ia_ref = self.ia_ref_calc()
+        self.ib_ref = self.ib_ref_calc()
+        self.ic_ref = self.ic_ref_calc()
+    
+    def update_inverter_frequency(self,t):
+        """Update d-q quantities."""
+        
+        self.wgrid_measured = self.wgrid_calc() #Update grid frequency
+        
+        #d-q transformation        
+        #Convert PCC LV side voltage from phasor to time domain
+        self.vat,self.vbt,self.vct = utility_functions.phasor_to_time(upha = self.va,uphb = self.vb,uphc = self.vc,w=self.wgrid_measured,t=t)
+        
+        #Convert from 3ph time domain to d-q using Parks transformation
+        self.vd,self.vq,self.v0 = utility_functions.abc_to_dq0(self.vat,self.vbt,self.vct,self.wte) #PCC LV side voltage
+        
+        self.we = self.we_calc() #Calculate inverter frequency from PLL equation
+        self.winv = self.we
+    
     def ODE_model(self,y,t):
         """Derivatives for the equation."""
         
@@ -402,101 +397,21 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         #self.xb = utility_functions.Ub_calc(self.xa)
         #self.xc = utility_functions.Uc_calc(self.xa)
         
-        #PV conditions
-        Sinsol_new,Tactual_new = self.events.solar_events(t)
-        if abs(self.Sinsol- Sinsol_new) or abs(self.Tactual- Tactual_new) > 0.0:
-             
-            self.Sinsol = Sinsol_new
-            self.Tactual = Tactual_new
-            utility_functions.print_to_terminal("{}:PV module current output changed from {:.3f} A to {:.3f} A at {:.3f}".format(self.name,self.Iph,self.Iph_calc(),t))
-            self.Iph = self.Iph_calc()
+        self.update_Ppv(t)
+        self.update_Zload1(t)        
         
-        self.Ppv = self.Ppv_calc(self.Vdc_actual)
+        self.update_voltages()
+        self.update_power()
+        self.update_RMS()
         
-        #Load at PCC LV side
-        if self.standAlone:
-            Zload1_actual_new =  self.events.load_events(t)
-            Zload1_new = Zload1_actual_new/self.grid_model.Zbase
+        self.update_Q_Vdc_ref(t)               
+        self.update_iref()
         
-            if abs(self.Zload1- Zload1_new)> 0.0:
-               self.Zload1 = Zload1_new
-               utility_functions.print_to_terminal("Load at PCC LV side changed from {:.3f} VA to {:.3f} VA at {:.3f}".format(self.S_load1,self.S_load1_calc(),t))
-        else:
-            self.Zload1 =  self.Zload1    #Load at PCC-LV side is always constant
+        self.update_inverter_frequency(t)
+        self.update_ridethrough_flags(t)
         
-        #Update inverter terminal voltage
-        self.vta = self.vta_calc()
-        self.vtb = self.vtb_calc()
-        self.vtc = self.vtc_calc()
-        
-        #Update PCC LV side voltage
-        self.va = self.va_calc()
-        self.vb = self.vb_calc()
-        self.vc = self.vc_calc()
-        self.Vrms = self.Vrms_calc()
-        #Update grid frequency
-        self.wgrid_measured = self.wgrid_calc()
-        
-        #Update power output
-        self.S = self.S_calc()
-        self.S_PCC = self.S_PCC_calc()
-        
-        #Update RMS values
-        if self.DO_EXTRA_CALCULATIONS:
-            self.Vtrms = self.Vtrms_calc()
-            self.Vtabrms = self.Vtabrms_calc()        
-            self.Vabrms = self.Vabrms_calc()        
-            self.Irms = self.Irms_calc()
-            self.S_PCCa = self.S_PCCph_calc(self.va,self.ia)
-            self.S_PCCb = self.S_PCCph_calc(self.vb,self.ib)
-            self.S_PCCc = self.S_PCCph_calc(self.vc,self.ic)
-        
-        #Update load current in stand alone mode
-        if self.standAlone:
-            self.iaload1 = self.iphload1_calc(self.va)
-            self.ibload1 = self.iphload1_calc(self.vb)
-            self.icload1 = self.iphload1_calc(self.vc)
-            
-            self.S_G = self.S_G_calc()
-            self.S_load1 = self.S_load1_calc()
-        
-        self.Q_ref = self.get_Qref()
-        #Get DC link voltage set point
-        #if self.MPPT_ENABLE == True:
-        #    self.Vdc_ref_new = self.MPP_table()
-        #else:
-        #    self.Vdc_ref_new = self.Vdcnominal
-        #if self.RAMP_ENABLE:
-        #    self.Vdc_ramp(t)
-        
-        self.Vdc_ref = self.get_Vdc_ref(t)
-        #Get current controller setpoint
-        self.ia_ref = self.ia_ref_calc()
-        self.ib_ref = self.ib_ref_calc()
-        self.ic_ref = self.ic_ref_calc()
-        
-        #d-q transformation
-        
-        #Convert PCC LV side voltage from phasor to time domain
-        self.vat,self.vbt,self.vct = utility_functions.phasor_to_time(upha = self.va,uphb = self.vb,uphc = self.vc,w=self.wgrid_measured,t=t)
-        
-        #Convert from 3ph time domain to d-q using Parks transformation
-        self.vd,self.vq,self.v0 = utility_functions.abc_to_dq0(self.vat,self.vbt,self.vct,self.wte) #PCC LV side voltage
-        
-        #Calculate inverter frequency from PLL equation
-        self.we = self.we_calc()
-        self.winv = self.we
-
-        if self.LVRT_ENABLE == True:
-            self.LVRT(t)
-            if self.LVRT_TRIP == True and self.LVRT_RECONNECT == False:
-               self.PV_DER_disconnect()
-        #LFRT trip logic
-        if self.LFRT_ENABLE == True:
-            self.FRT(t)
-            if self.LFRT_TRIP == True and self.LFRT_RECONNECT == False:
-               self.PV_DER_disconnect() 
         #print(self.S.imag*self.Sbase,self.S_PCC.imag*self.Sbase)
+        
         #Phase a inverter output current
         diaR = (1/self.Lf)*(-self.Rf*self.ia.real - self.va.real + self.vta.real) + (self.winv/self.wbase)*self.ia.imag 
         diaI = (1/self.Lf)*(-self.Rf*self.ia.imag - self.va.imag + self.vta.imag) - (self.winv/self.wbase)*self.ia.real  
@@ -685,99 +600,25 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
             varInd[entry]=n
             n+=1
         
-        #PV conditions
-        Sinsol_new,Tactual_new = self.events.solar_events(t)
-        if abs(self.Sinsol- Sinsol_new) or abs(self.Tactual- Tactual_new) > 0.0:
-             
-            self.Sinsol = Sinsol_new
-            self.Tactual = Tactual_new
-            utility_functions.print_to_terminal("PV panel current output changed from {:.3f} A to {:.3f} A at {:.3f}".format(self.Iph,self.Iph_calc(),t))
-            self.Iph = self.Iph_calc()
+        self.update_Ppv(t)
         
-        self.Ppv = self.Ppv_calc(self.Vdc_actual)
+        self.update_voltages()
+        self.update_power()
+        self.update_RMS()
         
-        """
-        #Load at PCC LV side
-        if self.standAlone:
-            Zload1_actual_new =  self.events.load_events(t)
-            Zload1_new = Zload1_actual_new/self.grid_model.Zbase
-        
-            if abs(self.Zload1- Zload1_new)> 0.0:
-               self.Zload1 = Zload1_new
-               utility_functions.print_to_terminal("Load at PCC LV side changed from {:.3f} VA to {:.3f} VA at {:.3f}".format(self.S_load1,self.S_load1_calc(),t))
-        else:
-            self.Zload1 =  self.Zload1    #Load at PCC-LV side is always constant
-        """
-        
-        #Update inverter terminal voltage
-        self.vta = self.vta_calc()
-        self.vtb = self.vtb_calc()
-        self.vtc = self.vtc_calc()
-        
-        #Update PCC LV side voltage
-        self.va = self.va_calc()
-        self.vb = self.vb_calc()
-        self.vc = self.vc_calc()
-        self.Vrms = self.Vrms_calc()
-        #Update grid frequency
-        self.wgrid_measured = self.wgrid_calc()
-        
-        #Update RMS values
-        if self.DO_EXTRA_CALCULATIONS:
-            self.Vtrms = self.Vtrms_calc()
-            self.Vtabrms = self.Vtabrms_calc()        
-            self.Vabrms = self.Vabrms_calc()        
-            self.Irms = self.Irms_calc()        
-        
-        #Update power output
-        self.S = self.S_calc()
-        self.S_PCC = self.S_PCC_calc()
-        
-        if self.standAlone:
-            #Update load current in stand alone mode
-            self.iaload1 = self.iphload1_calc(self.va)
-            self.ibload1 = self.iphload1_calc(self.vb)
-            self.icload1 = self.iphload1_calc(self.vc)
-            
-            self.S_G = self.S_G_calc()
-            self.S_load1 = self.S_load1_calc()
-        
-        #Get reactive power set-point
-        self.Q_ref = self.get_Qref()  
-        """
-        #Get DC link voltage set point
-        if self.MPPT_ENABLE == True:
-            self.Vdc_ref_new = self.MPP_table()
-        else:
-            self.Vdc_ref_new = self.Vdcnominal
-        
-        if self.RAMP_ENABLE:
-            self.Vdc_ramp(t)
-        """
-        self.Vdc_ref = self.get_Vdc_ref(t)
-        #Get current controller setpoint
-        self.ia_ref = self.ia_ref_calc()
-        self.ib_ref = self.ib_ref_calc()
-        self.ic_ref = self.ic_ref_calc()
+        self.update_Q_Vdc_ref(t)         
+        self.update_iref()
         
         #d-q transformation
         
-        #Convert PCC LV side voltage from phasor to time domain
-        self.vat,self.vbt,self.vct = utility_functions.phasor_to_time(upha = self.va,uphb = self.vb,uphc = self.vc,w=self.wgrid_measured,t=t)
-        
-        #Convert from 3ph time domain to d-q using Parks transformation
-        self.vd,self.vq,self.v0 = utility_functions.abc_to_dq0(self.vat,self.vbt,self.vct,self.wte) #PCC LV side voltage
-        
-        #Calculate inverter frequency from PLL equation
-        self.we = self.we_calc()
-        self.winv = self.we
+        self.update_inverter_frequency(t)
        
         #LVRT trip logic
         if self.LVRT_TRIP == True and self.LVRT_RECONNECT == False:
-               self.PV_DER_disconnect()
+            self.PV_DER_disconnect()
         #LFRT trip logic
         if self.LFRT_TRIP == True and self.LFRT_RECONNECT == False:
-               self.PV_DER_disconnect() 
+            self.PV_DER_disconnect() 
         
         #Phase a inverter output current
         
@@ -1167,6 +1008,3 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
                                           0.5*rc*math.cos(theta_c)*math.sin(self.wte) - 0.8660254037*rc*math.cos(theta_c)*math.cos(self.wte))
         
         return J
-    
-   
-

@@ -6,16 +6,11 @@ import six
 from pvder.simulation_utilities import SimulationUtilities
 from pvder import utility_functions
 
-class Grid(SimulationUtilities):
-    """ Class for grid"""
+
+
+class BaseValues():
+    """Class to store base values."""
     
-    grid_count = 0
-    #Number of ODE's
-    n_ODE = 0
-    
-    #Grid voltage time constant
-    Vgridrated =  20415.0 # L-G peak to peak equivalent to 25000 V L-L RMS
-    Tgrid = 0.000001
     Vbase = 500.0  #L-G peak"
     Sbase = 50e3 #VA base
     wbase = 2*math.pi*60.0
@@ -26,11 +21,15 @@ class Grid(SimulationUtilities):
     Lbase = Zbase/wbase
     Cbase = 1/(Zbase*wbase)
     
-    #Simulation time steps
-    tStart = 0.0
-    tStop = 0.5
-    tInc = 0.001
-    t = np.arange(tStart, tStop, tInc)
+class Grid(BaseValues,SimulationUtilities):
+    """ Class for grid"""
+    
+    grid_count = 0
+    #Number of ODE's
+    n_ODE = 0
+    
+    #Grid voltage time constant
+    Vgridrated =  20415.0 # L-G peak to peak equivalent to 25000 V L-L RMS
     
     def __init__(self,events,unbalance_ratio_b=1.0,unbalance_ratio_c=1.0,Z2_actual = 1.61 + 1j*5.54):
         """Creates an instance of `GridSimulation`.

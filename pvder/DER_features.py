@@ -42,6 +42,21 @@ class PVDER_SmartFeatures():
         """
         pass
     
+    def update_ridethrough_flags(self,t):
+        """Check VRT and FRT logic."""
+        
+        #LVRT trip logic        
+        if self.LVRT_ENABLE == True:
+            self.LVRT(t)
+            if self.LVRT_TRIP == True and self.LVRT_RECONNECT == False:
+                self.PV_DER_disconnect()
+        
+        #LFRT trip logic
+        if self.LFRT_ENABLE == True:
+            self.FRT(t)
+            if self.LFRT_TRIP == True and self.LFRT_RECONNECT == False:
+                self.PV_DER_disconnect() 
+    
     def LVRT_initialize(self,pvderConfig=None):
         """Function to initialize LVRT settings."""
         if pvderConfig is None:

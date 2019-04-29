@@ -3,16 +3,16 @@ import operator
 import math
 import cmath
 import numpy as np
-
-from pvder.grid_components import Grid
+    
+from pvder.grid_components import BaseValues
 from pvder import utility_functions
 
-class PVDER_ModelUtilities(Grid):
+class PVDER_ModelUtilities(BaseValues):
     """
        Utility class for single phase and three phase PV-DER model.
     """
    
-    Vdcbase = Grid.Vbase #DC side base value is same as AC side base value
+    Vdcbase = BaseValues.Vbase #DC side base value is same as AC side base value
     
     #Ramp control
     RAMP_ENABLE = False
@@ -157,16 +157,36 @@ class PVDER_ModelUtilities(Grid):
         """Calculate inverter frequency from PLL."""
         
         return  self.Kp_PLL*(self.vd) + self.xPLL + 2*math.pi*60.0
+        
+    def update_Ppv(self,t):
+        """Update load impedance at PCC-LV side."""
+       
+        Sinsol_new,Tactual_new = self.events.solar_events(t)
+        if abs(self.Sinsol- Sinsol_new) or abs(self.Tactual- Tactual_new) > 0.0:    #Update Iph only if solar insolation changes
+             
+            self.Sinsol = Sinsol_new
+            self.Tactual = Tactual_new
+            utility_functions.print_to_terminal("{}:PV module current output changed from {:.3f} A to {:.3f} A at {:.3f}".format(self.name,self.Iph,self.Iph_calc(),t))
+            self.Iph = self.Iph_calc()
+        
+        self.Ppv = self.Ppv_calc(self.Vdc_actual)
     
-    def get_Qref(self):
-        """Output reactive power set-point."""
-        if self.VOLT_VAR_ENABLE == True:
-            _Qref= self.Volt_VAR_logic(t)
-        elif self.Qref_EXTERNAL:
-            _Qref = self.Q_ref
-        else:
-            _Qref = 1.0/self.Sbase
-        return _Qref
+    def update_Q_Vdc_ref(self,t):
+        """Update DC link voltage reference, and reactive power reference."""
+        
+        self.Q_ref = self.get_Qref(t)
+        self.Vdc_ref = self.get_Vdc_ref(t)
+    
+    def update_Zload1(self,t):
+        """Update load impedance at PCC-LV side."""
+        
+        if self.standAlone:   #Update load at PCC LV side only in stand alone mode
+            Zload1_actual_new =  self.events.load_events(t)
+            Zload1_new = Zload1_actual_new/BaseValues.Zbase
+        
+            if abs(self.Zload1- Zload1_new)> 0.0:
+                self.Zload1 = Zload1_new
+                utility_functions.print_to_terminal("Load at PCC LV side changed from {:.3f} VA to {:.3f} VA at {:.3f}".format(self.S_load1,self.S_load1_calc(),t))
     
     def S_PCCph_calc(self,vph,iph):
         """Inverter apparent power output - phase a/b/c"""
@@ -274,6 +294,17 @@ class PVDER_ModelUtilities(Grid):
         if PRINT_ERROR:
             print('Active power output error:{:.4f}\nReactive power output error:{:.4f}'.format(abs(self.Pt_phasor-self.Pt_RMS),abs(self.Qt_phasor-self.Qt_RMS)))    
             print('Inverter filter active power loss error:{:.4f}\nInverter filter reactive power loss error:{:.4f}'.format(abs(self.Pf_phasor-self.Pf_RMS),abs(self.Qf_phasor-self.Qf_RMS)))
+    
+    
+    def get_Qref(self,t):
+        """Output reactive power set-point."""
+        if self.VOLT_VAR_ENABLE == True:
+            _Qref= self.Volt_VAR_logic(t)
+        elif self.Qref_EXTERNAL:
+            _Qref = self.Q_ref
+        else:
+            _Qref = 0.0/self.Sbase
+        return _Qref
     
     def MPP_table(self):
         """Method to output Vdc reference corresponding to MPP at different insolation levels values."""

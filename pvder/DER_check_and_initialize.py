@@ -3,25 +3,74 @@ import math
 import numpy as np
 from scipy.optimize import fsolve, minimize
 
-from pvder.grid_components import Grid
+from pvder.grid_components import BaseValues
 from pvder import utility_functions
 
-class PVDER_SetupUtilities():
+class PVDER_SetupUtilities(BaseValues):
     """
        Utility class for error checking during model initialization.
     """
     
+    def initialize_grid_voltage(self,gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency):
+        """Get grid voltage."""
+        
+        if not self.standAlone:
+            assert  gridVoltagePhaseA != None and gridFrequency != None, 'Voltage and frequency of grid voltage source need to be supplied if model is not stand alone!'
+            self.gridVoltagePhaseA, self.gridVoltagePhaseB, self.gridVoltagePhaseC = gridVoltagePhaseA/self.Vbase, gridVoltagePhaseB/self.Vbase, gridVoltagePhaseC/self.Vbase
+            self.gridFrequency = gridFrequency
+    
+    def initialize_states(self,ia0,xa0,ua0,xDC0,xQ0,xPLL0,wte0):
+        """Initialize inverter states."""
+        
+         #Initialize all states with steady state values at current operating point
+        if self.STEADY_STATE_INITIALIZATION == True:
+            #ia0,xa0,ua0,ib0,xb0,ub0,ic0,xc0,uc0,Vdc0,xDC0,xQ0,xPLL0,wte0
+            self.steady_state_calc()
+        else:
+            #Phase a
+            self.ia = ia0
+            self.xa = xa0
+            self.ua = ua0
+            
+            #DC link voltage and reactive power controller
+            self.xDC = xDC0
+            self.xQ = xQ0
+
+            #PLL
+            self.xPLL = xPLL0
+            self.wte = wte0
+
+            if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+                ib0 = utility_functions.Ub_calc(ia0)
+                xb0 = utility_functions.Ub_calc(xa0)
+                ub0 = utility_functions.Ub_calc(ua0)
+                
+                ic0 = utility_functions.Uc_calc(ia0)
+                xc0 = utility_functions.Uc_calc(xa0)
+                uc0 = utility_functions.Uc_calc(ua0)
+        
+                #Phase b
+                self.ib = ib0
+                self.xb = xb0  #Shift by -120 degrees
+                self.ub = ub0
+
+                #Phase c
+                self.ic = ic0
+                self.xc = xc0   #Shift by +120 degrees
+                self.uc = uc0
+
     def initialize_DER(self,Sinverter_rated):
         
         if str(int(Sinverter_rated/1e3)) in self.Sinverter_list:
             print('Creating PV inverter instance for DER with rating:' + str(int(Sinverter_rated/1e3)) + ' kVA')
             self.Sinverter_rated = Sinverter_rated #Inverter rating in kVA
-            self.Sinverter_nominal = (self.Sinverter_rated/Grid.Sbase) #Converting to p.u. value
-           
-            #Initialize inverter parameters according to DER rating
-            self.initialize_inverter_parameters()
-            #Initialize control loop gains according to DER rating
-            self.initialize_controller_gains()
+            self.Sinverter_nominal = (self.Sinverter_rated/BaseValues.Sbase) #Converting to p.u. value
+            
+            self.initialize_inverter_parameters() #Initialize inverter parameters according to DER rating
+            
+            self.check_voltage() #Check if voltage is feasible
+            
+            self.initialize_controller_gains()  #Initialize control loop gains according to DER rating
            
         else:
             raise ValueError('PV inverter parameters not available for DER with rating: ' + Sinverter_rated +' kVA')
@@ -36,11 +85,12 @@ class PVDER_SetupUtilities():
             self.Vrms_rated = self.Varated/math.sqrt(2)
         else:
             self.Varated = self.Vrms_rated*math.sqrt(2)
-                
-        self.a = Grid.Vgridrated/self.Varated  #Transformer turns ratio
         
-        self.Vdcnominal = (self.Vdcrated/self.Vdcbase)   #Converting to p.u. value
-        self.Vanominal = self.Varated/Grid.Vbase #Converting to p.u. value
+        if self.standAlone:
+            self.a = self.grid_model.Vgridrated/self.Varated  #Transformer turns ratio
+        
+        self.Vdcnominal = self.Vdcrated/self.Vdcbase   #Converting to p.u. value
+        self.Vanominal = self.Varated/BaseValues.Vbase #Converting to p.u. value
         self.Vrms_ref =  self.Vanominal/math.sqrt(2) 
         
         if self.MPPT_ENABLE:
@@ -60,13 +110,13 @@ class PVDER_SetupUtilities():
         self.Rf_actual =  self.circuit_parameters[_DER_rating]['Rf_actual'] #Filter resistance
         self.Lf_actual = self.circuit_parameters[_DER_rating]['Lf_actual']  #Filter inductance
         self.C_actual =  self.circuit_parameters[_DER_rating]['C_actual']   #DC link capacitance
-        self.Zf_actual =  self.Rf_actual + 1j*self.Lf_actual*Grid.wbase
+        self.Zf_actual =  self.Rf_actual + 1j*self.Lf_actual*BaseValues.wbase
         
-        self.Rf = self.Rf_actual/Grid.Zbase        # VSC Filter resistance 
-        self.Lf = self.Lf_actual/Grid.Lbase        # VSC Filter inductance
-        self.Xf = (self.Lf_actual*Grid.wbase)/Grid.Zbase # VSC Filter reactance
-        self.C = self.C_actual/Grid.Cbase          #DC link capacitor capacitance
-        self.Zf = self.Zf_actual/Grid.Zbase
+        self.Rf = self.Rf_actual/BaseValues.Zbase        # VSC Filter resistance 
+        self.Lf = self.Lf_actual/BaseValues.Lbase        # VSC Filter inductance
+        self.Xf = (self.Lf_actual*BaseValues.wbase)/BaseValues.Zbase # VSC Filter reactance
+        self.C = self.C_actual/BaseValues.Cbase          #DC link capacitor capacitance
+        self.Zf = self.Zf_actual/BaseValues.Zbase
         
         #Interconnection to PCC - HV side
         #Actual values
@@ -75,9 +125,9 @@ class PVDER_SetupUtilities():
         self.L1_actual = self.Z1_actual.imag/(2*math.pi*60.0)
         
         #Per-unit values
-        self.R1 = self.R1_actual/Grid.Zbase  #Line/transformer resistance
-        self.L1 = self.L1_actual/Grid.Lbase  #Line/transformer inductance
-        self.Z1 =self.Z1_actual/Grid.Zbase    #Line/transformer impedance
+        self.R1 = self.R1_actual/BaseValues.Zbase  #Line/transformer resistance
+        self.L1 = self.L1_actual/BaseValues.Lbase  #Line/transformer inductance
+        self.Z1 =self.Z1_actual/BaseValues.Zbase    #Line/transformer impedance
         
         #Exhibit different behavior when used in standalone mode
         if self.standAlone:
@@ -92,9 +142,9 @@ class PVDER_SetupUtilities():
         self.Lload1_actual = self.Z1_actual.imag/(2*math.pi*60.0)
         
         #Per-unit values
-        self.Rload1 = self.Rload1_actual/Grid.Zbase  #resistance in per unit value
-        self.Lload1 = self.Lload1_actual/Grid.Lbase  #inductance in per unit value
-        self.Zload1 = self.Zload1_actual/Grid.Zbase
+        self.Rload1 = self.Rload1_actual/BaseValues.Zbase  #resistance in per unit value
+        self.Lload1 = self.Lload1_actual/BaseValues.Lbase  #inductance in per unit value
+        self.Zload1 = self.Zload1_actual/BaseValues.Zbase
         
         self.transformer_name = 'transformer_'+str(self.PV_DER_ID)
         
