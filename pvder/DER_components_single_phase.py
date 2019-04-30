@@ -32,7 +32,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
     
     #Inverter current overload rating (Max 10s)
     Ioverload = 1.5
-    inverter_ratings = {'10':{'Varated':245.0,'Vdcrated':750.0},
+    inverter_ratings = {'10':{'Varated':250.0,'Vdcrated':550.0},
                         }
     
     circuit_parameters = {'10':{'Rf_actual':0.002,'Lf_actual' :25.0e-6,'C_actual':300.0e-6,'Z1_actual':0.0019 + 1j*0.0561},
@@ -103,6 +103,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         self.initialize_DER(Sinverter_rated)
         
         self.LVRT_initialize(pvderConfig) #LVRT settings
+        self.initialize_jacobian()
         self.reset_reference_counters()
         
         #Reference
@@ -122,7 +123,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         #Reference currents
         self.update_iref() 
         
-        self.update_inverter_frequency(t=0.0)
+        self.update_inverter_frequency(t=0.0)        
         
     @property                         #Decorator used for auto updating
     def y0(self):
@@ -354,15 +355,8 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
                                     Vdc,xDC,xQ,\
                                     xPLL,wte)
         
-        #self.xb = utility_functions.Ub_calc(self.xa)
-        #self.xc = utility_functions.Uc_calc(self.xa)
-        
-        J=np.zeros((self.n_total_ODE,self.n_total_ODE))
-        varInd={}; n=0
-        for entry in ['iaR','iaI','xaR','xaI','uaR','uaI','Vdc','xDC','xQ','xPLL','wte']:
-            varInd[entry]=n
-            n+=1
-        
+        J = self.J
+        varInd = self.varInd 
         self.update_Ppv(t)
         #self.update_Zload1(t) 
         

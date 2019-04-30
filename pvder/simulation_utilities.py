@@ -306,20 +306,7 @@ class SimulationUtilities():
         self.check_simulation(infodict,t) #Check whether solver successful for all time intervals
         
         return solution,infodict
-    """
-    def solve_ODE(self):
-        Solve given system of ODE's.
-        
-        timer_start = time.time()
-        six.print_("{}:Simulation started at {} s and will end at {} s".format(self.name,self.tStart,self.tStop))
-        if self.jacFlag:
-            six.print_("{}:Analytical Jacobian will be provided to ODE solver.".format(self.name))
-        
-        solution,infodict  = self.call_ODE_solver(self.ODE_model,self.jac_ODE_model,self.y0,self.t)
-        six.print_('{}:Simulation was completed in {}'.format(self.name,time.strftime("%H:%M:%S", time.gmtime(time.time()-timer_start))))
-        
-        return solution
-    """
+
     def check_simulation(self,infodict,t):
         """Check whether the ODE solver failed at any time step."""
         infodict_mused = infodict['mused']

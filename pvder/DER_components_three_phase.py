@@ -212,6 +212,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         
         
         self.LVRT_initialize(pvderConfig) #LVRT settings
+        self.initialize_jacobian()
         self.reset_reference_counters()
         
         #Reference
@@ -589,17 +590,9 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
                                     icR + 1j*icI, xcR + 1j*xcI,ucR + 1j*ucI,\
                                     Vdc,xDC,xQ,\
                                     xPLL,wte)
-        
-        #self.xb = utility_functions.Ub_calc(self.xa)
-        #self.xc = utility_functions.Uc_calc(self.xa)
-        
-        J=np.zeros((self.n_total_ODE,self.n_total_ODE))
-        varInd={}; n=0
-        for entry in ['iaR','iaI','xaR','xaI','uaR','uaI','ibR','ibI','xbR','xbI','ubR','ubI','icR','icI',\
-            'xcR','xcI','ucR','ucI','Vdc','xDC','xQ','xPLL','wte']:
-            varInd[entry]=n
-            n+=1
-        
+
+        J = self.J
+        varInd = self.varInd 
         self.update_Ppv(t)
         
         self.update_voltages()

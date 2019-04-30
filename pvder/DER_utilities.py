@@ -208,6 +208,11 @@ class PVDER_ModelUtilities(BaseValues):
             print('Vdc:{:.2f}\nVta:{:.2f} V'.format(self.Vdc*self.Vbase,self.vta*self.Vbase))
             if type(self).__name__ == 'SolarPV_DER_ThreePhase':
                 print('Vtb:{:.2f} V,Vtb:{:.2f} V\nVtn:{:.2f} V'.format(self.vtb*self.Vbase,self.vtc*self.Vbase,(self.vta+self.vtb+self.vtc)*self.Vbase))
+            
+            print('Va:{:.2f} V'.format(self.va*self.Vbase))
+            if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+                print('Vb:{:.2f} V,Vc:{:.2f} V\nVn:{:.2f} V'.format(self.vb*self.Vbase,self.vc*self.Vbase,(self.vta+self.vtb+self.vtc)*self.Vbase))
+            
             print('Vtrms:{:.2f} V\nVpccrms:{:.2f} V'.format(self.Vtrms*self.Vbase,self.Vrms*self.Vbase))
         
         elif quantity ==  'current':
@@ -388,3 +393,23 @@ class PVDER_ModelUtilities(BaseValues):
         self.Vdc_ref_counter = 0
         
         print('Reference event counters reset!')
+        
+    def initialize_jacobian(self):
+        """Create a Jacobian matrix with zero values."""
+        
+        self.J = np.zeros((self.n_total_ODE,self.n_total_ODE))
+        self.varInd={}; n=0
+        
+        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
+            state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
+                          'Vdc','xDC','xQ','xPLL','wte']
+        
+        elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
+                          'ibR','ibI','xbR','xbI','ubR','ubI',
+                          'icR','icI','xcR','xcI','ucR','ucI',
+                          'Vdc','xDC','xQ','xPLL','wte']            
+            
+        for entry in state_list:
+            self.varInd[entry]=n
+            n+=1
