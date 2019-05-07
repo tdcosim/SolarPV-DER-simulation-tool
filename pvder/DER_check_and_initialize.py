@@ -1,5 +1,6 @@
 from __future__ import division
 import math
+import logging
 import numpy as np
 from scipy.optimize import fsolve, minimize
 
@@ -62,7 +63,7 @@ class PVDER_SetupUtilities(BaseValues):
     def initialize_DER(self,Sinverter_rated):
         
         if str(int(Sinverter_rated/1e3)) in self.Sinverter_list:
-            print('Creating PV inverter instance for DER with rating:' + str(int(Sinverter_rated/1e3)) + ' kVA')
+            logging.debug('Creating PV inverter instance for DER with rating:' + str(int(Sinverter_rated/1e3)) + ' kVA')
             self.Sinverter_rated = Sinverter_rated #Inverter rating in kVA
             self.Sinverter_nominal = (self.Sinverter_rated/BaseValues.Sbase) #Converting to p.u. value
             
@@ -200,20 +201,20 @@ class PVDER_SetupUtilities(BaseValues):
         _Lf_min = self.Vdcrated/(16*self.fswitching*_del_I1max)
         _del_I1max_actual = self.Vdcrated/(16*self.fswitching*self.Lf_actual)
         if _del_I1max_actual > _del_I1max:   #Check if ripple current is less than 10 %
-            print('Filter inductance {:.4} H is acceptable since AC side current ripple is {:.2}% (< 10%)'.format(_Lf_min,_del_I1max_actual/self.Iarated))
+            logging.debug('Filter inductance {:.4} H is acceptable since AC side current ripple is {:.2}% (< 10%)'.format(_Lf_min,_del_I1max_actual/self.Iarated))
         else:
-            print('Warning:Filter inductance {:.4} H results in AC side current ripple of {:.2}% (> 10%)'.format(_Lf_min,_del_I1max_actual/self.Iarated))
+            logging.debug('Warning:Filter inductance {:.4} H results in AC side current ripple of {:.2}% (> 10%)'.format(_Lf_min,_del_I1max_actual/self.Iarated))
         
         _I_ripple = (0.25*self.Vdcrated)/(self.Lf_actual*self.fswitching)  #Maximum ripple voltage (p-p) at DC link
         _V_ripple = self.Vdcrated/(32*self.Lf_actual*self.C_actual*(self.fswitching**2))  #Maximum ripple voltage (p-p) at DC link
         _V_ripple_percentage = (_V_ripple/self.Vdcrated)*100
         if _V_ripple_percentage <= 1.0:   #Check if voltage ripple on DC link is less than 1%
-            print('DC link capacitance of {:.4} F is acceptable since voltage ripple is only {:.2}% (< 1%)'.format(self.C_actual,_V_ripple_percentage))
+            logging.debug('DC link capacitance of {:.4} F is acceptable since voltage ripple is only {:.2}% (< 1%)'.format(self.C_actual,_V_ripple_percentage))
         
         else:
             _V_ripple_ideal = self.Vdcrated*0.01  #1% ripple is acceptable
             _C = self.Vdcrated/(32*self.Lf_actual*_V_ripple_ideal*(self.fswitching**2))
-            print('Warning:DC link capacitance of {:.4} F results in DC link voltage ripple of {:.2}% (> 1%)!Please use at least {} F.'.format(self.C_actual,_V_ripple_percentage,_C))
+            logging.debug('Warning:DC link capacitance of {:.4} F results in DC link voltage ripple of {:.2}% (> 1%)!Please use at least {} F.'.format(self.C_actual,_V_ripple_percentage,_C))
             #warnings.warn('Warning:DC link capacitance of {} F results in DC link voltage ripple of {:.3}% (> 1%)!Please use at least {} F.'.format(self.C_actual,_V_ripple_percentage,_C))               
      
     def power_error_calc(self,x):

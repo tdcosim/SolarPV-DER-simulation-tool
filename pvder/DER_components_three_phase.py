@@ -6,6 +6,7 @@ import scipy
 import six
 import pdb
 import warnings
+import logging
 
 from scipy.optimize import fsolve, minimize
 
@@ -57,7 +58,7 @@ class PV_Module(object):
            (type(self).__name__ == 'SolarPV_DER_ThreePhase' and Sinverter_rated in {50e3,100e3,250e3}):
            
            _DER_rating = str(int(Sinverter_rated/1e3))
-           print('Creating PV module instance for {} DER with rating:{} kVA'.format(type(self).__name__.replace('SolarPV_DER_',''),_DER_rating))
+           logging.debug('Creating PV module instance for {} DER with rating:{} kVA'.format(type(self).__name__.replace('SolarPV_DER_',''),_DER_rating))
            self.Np = self.module_parameters[str(_DER_rating)]['Np']
            self.Ns = self.module_parameters[str(_DER_rating)]['Ns']
            self.Vdcmpp0 = self.module_parameters[str(_DER_rating)]['Vdcmpp0']

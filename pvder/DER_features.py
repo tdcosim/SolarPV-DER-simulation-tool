@@ -106,7 +106,20 @@ class PVDER_SmartFeatures():
         if self.t_reconnect_limit < 0.4 or self.t_reconnect_limit > self.t_LV2_limit:
             raise ValueError('LVRT reconnect time limit {} is infeasible!'.format(self.t_reconnect_limit))
             
+    def show_RT_settings(self,settings_type='LVRT',PER_UNIT=True):
+        """Method to show LVRT settings."""
         
+        if settings_type not in {'LVRT'}:#,'LFRT'
+            raise ValueError('Unknown quantity: ' + str(settings_type))
+        
+        print('\n______{} - {}_____'.format(self.name,settings_type))
+        
+        if settings_type ==  'LVRT':
+            print('Vrms_ref:{:.2f} V\nV_LV0:{:.2f} V\nV_LV1:{:.2f} V\nV_LV2:{:.2f} V'.format(self.Vrms_ref,self.V_LV0,self.V_LV1,self.V_LV2))
+            print('t_LV0:{:.2f} s\nt_LV1:{:.2f} s\nt_LV2:{:.2f} s'.format(self.t_LV0_limit,self.t_LV1_limit,self.t_LV2_limit))
+            print('______Flags______')
+            print('LVRT_ENABLE:{}\nLVRT_INSTANTANEOUS_TRIP:{}\nLVRT_TRIP:{} '.format(self.LVRT_ENABLE,self.LVRT_INSTANTANEOUS_TRIP,self.LVRT_TRIP))    
+    
     def Volt_VAR_logic(self,t):
         """Function for volt_var control."""
         
@@ -161,8 +174,6 @@ class PVDER_SmartFeatures():
         elif _Vrms_measured > self.Vrms_ref:
                 Qref = max(-self.Qlimit,(self.Vrms_ref + self.Vrms_ref*0.01-_Vrms_measured)*_del_V_to_Q)
         return Qref
-    
-
     
     def LVRT(self,t):
         """Function to implement LVRT trip and reconnect logic."""    
