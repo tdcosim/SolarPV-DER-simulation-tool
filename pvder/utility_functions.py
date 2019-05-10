@@ -1,3 +1,5 @@
+"""Commonly used calculations on electrical quantities."""
+
 from __future__ import division
 import numpy as np
 import math
@@ -94,6 +96,7 @@ def abc_to_dq0(ua,ub,uc,wt=2*math.pi):
 
 def dq0_to_abc(ud,uq,u0,wt=2*math.pi):
     """Convert to abc."""
+    
     ua = ud*math.cos(wt) - uq*math.sin(wt) + u0
     ub = ud*math.cos(wt-(2/3)*math.pi) - uq*math.sin(wt-(2/3)*math.pi) + u0
     uc = ud*math.cos(wt+(2/3)*math.pi) - uq*math.sin(wt+(2/3)*math.pi) + u0
@@ -130,18 +133,21 @@ def phasor_to_symmetrical(upha,uphb,uphc):
 
 def phasor_to_zero_sequence(upha,uphb,uphc):
     """Convert to zero sequence.""" 
+    
     u0,u1,u2 = phasor_to_symmetrical(upha,uphb,uphc)
     
     return u0,u0,u0	
 
 def phasor_to_positive_sequence(upha,uphb,uphc):
     """Convert to positive sequence.""" 
+    
     u0,u1,u2 = phasor_to_symmetrical(upha,uphb,uphc)
     
     return u1,u1*pow(math.e,1j*((4/3)*math.pi)),u1*pow(math.e,1j*((2/3)*math.pi))
 
 def phasor_to_negative_sequence(upha,uphb,uphc):
     """Convert to negative sequence.""" 
+    
     u0,u1,u2 = phasor_to_symmetrical(upha,uphb,uphc)
     
     return u2,u2*pow(math.e,1j*((4/3)*math.pi)),u2*pow(math.e,1j*((2/3)*math.pi))
@@ -161,8 +167,8 @@ def m_time_series(u_t,x_t,Kp_GCC):
     return Kp_GCC*u_t + x_t
 
 def extract_matlab_file(file_name,series_label):
+    """Program to extract contents of .mat file having structure with time format."""
     
-    'Program to extract contents of .mat file having structure with time format.'
     matlab_file = sio.loadmat(file_name)
     content_list = []
     sim_time = matlab_file[series_label][0,0][0]
@@ -173,6 +179,7 @@ def extract_matlab_file(file_name,series_label):
  
 def limit_complex(z,low_limit=-1.0,high_limit=1.0):
     """Check if complex number is within limits."""
+    
     assert  low_limit < high_limit,'low limit should be higher than high limit'
     r,phi = cmath.polar(z)
     r = min(max(r,low_limit),high_limit)
@@ -185,6 +192,7 @@ def limit_complex(z,low_limit=-1.0,high_limit=1.0):
     
 def limit_complex_time_series(z,low_limit=-1.0,high_limit=1.0):
     """Check if complex number is within limits."""
+    
     assert  low_limit < high_limit,'low limit should be higher than high limit'
     #z_real = np.minimum(np.maximum(z.real,np.full(len(z),-1)),np.full(len(z),1))
     #z_imag = np.minimum(np.maximum(z.imag,np.full(len(z),-1)),np.full(len(z),1))
@@ -198,11 +206,12 @@ def limit_complex_time_series(z,low_limit=-1.0,high_limit=1.0):
 
 def print_to_terminal(text_string='Printing to terminal!'):
     """Print to terminal."""
+    
     sys.__stdout__.write(text_string+'\n')
     sys.__stdout__.flush()      #Flush buffer to terminal
 
 def print_LVRT_events(simulation_time,voltage,timer_start=0.0,event_name='',print_inline = False,verbose = False):
-
+        """Print logs for LVRT events."""
 
         if event_name == 'LV1_start':
             text_string = '{time_stamp:.4f}:LV1 zone entered at {timer_start:.4f}s for {voltage:.3f} V'\
@@ -271,7 +280,7 @@ def print_LVRT_events(simulation_time,voltage,timer_start=0.0,event_name='',prin
             pass
 
 def print_LFRT_events(simulation_time,frequency,timer_start=0.0,event_name='',print_inline = False,verbose = False):
-    """Function to print LFRT events."""    
+    """Print LFRT events."""    
     
     if event_name == 'LF1_start':
         text_string = '{time_stamp:.4f}:LF1 zone entered at {timer_start:.4f}s for {frequency:.3f} Hz'\

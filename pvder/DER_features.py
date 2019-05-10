@@ -1,9 +1,12 @@
+"""Code for features inside PV-DER model instances."""
+
 from __future__ import division
 
 from pvder import utility_functions
 
 class PVDER_SmartFeatures():
     """Class for describing smart inverter inverter features of PV-DER."""
+    
     #Flags
     VOLT_VAR_ENABLE = False
     VOLT_VAR_FLAG = False
@@ -58,7 +61,8 @@ class PVDER_SmartFeatures():
                 self.PV_DER_disconnect() 
     
     def LVRT_initialize(self,pvderConfig=None):
-        """Function to initialize LVRT settings."""
+        """Initialize LVRT settings."""
+        
         if pvderConfig is None:
             pvderConfig = {}
             pvderConfig['scaling_factor']=10
@@ -89,7 +93,7 @@ class PVDER_SmartFeatures():
         #V1 to V2 - zone 2,V1 < - zone 1
     
     def check_LVRT_settings(self):
-        """Method to do sanity check of LVRT settings."""
+        """Sanity check for LVRT settings."""
         
         if (self.V_LV0 > self.V_LV1 or self.V_LV1 > self.V_LV2) or \
             (self.V_LV0 < 0.45*self.Vrms_ref or self.V_LV0 > 0.6*self.Vrms_ref) or \
@@ -160,6 +164,7 @@ class PVDER_SmartFeatures():
     
     def Qsetpoint_calc(self,t):
         """Function to calculate Qsetpoint."""
+        
         _del_V_to_Q = 200.0 #100.0
         
         _Vrms_measured = self.Vrms
@@ -176,7 +181,8 @@ class PVDER_SmartFeatures():
         return Qref
     
     def LVRT(self,t):
-        """Function to implement LVRT trip and reconnect logic."""    
+        """Function to implement LVRT trip and reconnect logic."""
+        
         #Select RMS voltage source
         _Vrms_measured = self.Vrms   #Select PCC - LV side voltage     
 
@@ -252,7 +258,8 @@ class PVDER_SmartFeatures():
             self.LVRT_TRIP = False
     
     def PV_DER_disconnect(self):
-        """Function to disconnect PV DER from grid.""" 
+        """Function to disconnect PV DER from grid."""
+        
         self.VOLT_VAR_ENABLE = False
         self.VOLT_WATT_ENABLE = False
         
@@ -267,17 +274,9 @@ class PVDER_SmartFeatures():
     
     def FRT(self,t):
         """Frequency ride through and trip logic. """
+        
         t_reconnect_limit = 3.0   #Time lag before reconnecting
-        """
-        #ERCOT standards from NERC PRC - 024
-        F_LF0 = 57.5  #From NERC PRC - 024
-        F_LF1 = 58.0  #From NERC PRC - 024
-        F_LF2 = 58.4  #From NERC PRC - 024
-        F_LF3 = 59.4  #From NERC PRC - 024
-        t_LF1_limit = 2.0      #Time limit for LF1 zone
-        t_LF2_limit = 30.0      #Time limit for LF2 zone
-        t_LF3_limit = 540.0      #Time limit for LF2 zone
-        """
+
         #IEEE 1547-2018 standards
         F_LF1 = 57.0  #From IEEE 1557-2018 Category III    
         F_LF2 = 58.8  #From IEEE 1557-2018 Category III    

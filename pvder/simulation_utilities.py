@@ -1,3 +1,5 @@
+""" Manage simulation results and ODE solver."""
+
 from __future__ import division
 import numpy as np
 import math
@@ -11,6 +13,7 @@ import matplotlib.ticker as ticker
 
 class SimulationResults():
     """ Utility class for simulation results."""
+    
     SAVE_PLOT_JPEG = False
     SAVE_PLOT_SVG = False
     figure_DPI = 1200
@@ -55,7 +58,14 @@ class SimulationResults():
            six.print_('Using SI quantities!')
     
     def group_quantities_for_plotting(self,plot_type):
-        """Plot power from simulation."""
+        """Plot power from simulation.
+        
+        Args:
+          plot_type (string): The quantities to be plotted.
+        
+        Raises:
+             ValueError: If `plot_type` is not available. 
+        """
         
         if plot_type not in {'power','active_power','active_power_Ppv_Pac_PCC','active_power_Pac_PCC','reactive_power','reactive_power_Q_PCC','reactive_power_Q_PCC_smoothed','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','voltage_Vpcclv_smoothed','current','phase_angle','frequency','duty_cycle'}:
             raise ValueError('Unknown plot type: ' + str(plot_type))
@@ -228,6 +238,7 @@ class SimulationResults():
 
     def plot_DER_simulation(self,plot_type = 'power'):
         """Plot desired electrical quantity from simulation."""
+        
         time,plot_values,legends,plot_title,y_labels = self.group_quantities_for_plotting(plot_type)
         time_values = [time]*len(plot_values)
         
@@ -289,7 +300,9 @@ class SimulationResults():
     
 class SimulationUtilities():
     """ Utility class for dynamic simulations."""
+    
     max_steps = 500
+    SOLVER_CONVERGENCE = False
     
     def call_ODE_solver(self,derivatives,jacobian,y,t):
         """Call the SciPy ODE solver."""
@@ -305,17 +318,20 @@ class SimulationUtilities():
         
         self.check_simulation(infodict,t) #Check whether solver successful for all time intervals
         
-        return solution,infodict
+        return solution,infodict,self.SOLVER_CONVERGENCE
 
     def check_simulation(self,infodict,t):
         """Check whether the ODE solver failed at any time step."""
+        
         infodict_mused = infodict['mused']
         
         if any(status == 0 or status > 2 for status in infodict_mused): #Alway check whether solver is failing to converge at any step
-                 assert len(infodict_mused) == len(t)-1,  " The number of methods used should be equal to the number of time steps."
-                 failure_time_point = list(map(lambda status: status == 0 or  status > 2,  infodict_mused)).index(True)
+            assert len(infodict_mused) == len(t)-1,  " The number of methods used should be equal to the number of time steps."
+            
+            failure_time_point = list(map(lambda status: status == 0 or  status > 2,  infodict_mused)).index(True)
+            self.SOLVER_CONVERGENCE = False
                  
-                 raise ValueError('{}:ODE solver failed at {:.6f} s for {} with failure code:{}!\n___States at failure___\nVdc:{:.4f},Vta:{:.4f},Vpcca:{:.4f}\nia:{:.4f}\nPpv:{:.4f},S:{:.4f},\nma:{:.4f},xDC:{:.4f},xQ:{:.4f}'
+            raise ValueError('{}:ODE solver failed at {:.6f} s for {} with failure code:{}!\n___States at failure___\nVdc:{:.4f},Vta:{:.4f},Vpcca:{:.4f}\nia:{:.4f}\nPpv:{:.4f},S:{:.4f},\nma:{:.4f},xDC:{:.4f},xQ:{:.4f}'
 .format(self.name,t[failure_time_point],self.PV_model.name,infodict_mused[failure_time_point],self.PV_model.Vdc*self.PV_model.Vdcbase,self.PV_model.vta*self.PV_model.Vbase,self.PV_model.va*self.PV_model.Vbase,self.PV_model.ia*self.PV_model.Ibase,self.PV_model.Ppv*self.PV_model.Sbase,self.PV_model.S*self.PV_model.Sbase,self.PV_model.ma,self.PV_model.xDC,self.PV_model.xQ))
         
         elif self.DEBUG_SOLVER:
@@ -324,4 +340,6 @@ class SimulationUtilities():
             six.print_('{}:Time:{},Methods:{},Time steps:{}'.format(self.PV_model.name,t,infodict_mused,infodict_time_steps))
             
             if all(status == 1 or status == 2 for status in infodict_mused):
-                six.print_('{}:Simulation successful for all time steps!'.format(self.PV_model.name))             
+                six.print_('{}:Simulation successful for all time steps!'.format(self.PV_model.name))
+        else:
+            self.SOLVER_CONVERGENCE = True

@@ -1,3 +1,5 @@
+"""Code for setting up, and running, and collecting data from PV-DER simulations."""
+
 from __future__ import division
 import numpy as np
 import math
@@ -27,6 +29,7 @@ class ModelUtilities():
     
     def draw_model(self,display_value_type='per_unit'):
         """Draw and render the model using graphs."""
+        
         assert display_value_type in ['per_unit','actual'],'Display can only be in per unit or actual values'
         
         self.display_value_type =display_value_type
@@ -130,12 +133,14 @@ class DynamicSimulation(Grid,SimulationUtilities):
     #@property
     def t_calc(self):
         """Vector of time steps for simulation"""
+        
         if (self.tStop - self.tStart) <= self.tInc:
             self.tStop =  self.tStart + self.tInc + 0.000001
         return np.arange(self.tStart, self.tStop, self.tInc)
     
     def reset_stored_trajectories(self):
         """Reset for plotting."""
+        
         self._t_t = np.array(0.0)
         self.Vdc_t = self._Vdc_t = np.array(self.PV_model.Vdc)
         self.ma_absolute_t = self._ma_absolute_t = np.array(abs(self.PV_model.ma))
@@ -375,6 +380,7 @@ class DynamicSimulation(Grid,SimulationUtilities):
     
     def time_series_Ppv(self):
         """Calculate time series Solar PV power output."""
+        
         self.Ppv_t = []
         self.Sinsol_t = []
         for i,t in enumerate(self.t):       #Loop through solar events and calculate Ppv at each time step
@@ -409,6 +415,7 @@ class DynamicSimulation(Grid,SimulationUtilities):
     
     def time_series_phase_angle(self):
         """Calculate time series phase angle between grid and inverter voltage."""
+        
         assert len(self.va_t) == len(self.vta_t) != None, "States must be available from simulation."
         
         self.phi_at_t = np.angle(self.vta_t)
@@ -431,6 +438,7 @@ class DynamicSimulation(Grid,SimulationUtilities):
         
     def time_series_power_transfer(self):
         """Calculate time series power transfer between grid and PCC."""
+        
         self.P_transfer = (self.Vhvrms_t*self.Vgrms_t*np.sin(self.phi_aHV_t-self.phi_ag_t))/np.abs(self.grid_model.Z2)
     
     def collect_solution(self,solution,t=None):
@@ -559,7 +567,8 @@ class DynamicSimulation(Grid,SimulationUtilities):
         logging.debug("All states collected!")
     
     def invert_arrays(self):
-        """Temporary arrangment."""
+        """Inverter arrays before usage by plots."""
+        
         self.t_t = self._t_t
         self.Vdc_t = self._Vdc_t
         
@@ -595,7 +604,7 @@ class DynamicSimulation(Grid,SimulationUtilities):
                 six.print_("{}:Simulation started in loop mode with a step size of {:.4f} s!".format(self.name,self.t[-1]-self.t[0]))
                 if self.jacFlag:
                     six.print_("{}:Analytical Jacobian will be provided to ODE solver.".format(self.name))
-            solution,_  = self.call_ODE_solver(self.ODE_model,self.jac_ODE_model,y0,t)
+            solution,_,_  = self.call_ODE_solver(self.ODE_model,self.jac_ODE_model,y0,t)
             
         else:
             self.t = self.t_calc()
@@ -605,7 +614,7 @@ class DynamicSimulation(Grid,SimulationUtilities):
             if self.jacFlag:
                 six.print_("{}:Analytical Jacobian will be provided to ODE solver.".format(self.name))
         
-            solution,_  = self.call_ODE_solver(self.ODE_model,self.jac_ODE_model,self.y0,self.t)
+            solution,_,_  = self.call_ODE_solver(self.ODE_model,self.jac_ODE_model,self.y0,self.t)
             six.print_('{}:Simulation was completed in {}'.format(self.name,time.strftime("%H:%M:%S", time.gmtime(time.time()-timer_start))))
             
             self.simulation_events.reset_event_counters() #Reset grid and solar event counters

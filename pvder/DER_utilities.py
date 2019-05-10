@@ -1,3 +1,5 @@
+"""Code containing utilities used by PV-DER model instances."""
+
 from __future__ import division
 import operator
 import math
@@ -40,6 +42,7 @@ class PVDER_ModelUtilities(BaseValues):
     @property                         #Decorator used for auto updating
     def Vdc_actual(self):
         """Actual DC link voltage"""
+        
         return min(self.Vdcmpp_max,self.Vdc*self.Vdcbase)  #Calculate actual voltage
     
     #Average duty cycle - Phase A
@@ -63,6 +66,26 @@ class PVDER_ModelUtilities(BaseValues):
         """Phase C duty cycle"""
         
         return self.Kp_GCC*self.uc + self.xc #PI controller equation
+    
+    def update_grid_measurements(self,gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency):
+        """Update grid voltage and frequency in non-standalone mode.
+
+         Extended description of function.
+
+         Args:
+             gridVoltagePhaseA (complex): Description of gridVoltagePhaseA
+             gridVoltagePhaseB (complex): Description of gridVoltagePhaseB
+             gridVoltagePhaseC (complex): Description of gridVoltagePhaseC
+             gridFrequency (float): Description of gridFrequency
+
+         Returns:
+             bool: Description of return value
+         """
+        
+        if not self.standAlone:
+            assert  gridVoltagePhaseA != None and gridFrequency != None, 'Voltage and frequency of grid voltage source need to be supplied if model is not stand alone!'
+            self.gridVoltagePhaseA, self.gridVoltagePhaseB, self.gridVoltagePhaseC = gridVoltagePhaseA/self.Vbase, gridVoltagePhaseB/self.Vbase, gridVoltagePhaseC/self.Vbase
+            self.gridFrequency = gridFrequency
     
     #Controller outer loop equations (Current set-point)    
     def ia_ref_calc(self):
@@ -196,8 +219,9 @@ class PVDER_ModelUtilities(BaseValues):
     
     def show_PV_DER_states(self,quantity='voltage'):
         """Display values of states in the DER model quantities.
-        Args:
-          quantity: A string ('voltage','current','power','duty cycle') specifying the electrical quantity to be displayed.
+        
+        Arguments
+                quantity: A string ('voltage','current','power','duty cycle') specifying the electrical quantity to be displayed.
         """
         
         if quantity not in {'voltage','current','power','duty cycle'}:
@@ -231,8 +255,10 @@ class PVDER_ModelUtilities(BaseValues):
     
     def show_PV_DER_parameters(self,quantity='inverter_ratings'):
         """Display rated values.
+        
         Args:
-          quantity: A string ('inverter_ratings','controller_gains','circuit_parameters') specifying the parameter to be displayed.
+          quantity (str): A string ('inverter_ratings','controller_gains','circuit_parameters') specifying the parameter to be displayed.
+        
         """
         
         if quantity not in {'inverter_ratings','controller_gains','circuit_parameters'}:
@@ -363,9 +389,10 @@ class PVDER_ModelUtilities(BaseValues):
     
     def Vdc_ref_ramp(self,tstart,Vdc_ref_target):
         """Create a ramp signal for voltage reference that ramps at 1 V/s.
-        Args:
-           tstart: A scalr specifying start time of ramp in seconds.
-           Vdc_ref_target: A scalar specifying target Vdc reference seconds in volts.
+        
+        Arguments:
+          tstart: A scalar specifying start time of ramp in seconds.
+          Vdc_ref_target: A scalar specifying target Vdc reference seconds in volts.
         """
         
         Vdc_ref_start = self.get_Vdc_ref(t=tstart)*self.Vdcbase

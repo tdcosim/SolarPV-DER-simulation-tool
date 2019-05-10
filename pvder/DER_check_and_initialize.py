@@ -1,3 +1,5 @@
+"""Code for initializing and validating PV-DER model instances."""
+
 from __future__ import division
 import math
 import logging
@@ -12,16 +14,19 @@ class PVDER_SetupUtilities(BaseValues):
        Utility class for error checking during model initialization.
     """
     
-    def initialize_grid_voltage(self,gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency):
-        """Get grid voltage."""
-        
-        if not self.standAlone:
-            assert  gridVoltagePhaseA != None and gridFrequency != None, 'Voltage and frequency of grid voltage source need to be supplied if model is not stand alone!'
-            self.gridVoltagePhaseA, self.gridVoltagePhaseB, self.gridVoltagePhaseC = gridVoltagePhaseA/self.Vbase, gridVoltagePhaseB/self.Vbase, gridVoltagePhaseC/self.Vbase
-            self.gridFrequency = gridFrequency
-    
     def initialize_states(self,ia0,xa0,ua0,xDC0,xQ0,xPLL0,wte0):
-        """Initialize inverter states."""
+        """Initialize inverter states.
+
+        Extended description of function.
+
+        Args:
+            ia0 (float): Initial current
+            xa0 (float): Initial controller state
+            ua0 (float): Initial controller state
+
+        Returns:
+            bool: Description of return value
+        """
         
          #Initialize all states with steady state values at current operating point
         if self.STEADY_STATE_INITIALIZATION == True:
@@ -61,6 +66,16 @@ class PVDER_SetupUtilities(BaseValues):
                 self.uc = uc0
 
     def initialize_DER(self,Sinverter_rated):
+        """Initialize DER ratings.
+
+        Extended description of function.
+
+        Args:
+             Sinverter_rated (float): Rated inverter power output in W at unity power factor.
+
+        Raises:
+             ValueError: If specified parameters correponding to `Sinverter_rated` is not available.
+        """
         
         if str(int(Sinverter_rated/1e3)) in self.Sinverter_list:
             logging.debug('Creating PV inverter instance for DER with rating:' + str(int(Sinverter_rated/1e3)) + ' kVA')
@@ -78,6 +93,7 @@ class PVDER_SetupUtilities(BaseValues):
     
     def initialize_inverter_parameters(self):
         """Initialize ratings and C, Lf, and Rf parameters."""
+        
         _DER_rating = str(int(self.Sinverter_rated/1e3))
         
         self.Vdcrated = self.inverter_ratings[_DER_rating]['Vdcrated'] #Rated DC voltage
@@ -174,6 +190,16 @@ class PVDER_SetupUtilities(BaseValues):
         self.Ki_Q = _Ki_Q/self.controller_parameters[_DER_rating]['scale_Ki_Q']   #Reactive power controller Integral constant    
     
     def attach_grid_model(self,grid_model):
+        """Summary line.
+
+        Extended description of function.
+
+        Args:
+             grid_model: An instance of `GridModel`.
+
+        Returns:
+             bool: Description of return value
+        """
         
         #Connect grid instance only if working in stand alone mode
         if self.standAlone and grid_model is not None:
@@ -184,6 +210,11 @@ class PVDER_SetupUtilities(BaseValues):
             print('{}:No grid model attached since PV-DER instance is not stand alone!'.format(self.name))
                              
     def check_voltage(self):
+        """Method to check whether inverter voltage ratings are feasible.
+        
+        Raises:
+             ValueError: If any of the specificied voltage ratings is infeasible.
+        """
                              
         if not self.standAlone and abs(abs(self.gridVoltagePhaseA) - self.Vanominal)/self.Vanominal > 0.1:
             raise ValueError('The rated PCC-LV voltage {} V has more than 10% deviation from the voltage input from external program {} V!'.format(self.Vanominal, abs(self.gridVoltagePhaseA)))
@@ -219,6 +250,7 @@ class PVDER_SetupUtilities(BaseValues):
      
     def power_error_calc(self,x):
         """Function for power."""
+        
         maR = x[0]
         maI = x[1]
         iaR = x[2]

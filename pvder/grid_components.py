@@ -1,3 +1,5 @@
+"""Grid model and shared attributes."""
+
 from __future__ import division
 import numpy as np
 import math
@@ -5,8 +7,6 @@ import cmath
 import six
 from pvder.simulation_utilities import SimulationUtilities
 from pvder import utility_functions
-
-
 
 class BaseValues():
     """Class to store base values."""
@@ -78,12 +78,14 @@ class Grid(BaseValues,SimulationUtilities):
     @property
     def y0(self):        
         """Grid states"""
+        
         return [self.vag.real,self.vag.imag,\
                 self.vbg.real,self.vbg.imag,\
                 self.vcg.real,self.vcg.imag]
 
     def Vgrms_calc(self):
         """Grid side terminal voltage -  RMS"""
+        
         return utility_functions.Urms_calc(self.vag,self.vbg,self.vcg)
   
     def steady_state_model(self,t):

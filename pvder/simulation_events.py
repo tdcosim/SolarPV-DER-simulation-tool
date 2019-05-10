@@ -1,3 +1,5 @@
+"""Manage simulation events."""
+
 from __future__ import division
 import math
 import operator
@@ -7,6 +9,7 @@ from pvder import utility_functions
 
 class SimulationEvents():
     """ Utility class for events."""
+    
     events_count = 0
     Vgrms_default = 1.0  #This is a fraction and not per unit value
     fgrid_default = 60.0 
@@ -21,7 +24,6 @@ class SimulationEvents():
           SOLAR_EVENT_ENABLE: A boolean to enable solar insolation events.
           GRID_EVENT_ENABLE: A boolean to enable grid voltage or frequency events.
           LOAD_EVENT_ENABLE: A boolean to enable load change events at PCC-LV side.
-
         """
                 
         #Increment count to keep track of number of simulation events instances
@@ -43,6 +45,7 @@ class SimulationEvents():
     
     def solar_events(self,t):
         """List of all simulation events."""
+        
         if self.SOLAR_EVENT_ENABLE == True and self.solar_events_list: #Check whether list is empty
             
             if t<self.solar_events_list[0]['T']: 
@@ -105,6 +108,7 @@ class SimulationEvents():
     
     def add_solar_event(self,T,Sinsol=100.0,Tactual=298.15):
         """Add new solar event.
+        
         Args:
            T: A scalar specifying start time of solar event in seconds.
            Sinsol: A scalar specifying solar insolation in percentage.
@@ -132,11 +136,13 @@ class SimulationEvents():
     
     def add_grid_event(self,T,Vgrms=1.0,fgrid=60.0):
         """Add new solar event.
+        
         Args:
            T: A scalar specifying start time of grid event in seconds.
            Vgrms: A scalar specifying grid voltage in fraction.
            fgrid: A scalar specifying grid frequency in Hz.
         """
+        
         assert Vgrms >=0.0 and Vgrms <=1.2 and fgrid >= 0.0 and fgrid <= 100.0, 'Grid event {} is not within feasible limits'.format(Vgrms,fgrid)
         
         T = float(T)
@@ -154,10 +160,12 @@ class SimulationEvents():
     
     def add_load_event(self,T,Zload1_actual=10e6+0j):
         """Add new load event.
+        
         Args:
            T: A scalar specifying start time of load event in seconds.
            Vgrms: A complex scalar specifying load in ohm.
         """
+        
         T = float(T)
         if type(Zload1_actual) != complex:
             Zload1_actual = complex(Zload1_actual)
@@ -232,12 +240,14 @@ class SimulationEvents():
     
     def insolation_ramp(self,tstart,tstop,Sinsol_target,tstep=0.25):
         """Create a ramp signal.
+        
         Args:
            tstart: A scalar specifying start time of solar insolation event in seconds.
            tstop: A scalar specifying stop time of solar insolation event in seconds.
            Sinsol_target: A scalar specifying target solar insolation at 'tstop' in percentage.
            tstep: A scalar specifying time step size.
         """
+        
         Sinsol,_ = self.solar_events(t=tstart)
         
         trange = np.arange(tstart,tstop,tstep)
@@ -247,12 +257,14 @@ class SimulationEvents():
     
     def voltage_ramp(self,tstart,tstop,vg_target,tstep=0.5):
         """Create a ramp signal for grid voltage.
+        
         Args:
            tstart: A scalar specifying start time of grid voltage event in seconds.
            tstop: A scalar specifying stop time of grid voltage event in seconds.
            vg_target: A scalar specifying target grid voltage at 'tstop' in fraction.
            tstep: A scalar specifying time step size (optional).
         """
+        
         vg,_ = self.grid_events(t=tstart)
         
         trange = np.arange(tstart,tstop,tstep)
@@ -279,12 +291,15 @@ class SimulationEvents():
     
     def update_event_totals(self):
         """Update event counts. """
+        
         self.solar_events_total = len(self.solar_events_list)
         self.grid_events_total = len(self.grid_events_list)
         self.load_events_total = len(self.load_events_list)
         self.events_total =self.solar_events_total +self.grid_events_total  +  self.load_events_total 
     
     def reset_event_counters(self):
+        """Reset event counts. """
+        
         self.solar_event_counter = 0
         self.grid_event_counter = 0
         self.load_event_counter = 0
@@ -294,5 +309,6 @@ class SimulationEvents():
     @property
     def simulation_events_list(self):
         """List of all simulation events."""
+        
         return  sorted(self.solar_events_list + self.grid_events_list + self.load_events_list, key=operator.itemgetter('T'))  
    

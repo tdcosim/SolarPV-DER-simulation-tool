@@ -1,3 +1,5 @@
+"""Single phase PV-DER code."""
+
 from __future__ import division
 import numpy as np
 import math
@@ -19,9 +21,14 @@ from pvder import utility_functions
 
 class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,Grid):
     """
-       Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
-       control systems.
+    Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
+    control systems.
+    
+    Attributes:
+         DER_count (int): Number of `SolarPV_DER_SinglePhase` instances.
+         Ioverload (float): Overload current rating of inverter.
     """
+    
     DER_count = 0
     #Number of ODE's
     n_ODE = 11
@@ -83,7 +90,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         """
         
         self.standAlone = standAlone
-        self.initialize_grid_voltage(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
+        self.update_grid_measurements(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
         self.Vrms_rated = Vrms_rated
        
         #Increment count to keep track of number of PV-DER model instances
@@ -176,7 +183,14 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         return abs(self.va-self.vb)/math.sqrt(2)
     
     def update_inverter_states(self,ia,xa,ua,Vdc,xDC,xQ,xPLL,wte):
-        """Update inverter states"""
+        """Update inverter states
+        
+        Args:
+             ia (complex): Inverter phase a current.
+             xa (complex): Inverter controller state.
+             ua (complex): Inverter controller state.
+             Vdc (float): DC link voltage.             
+        """
         
         self.ia = ia
         self.xa = xa
@@ -231,8 +245,11 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         self.ia_ref = self.ia_ref_calc()
     
     def update_inverter_frequency(self,t):
-        """Update d-q quantities."""
+        """Update inverter PLL frequency.
         
+        Args:
+             t (float): Simulation time in seconds.
+        """
         #Update grid frequency
         self.wgrid_measured = self.wgrid_calc()
         
@@ -248,8 +265,15 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         self.winv = self.we
     
     def ODE_model(self,y,t):
-        """Derivatives for the equation."""
+        """System of ODE's defining the dynamic DER model.
         
+        Args:
+             y (list of float): Initial conditions for the states..
+             t (float): Simulation time in seconds.
+             
+        Returns:
+             result (list of float): Derivates for the system of ODE's.
+        """
         iaR, iaI, xaR, xaI, uaR, uaI,\
         Vdc, xDC, xQ, xPLL, wte = y   # unpack current values of y
         
@@ -346,7 +370,15 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         return result
 
     def jac_ODE_model(self,y,t):
-        """Jacobian for the system of ODE's."""
+        """Jacobian for the system of ODE's.
+                
+        Args:
+             y (list of float): Initial conditions for the states..
+             t (float): Simulation time in seconds.
+             
+        Returns:
+             result (array of float): An array containing the elements of the Jacobian.
+        """
         
         iaR, iaI, xaR, xaI, uaR, uaI,\
         Vdc, xDC, xQ, xPLL, wte = y   # unpack current values of y

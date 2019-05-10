@@ -1,3 +1,5 @@
+"""Three phase PV-DER components."""
+
 from __future__ import division
 import numpy as np
 import math
@@ -192,7 +194,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
           ValueError: If rated DC link voltage is not sufficient.
         """
         self.standAlone = standAlone
-        self.initialize_grid_voltage(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
+        self.update_grid_measurements(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
         self.Vrms_rated = Vrms_rated
         
         #Increment count to keep track of number of PV-DER model instances

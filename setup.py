@@ -6,6 +6,6 @@ setup(name='PV-DER',
       description='Utility for simulating PV-DER',
       author = 'Siby Jose Plathottam',
       author_email='sibyjackgrove@gmail.com',
-      license='LICENSE.txt',
+      license= BSD,
       install_requires=['scipy>=1.0.0','numpy>=1.15.1','matplotlib==2.0.2'],#And any other dependencies required	  
       )
