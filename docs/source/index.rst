@@ -5,7 +5,7 @@ Welcome to PV-DER Simulation Utility's documentation!
    :maxdepth: 1
    :caption: Contents:
    
-   notebook_links
+   .. notebook_links
    pvder_modules
    license_link
 
