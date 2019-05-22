@@ -9,6 +9,10 @@ Solar photovoltaic distributed energy resources (PV-DER) are power electronic in
 ## Basics
 The dynamics of the DER are modelled using dynamic phasors. Detailed description of the concepts behind this utility can be found in the IEEE publication **Dynamic Modeling of Solar PV Systems for Distribution System Stability Analysis** and detailed list of equations can be found in the [Model specification document.](docs/PV_DER_model_specification_rev3.docx)
 
+## Links
+* Source code repository: https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility
+* API Documentation: https://solarpv-der-simulation-utility.readthedocs.io/en/latest/
+
 ## Installation
 You can install the module directly from github with following commands:
 ```
@@ -34,7 +38,7 @@ The following steps are required:
 ```
 from pvder.DER_components_single_phase import SolarPV_DER_SinglePhase
 from pvder.grid_components import Grid
-from pvder.dynamic_simulation import GridSimulation
+from pvder.dynamic_simulation import DynamicSimulation
 from pvder.simulation_events import SimulationEvents
 from pvder.simulation_utilities import SimulationResults
 ```
@@ -50,15 +54,15 @@ grid = Grid(events=events)
 ```
 PV_DER = SolarPV_DER_SinglePhase(grid_model=grid,events=events,Sinverter_rated = 10.0e3,standAlone = True)
 ```
-4. Create a **GridSimulation** object: This object runs the simulation and stores the solution. It takes **_SimulationEvents_**, **Grid** and, **SolarPV_DER_SinglePhase** objects as arguments.
+4. Create a **DynamicSimulation** object: This object runs the simulation and stores the solution. It takes **_SimulationEvents_**, **Grid** and, **SolarPV_DER_SinglePhase** objects as arguments.
 ```
-sim = GridSimulation(grid_model=grid,PV_model=PV_DER,events = events)
+sim = DynamicSimulation(grid_model=grid,PV_model=PV_DER,events = events)
 ```
 5. Create a **SimulationResults** object: This object is used to visualize the simulation results.
 ```
 results = SimulationResults(simulation = sim)
 ```
-6. Add an event (for e.g. solar insolation change at 10.0 s:
+6. Add an event (for e.g. solar insolation change at 10.0 s):
 ```
 events.add_solar_event(10,90)
 ```
@@ -78,7 +82,7 @@ sim.run_simulation()
 10. Visualize the results (for e.g. the power output at PCC-LV side):
 ```
 results.PER_UNIT = False
-results.plot_DER_simulation(plot_type='active_power_Ppv_Pac_PCC')#
+results.plot_DER_simulation(plot_type='active_power_Ppv_Pac_PCC')
 ```
 Try it out in Google Colab:
 
