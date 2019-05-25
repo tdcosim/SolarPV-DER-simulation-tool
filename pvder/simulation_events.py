@@ -37,8 +37,8 @@ class SimulationEvents():
         self.LOAD_EVENT_ENABLE = LOAD_EVENT_ENABLE
         
         self.solar_events_list = [{'T':3.0,'Sinsol':self.Sinsol_default,'Tactual':self.Tactual_default}]
-        self.load_events_list = [{'T':4.0,'Zload1_actual':self.Zload1_actual_default}]
-        self.grid_events_list = [{'T':5.0,'Vgrms':self.Vgrms_default,'fgrid':self.fgrid_default}]
+        self.load_events_list = [] #{'T':4.0,'Zload1_actual':self.Zload1_actual_default}
+        self.grid_events_list = [] #{'T':5.0,'Vgrms':self.Vgrms_default,'fgrid':self.fgrid_default}
         
         self.update_event_totals()
         self.reset_event_counters()

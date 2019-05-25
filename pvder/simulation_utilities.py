@@ -334,12 +334,13 @@ class SimulationUtilities():
             raise ValueError('{}:ODE solver failed at {:.6f} s for {} with failure code:{}!\n___States at failure___\nVdc:{:.4f},Vta:{:.4f},Vpcca:{:.4f}\nia:{:.4f}\nPpv:{:.4f},S:{:.4f},\nma:{:.4f},xDC:{:.4f},xQ:{:.4f}'
 .format(self.name,t[failure_time_point],self.PV_model.name,infodict_mused[failure_time_point],self.PV_model.Vdc*self.PV_model.Vdcbase,self.PV_model.vta*self.PV_model.Vbase,self.PV_model.va*self.PV_model.Vbase,self.PV_model.ia*self.PV_model.Ibase,self.PV_model.Ppv*self.PV_model.Sbase,self.PV_model.S*self.PV_model.Sbase,self.PV_model.ma,self.PV_model.xDC,self.PV_model.xQ))
         
-        elif self.DEBUG_SOLVER:
-            infodict_time_steps = infodict['hu']
-            assert len(infodict_mused) == len(infodict_time_steps) == len(t)-1,  " The number of methods used should be equal to the number of time steps."
-            six.print_('{}:Time:{},Methods:{},Time steps:{}'.format(self.PV_model.name,t,infodict_mused,infodict_time_steps))
-            
-            if all(status == 1 or status == 2 for status in infodict_mused):
-                six.print_('{}:Simulation successful for all time steps!'.format(self.PV_model.name))
         else:
+            if self.DEBUG_SOLVER:
+                infodict_time_steps = infodict['hu']
+                assert len(infodict_mused) == len(infodict_time_steps) == len(t)-1,  " The number of methods used should be equal to the number of time steps."
+                six.print_('{}:Time:{},Methods:{},Time steps:{}'.format(self.PV_model.name,t,infodict_mused,infodict_time_steps))
+            
+                if all(status == 1 or status == 2 for status in infodict_mused):
+                    six.print_('{}:Simulation successful for all time steps!'.format(self.PV_model.name))
+        
             self.SOLVER_CONVERGENCE = True

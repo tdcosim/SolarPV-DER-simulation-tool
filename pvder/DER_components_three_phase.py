@@ -68,11 +68,11 @@ class PV_Module(object):
            self.Vdcmpp_max = self.module_parameters[str(_DER_rating)]['Vdcmpp_max']
            
         else:
-           raise ValueError('PV module parameters not available for DER with rating: ' + str(Sinverter_rated/1e3)+' kVA')
+            raise ValueError('PV module parameters not available for DER with rating: ' + str(Sinverter_rated/1e3)+' kVA')
         
         #Fit polynomial
-        if self.USE_POLYNOMIAL_MPP:
-           self.fit_MPP_poly()
+        if self.MPPT_ENABLE and self.USE_POLYNOMIAL_MPP:
+            self.fit_MPP_poly()
         
         #PV conditions
         self.Sinsol,self.Tactual= events.solar_events(t=0.0)

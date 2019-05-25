@@ -109,8 +109,8 @@ class DynamicSimulation(Grid,SimulationUtilities):
         
         #Remove existing simulation events
         self.simulation_events.remove_solar_event(3.0)
-        self.simulation_events.remove_load_event(4.0)
-        self.simulation_events.remove_grid_event(5.0)
+        #self.simulation_events.remove_load_event(4.0)
+        #self.simulation_events.remove_grid_event(5.0)
         
         if self.LOOP_MODE:
             self.reset_stored_trajectories()
@@ -310,6 +310,16 @@ class DynamicSimulation(Grid,SimulationUtilities):
         self.vag_t = np.asarray(self.vag_t)
         self.vbg_t = np.asarray(self.vbg_t)
         self.vcg_t = np.asarray(self.vcg_t)
+        
+        self.vagR_t = self.vag_t.real
+        self.vagI_t = self.vag_t.imag
+        
+        self.vbgR_t = self.vbg_t.real
+        self.vbgI_t = self.vbg_t.imag
+        
+        self.vcgR_t = self.vcg_t.real
+        self.vcgI_t = self.vcg_t.imag
+        
         if not self.LOOP_MODE:
             self.simulation_events.reset_event_counters() #reset event counters
     
@@ -450,7 +460,8 @@ class DynamicSimulation(Grid,SimulationUtilities):
             self.collect_last_states()
         else:
             self.collect_full_trajectory(solution)
-        print('Stored solution for {} time points starting at {:.3f} s and ending at {:.3f} s!'.format(len(self.t),self.t[0],self.t[-1]))
+        
+        logging.debug('{}:Stored solution for {} time points starting at {:.3f} s and ending at {:.3f} s!'.format(self.name,len(self.t),self.t[0],self.t[-1]))
         
     def collect_last_states(self):
         """Collect states at last time step."""
