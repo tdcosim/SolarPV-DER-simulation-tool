@@ -99,6 +99,9 @@ class DynamicSimulation(Grid,SimulationUtilities):
         self.PV_model = PV_model
         self.simulation_events = events
         
+        self.SOLVER_CONVERGENCE = False
+        self.convergence_failure_list =[]
+        
         self.LOOP_MODE = LOOP_MODE
         self.COLLECT_SOLUTION = COLLECT_SOLUTION
         

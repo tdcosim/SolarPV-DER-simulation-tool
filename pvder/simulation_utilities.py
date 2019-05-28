@@ -184,12 +184,13 @@ class SimulationResults():
         elif plot_type == 'reactive_power':
             plot_values = [self.simulation.S_t.imag*self.S_multiplier,self.simulation.S_PCC_t.imag*self.S_multiplier]
             legends=[r"$Q^{inv}$",r"$Q^{PCC-LV}$"]
+            plot_title='Inverter,PCC-LV:Reactive power'
             if self.simulation.PV_model.standAlone:
                 plot_values = plot_values + [self.simulation.S_load1_t.imag*self.S_multiplier,self.simulation.S_G_t.imag*self.S_multiplier]
                 legends= legends + [r"$Q^{load1}$",r"$Q^{G}$"] 
-            #legends=['Q','Q_PCC','Q_load1','Q_G']
-                        
-            plot_title='Inverter,PCC LV,Load,& Grid voltage:Reactive power'
+                plot_title = 'Inverter,PCC-LV,Load,& Grid voltage:Reactive power'
+            
+            #legends=['Q','Q_PCC','Q_load1','Q_G']                        
             y_labels=_reactive_power_label
         
         elif plot_type == 'reactive_power_Q_PCC':
@@ -197,7 +198,7 @@ class SimulationResults():
             #legends=['Q_PCC']
             
             legends=[r"$Q^{PCC-LV}$"]
-            plot_title='PCC-LV side:Reactive power'
+            plot_title='PCC-LV:Reactive power'
             y_labels=_reactive_power_label
     
         elif plot_type == 'phase_angle':
@@ -301,8 +302,7 @@ class SimulationResults():
 class SimulationUtilities():
     """ Utility class for dynamic simulations."""
     
-    max_steps = 500
-    SOLVER_CONVERGENCE = False
+    max_steps = 1000   
     
     def call_ODE_solver(self,derivatives,jacobian,y,t):
         """Call the SciPy ODE solver."""
@@ -330,6 +330,11 @@ class SimulationUtilities():
             
             failure_time_point = list(map(lambda status: status == 0 or  status > 2,  infodict_mused)).index(True)
             self.SOLVER_CONVERGENCE = False
+            self.convergence_failure_list.append({'Model':self.PV_model.name,
+                                                  'Simulation':self.name,
+                                                  'failure_time_point':t[failure_time_point],
+                                                  'failure_code':infodict_mused[failure_time_point],
+                                                  'S':self.PV_model.S*self.PV_model.Sbase})
                  
             raise ValueError('{}:ODE solver failed at {:.6f} s for {} with failure code:{}!\n___States at failure___\nVdc:{:.4f},Vta:{:.4f},Vpcca:{:.4f}\nia:{:.4f}\nPpv:{:.4f},S:{:.4f},\nma:{:.4f},xDC:{:.4f},xQ:{:.4f}'
 .format(self.name,t[failure_time_point],self.PV_model.name,infodict_mused[failure_time_point],self.PV_model.Vdc*self.PV_model.Vdcbase,self.PV_model.vta*self.PV_model.Vbase,self.PV_model.va*self.PV_model.Vbase,self.PV_model.ia*self.PV_model.Ibase,self.PV_model.Ppv*self.PV_model.Sbase,self.PV_model.S*self.PV_model.Sbase,self.PV_model.ma,self.PV_model.xDC,self.PV_model.xQ))

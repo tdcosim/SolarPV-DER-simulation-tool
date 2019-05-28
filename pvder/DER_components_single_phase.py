@@ -107,9 +107,9 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         self.STEADY_STATE_INITIALIZATION = STEADY_STATE_INITIALIZATION
         
         self.attach_grid_model(grid_model)
-        self.initialize_DER(Sinverter_rated)
+        self.initialize_DER(Sinverter_rated,pvderConfig)
         
-        self.LVRT_initialize(pvderConfig) #LVRT settings
+        self.LVRT_initialize() #LVRT settings
         self.initialize_jacobian()
         self.reset_reference_counters()
         

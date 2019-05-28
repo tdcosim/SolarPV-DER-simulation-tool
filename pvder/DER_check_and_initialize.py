@@ -65,7 +65,7 @@ class PVDER_SetupUtilities(BaseValues):
                 self.xc = xc0   #Shift by +120 degrees
                 self.uc = uc0
 
-    def initialize_DER(self,Sinverter_rated):
+    def initialize_DER(self,Sinverter_rated,pvderConfig=None):
         """Initialize DER ratings.
 
         Extended description of function.
@@ -81,6 +81,8 @@ class PVDER_SetupUtilities(BaseValues):
             logging.debug('Creating PV inverter instance for DER with rating:' + str(int(Sinverter_rated/1e3)) + ' kVA')
             self.Sinverter_rated = Sinverter_rated #Inverter rating in kVA
             self.Sinverter_nominal = (self.Sinverter_rated/BaseValues.Sbase) #Converting to p.u. value
+            
+            self.pvderConfig = pvderConfig #Protection and ridethrough settings from external programs (can be None)
             
             self.initialize_inverter_parameters() #Initialize inverter parameters according to DER rating
             

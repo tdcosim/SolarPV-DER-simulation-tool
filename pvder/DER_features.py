@@ -60,37 +60,30 @@ class PVDER_SmartFeatures():
             if self.LFRT_TRIP == True and self.LFRT_RECONNECT == False:
                 self.PV_DER_disconnect() 
     
-    def LVRT_initialize(self,pvderConfig=None):
+    def LVRT_initialize(self):
         """Initialize LVRT settings."""
         
-        if pvderConfig is None:
-            pvderConfig = {}
-            pvderConfig['scaling_factor']=10
-            pvderConfig['V_LV1']=0.70
-            pvderConfig['V_LV2']=0.88
-            pvderConfig['t_LV1_limit']=10.0
-            pvderConfig['t_LV2_limit']=20.0
-            pvderConfig['LVRT_INSTANTANEOUS_TRIP']=False
+        if self.pvderConfig is None:
+            self.pvderConfig = {}
+            
+            self.pvderConfig['V_LV1']=0.70
+            self.pvderConfig['V_LV2']=0.88
+            self.pvderConfig['t_LV1_limit']=1.0
+            self.pvderConfig['t_LV2_limit']=2.0
+            self.pvderConfig['LVRT_INSTANTANEOUS_TRIP']=False
+            self.pvderConfig['LVRT_MOMENTARY_CESSATION']=False
 
         #IEEE 1547-2018 standards
-        scaling_factor = pvderConfig['scaling_factor']
+        #scaling_factor = pvderConfig['scaling_factor']
         self.V_LV0 = 0.50*self.Vrms_ref  #From IEEE 1557-2018 Category III (Table 16)   
-        self.V_LV1 = pvderConfig['V_LV1']*self.Vrms_ref  #From IEEE 1557-2018 Category III (Table 16)   
-        self.V_LV2 = pvderConfig['V_LV2']*self.Vrms_ref  #From IEEE 1557-2018  Category III (Table 16)
-        self.t_LV0_limit = 1.0/scaling_factor #Time limit for LV0 zone from IEEE 1557-2018 Category III  (Table 16, page 48)
-        self.t_LV1_limit = pvderConfig['t_LV1_limit']/scaling_factor #Time limit for LV2 zone from IEEE 1557-2018 Category III  (Table 16, page 48)
-        self.t_LV2_limit = pvderConfig['t_LV2_limit']/scaling_factor #Time limit for LV2 zone from IEEE 1557-2018 Category III (Table 16, page 48) 
-        self._t_LV0_limit = self.t_LV0_limit
-        self._t_LV1_limit = self.t_LV1_limit 
-        self._t_LV2_limit = self.t_LV2_limit
+        self.V_LV1 = self.pvderConfig['V_LV1']*self.Vrms_ref  #From IEEE 1557-2018 Category III (Table 16)   
+        self.V_LV2 = self.pvderConfig['V_LV2']*self.Vrms_ref  #From IEEE 1557-2018  Category III (Table 16)
+        self.t_LV0_limit = 1.0#/scaling_factor #Time limit for LV0 zone from IEEE 1557-2018 Category III  (Table 16, page 48)
+        self.t_LV1_limit = self.pvderConfig['t_LV1_limit']#/scaling_factor #Time limit for LV2 zone from IEEE 1557-2018 Category III  (Table 16, page 48)
+        self.t_LV2_limit = self.pvderConfig['t_LV2_limit']#/scaling_factor #Time limit for LV2 zone from IEEE 1557-2018 Category III (Table 16, page 48) 
         
-        self.LVRT_INSTANTANEOUS_TRIP =  pvderConfig['LVRT_INSTANTANEOUS_TRIP']
-        self.t_reconnect_limit = pvderConfig['t_LV2_limit']/scaling_factor #Time lag before reconnecting
-        
-        """
-        if self.LVRT_INSTANTANEOUS_TRIP:
-            self.t_LV0_limit = self.t_LV1_limit = self.t_LV2_limit = 1/60 #Disconnect within one cycle
-        """
+        self.LVRT_INSTANTANEOUS_TRIP = self.pvderConfig['LVRT_INSTANTANEOUS_TRIP']
+        self.LVRT_MOMENTARY_CESSATION = self.pvderConfig['LVRT_MOMENTARY_CESSATION']        
 
         assert (self.V_LV1 < self.V_LV2 and self.t_LV1_limit <= self.t_LV2_limit) == True, "Voltage level 2 should be greater than Voltage level 1"
         self.check_LVRT_settings()
@@ -112,7 +105,7 @@ class PVDER_SmartFeatures():
             self.t_LV2_limit < 2 or self.t_LV2_limit > 20) and not self.LVRT_INSTANTANEOUS_TRIP:
             raise ValueError('LVRT ridethrough times {},{},{} are infeasible!'.format(self.t_LV0_limit,self.t_LV1_limit,self.t_LV2_limit))
         
-        if self.t_reconnect_limit < 0.4 or self.t_reconnect_limit > 10.0:
+        if self.t_reconnect_limit < 0.4:
             raise ValueError('LVRT reconnect time limit {} is infeasible!'.format(self.t_reconnect_limit))
             
     def show_RT_settings(self,settings_type='LVRT',PER_UNIT=True):
@@ -401,9 +394,24 @@ class PVDER_SmartFeatures():
                       
             self.t_LV0_limit = self.t_LV1_limit = self.t_LV2_limit = 1/60 #Disconnect within one cycle
         else:
-            self.t_LV0_limit = self._t_LV0_limit
-            self.t_LV1_limit = self._t_LV1_limit 
-            self.t_LV2_limit = self._t_LV2_limit
+            self.t_LV0_limit = 1.0 #self._t_LV0_limit
+            self.t_LV1_limit = self.pvderConfig['t_LV1_limit'] #self._t_LV1_limit 
+            self.t_LV2_limit = self.pvderConfig['t_LV2_limit'] #self._t_LV2_limit
                     
         return self.__LVRT_INSTANTANEOUS_TRIP
     
+    @property
+    def LVRT_MOMENTARY_CESSATION(self):
+        return self.__LVRT_MOMENTARY_CESSATION
+    
+    @LVRT_MOMENTARY_CESSATION.setter
+    def LVRT_MOMENTARY_CESSATION(self,LVRT_MOMENTARY_CESSATION):
+        
+        self.__LVRT_MOMENTARY_CESSATION = LVRT_MOMENTARY_CESSATION
+        
+        if LVRT_MOMENTARY_CESSATION:
+            self.t_reconnect_limit = self.pvderConfig['t_LV2_limit']#/scaling_factor #Time lag before reconnecting
+        else:
+            self.t_reconnect_limit = 1000.0 # A really high number to prevent reconnection        
+                    
+        return self.__LVRT_MOMENTARY_CESSATION
