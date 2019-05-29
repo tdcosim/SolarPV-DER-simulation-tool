@@ -189,7 +189,7 @@ class PVDER_ModelUtilities(BaseValues):
              
             self.Sinsol = Sinsol_new
             self.Tactual = Tactual_new
-            utility_functions.print_to_terminal("{}:PV module current output changed from {:.3f} A to {:.3f} A at {:.3f}".format(self.name,self.Iph,self.Iph_calc(),t))
+            utility_functions.print_to_terminal("{}:PV module current output changed from {:.3f} A to {:.3f} A at {:.3f} s".format(self.name,self.Iph,self.Iph_calc(),t))
             self.Iph = self.Iph_calc()
         
         self.Ppv = self.Ppv_calc(self.Vdc_actual)

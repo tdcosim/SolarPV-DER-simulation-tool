@@ -94,15 +94,19 @@ class Grid(BaseValues,SimulationUtilities):
         Vagrid_new,wgrid_new = self.events.grid_events(t)
         Vagrid_new = Vagrid_new*(self.Vgridrated/self.Vbase)
         
-        if abs(self.Vagrid- Vagrid_new) or abs(self.wgrid- wgrid_new) > 0.0:
-            utility_functions.print_to_terminal("Grid voltage changed from {:.3f} V to {:.3f} V at {:.3f}".format(self.Vagrid,Vagrid_new,t))
-            utility_functions.print_to_terminal("Grid frequency changed from {:.3f} Hz to {:.3f} Hz at {:.3f}".format(self.wgrid/(2.0*math.pi),wgrid_new/(2.0*math.pi),t))
-                      
-            self.wgrid = wgrid_new
-            #Conversion of grid voltage setpoint
+        if abs(self.Vagrid- Vagrid_new) > 0.0:
+            utility_functions.print_to_terminal("{}:Grid voltage changed from {:.3f} V to {:.3f} V at {:.3f} s".format(self.name,self.Vagrid,Vagrid_new,t))
+            
             self.Vagrid = Vagrid_new
             self.Vbgrid = utility_functions.Ub_calc(self.Vagrid*self.unbalance_ratio_b)
             self.Vcgrid = utility_functions.Uc_calc(self.Vagrid*self.unbalance_ratio_c)  
+            
+        if abs(self.wgrid- wgrid_new) > 0.0:
+            utility_functions.print_to_terminal("{}:Grid frequency changed from {:.3f} Hz to {:.3f} Hz at {:.3f} s".format(self.name,self.wgrid/(2.0*math.pi),wgrid_new/(2.0*math.pi),t))
+                      
+            self.wgrid = wgrid_new
+            #Conversion of grid voltage setpoint
+            
         
         self.vag = self.Vagrid
         self.vbg = self.Vbgrid
