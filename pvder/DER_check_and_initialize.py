@@ -14,6 +14,19 @@ class PVDER_SetupUtilities(BaseValues):
        Utility class for error checking during model initialization.
     """
     
+    def name_instance(self,identifier):
+        """Provide a name to the instance."""
+        
+        self.PV_DER_ID = self.DER_count  #ID is same as current DER instance count
+        
+        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
+            self.name = 'PV_DER-1ph_'+str(self.PV_DER_ID)  #Object name
+        elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            self.name = 'PV_DER-3ph_'+str(self.PV_DER_ID)  #Object name
+        
+        if identifier is not None:
+            self.name  = str(identifier) + '-' +self.name  #Add additional identifier to object name if it was provided
+        
     def initialize_states(self,ia0,xa0,ua0,xDC0,xQ0,xPLL0,wte0):
         """Initialize inverter states.
 

@@ -69,7 +69,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
                              gridVoltagePhaseC = None,\
                              gridFrequency = None,\
                              standAlone=True,STEADY_STATE_INITIALIZATION=False,\
-                             pvderConfig=None): 
+                             pvderConfig=None,identifier=None): 
         
         """Creates an instance of `SolarPV_DER`.
         
@@ -83,6 +83,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
           standAlone: A boolean specifying if the DER instance is a stand alone simulation or part of a larger simulation.
           STEADY_STATE_INITIALIZATION: A boolean specifying whether states in the DER instance will be initialized to steady state values.
           pvderConfig: A dictionary containing configuration parameters that may be supplied from an external program.
+          identifier: An identifier that can be used to name the instance (can be None).
           
         Raises:
           ValueError: If parameters corresponding to `Sinverter_rated` are not available.
@@ -91,13 +92,12 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         
         self.standAlone = standAlone
         self.update_grid_measurements(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
-        self.Vrms_rated = Vrms_rated
-       
+        self.Vrms_rated = Vrms_rated       
+        
         #Increment count to keep track of number of PV-DER model instances
         SolarPV_DER_SinglePhase.DER_count = SolarPV_DER_SinglePhase.DER_count+1
-        self.PV_DER_ID = SolarPV_DER_SinglePhase.DER_count
-        #Object name
-        self.name = 'PV_DER-1ph_'+str(self.PV_DER_ID)
+        #Generate a name for the instance
+        self.name_instance(identifier)
         
         if six.PY3:
             super().__init__(events,Sinverter_rated)  #Initialize PV module class (base class)
