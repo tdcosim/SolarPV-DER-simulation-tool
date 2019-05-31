@@ -12,6 +12,7 @@ import logging
 
 from scipy.optimize import fsolve, minimize
 
+from pvder.utility_classes import Logging
 from pvder.DER_check_and_initialize import PVDER_SetupUtilities
 from pvder.DER_features import PVDER_SmartFeatures
 from pvder.DER_utilities import PVDER_ModelUtilities
@@ -174,7 +175,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
                              gridVoltagePhaseC = None,\
                              gridFrequency = None,\
                              standAlone=True,STEADY_STATE_INITIALIZATION=False,\
-                             pvderConfig=None,identifier=None): #.50+0j,.25-.43301270j,-.25+.43301270j,2*math.pi*60.0
+                             pvderConfig=None,identifier=None,verbosity='INFO'): #.50+0j,.25-.43301270j,-.25+.43301270j,2*math.pi*60.0
         
         """Creates an instance of `SolarPV_DER_ThreePhase`.
         
@@ -195,14 +196,17 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
           ValueError: If rated DC link voltage is not sufficient.
         """
         
-        self.standAlone = standAlone
-        self.update_grid_measurements(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
-        self.Vrms_rated = Vrms_rated
-        
         #Increment count to keep track of number of PV-DER model instances
         SolarPV_DER_ThreePhase.DER_count = SolarPV_DER_ThreePhase.DER_count+1
         #Generate a name for the instance
         self.name_instance(identifier)
+        
+        #Set logging level - {DEBUG,INFO,WARNING,ERROR}
+        self.verbosity = verbosity
+        
+        self.standAlone = standAlone
+        self.update_grid_measurements(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
+        self.Vrms_rated = Vrms_rated        
         
         if six.PY3:
             super().__init__(events,Sinverter_rated)  #Initialize PV module class (base class)

@@ -1,13 +1,17 @@
 """Manage simulation events."""
 
 from __future__ import division
-import math
 import operator
 import six
+import logging
+
+import math
 import numpy as np
+
+from pvder.utility_classes import Logging
 from pvder import utility_functions
 
-class SimulationEvents():
+class SimulationEvents(Logging):
     """ Utility class for events."""
     
     events_count = 0
@@ -17,7 +21,7 @@ class SimulationEvents():
     Tactual_default = 298.15
     Zload1_actual_default = 10e6+0j
     
-    def __init__(self,SOLAR_EVENT_ENABLE = True,GRID_EVENT_ENABLE = True, LOAD_EVENT_ENABLE = True):
+    def __init__(self,SOLAR_EVENT_ENABLE = True,GRID_EVENT_ENABLE = True, LOAD_EVENT_ENABLE = True,verbosity='INFO'):
         """Creates an instance of `SimulationEvents`.
         
         Args:
@@ -42,6 +46,9 @@ class SimulationEvents():
         
         self.update_event_totals()
         self.reset_event_counters()
+        
+        #Set logging level - {DEBUG,INFO,WARNING,ERROR}
+        self.verbosity = verbosity
     
     def solar_events(self,t):
         """List of all simulation events."""
@@ -126,10 +133,10 @@ class SimulationEvents():
         
         for event in self.solar_events_list:
             if T==event['T']:
-                six.print_('Removing existing solar event at {:.2f}'.format(event['T']))
+                logging.debug('{}:Removing existing solar event at {:.2f}'.format(self.name,event['T']))
                 self.solar_events_list.remove(event)   # in {}Remove exi,self.events_IDsting event at same time stamp
         
-        six.print_('Adding new solar event at {:.2f} s'.format(T))
+        logging.debug('{}:Adding new solar event at {:.2f} s'.format(self.name,T))
         self.solar_events_list.append({'T':T,'Sinsol':Sinsol,'Tactual':Tactual})  #Append new event to existing event list
         self.solar_events_list.sort(key=operator.itemgetter('T'))  #Sort new events list
         self.update_event_totals()
@@ -150,10 +157,10 @@ class SimulationEvents():
         fgrid = float(fgrid)
         for event in self.grid_events_list:
             if T==event['T']:
-                six.print_('Removing existing grid event at {:.2f}'.format(event['T']))
+                logging.debug('{}:Removing existing grid event at {:.2f}'.format(self.name,event['T']))
                 self.grid_events_list.remove(event)   #Remove existing event at same time stamp
         
-        six.print_('Adding new grid event at {:.2f} s'.format(T))
+        logging.debug('{}:Adding new grid event at {:.2f} s'.format(self.name,T))
         self.grid_events_list.append({'T':T,'Vgrms':Vgrms,'fgrid':fgrid})  #Append new event to existing event list
         self.grid_events_list.sort(key=operator.itemgetter('T'))  #Sort new events list
         self.update_event_totals()
@@ -163,7 +170,7 @@ class SimulationEvents():
         
         Args:
            T: A scalar specifying start time of load event in seconds.
-           Vgrms: A complex scalar specifying load in ohm.
+           Zload1_actual: A complex scalar specifying load in ohm.
         """
         
         T = float(T)
@@ -175,10 +182,10 @@ class SimulationEvents():
         
         for event in self.load_events_list:
             if T==event['T']:
-                six.print_('Removing existing load event at {:.2f}'.format(event['T']))
+                logging.debug('{}:Removing existing load event at {:.2f}'.format(self.name,event['T']))
                 self.load_events_list.remove(event)   #Remove existing event at same time stamp
         
-        six.print_('Adding new load event at {:.2f} s'.format(T))
+        logging.debug('{}:Adding new load event at {:.2f} s'.format(self.name,T))
         self.load_events_list.append({'T':T,'Zload1_actual':Zload1_actual})  #Append new event to existing event list
         self.load_events_list.sort(key=operator.itemgetter('T'))  #Sort new events list
         self.update_event_totals()
@@ -191,13 +198,13 @@ class SimulationEvents():
             REMOVE_FLAG = False
             for event in self.solar_events_list:
                 if event["T"] == T:
-                    six.print_('Solar event at {:.2f} s removed'.format(T))
+                    logging.debug('{}:Solar event at {:.2f} s removed'.format(self.name,T))
                     self.solar_events_list.remove(event)
                     REMOVE_FLAG = True
             if REMOVE_FLAG == False:
-                six.print_('No solar event at {:.2f} s'.format(T))
+                logging.debug('{}:No solar event at {:.2f} s'.format(self.name,T))
         else:
-            six.print_('Removing all events in solar events list and replacing with default event')
+            logging.debug('{}:Removing all events in solar events list and replacing with default event'.format(self.name))
             self.solar_events_list.clear()
             self.solar_events_list.append({'T':3.0,'Sinsol':self.Sinsol_default,'Tactual':self.Tactual_default})  #Defaut solar event
             
@@ -209,12 +216,12 @@ class SimulationEvents():
         T = float(T)
         REMOVE_FLAG = False
         for event in self.grid_events_list:
-           if event["T"] == T:
-              six.print_('Grid event at {:.2f} s removed'.format(T))
-              self.grid_events_list.remove(event)
-              REMOVE_FLAG = True
+            if event["T"] == T:
+                logging.debug('{}:Grid event at {:.2f} s removed'.format(self.name,T))
+                self.grid_events_list.remove(event)
+                REMOVE_FLAG = True
         if REMOVE_FLAG == False:
-           six.print_('No grid event at {:.2f} s'.format(T))
+            logging.debug('{}:No grid event at {:.2f} s'.format(self.name,T))
         self.update_event_totals()
     
     def remove_load_event(self,T=None,REMOVE_ALL=False):
@@ -226,13 +233,13 @@ class SimulationEvents():
             REMOVE_FLAG = False
             for event in self.load_events_list:
                 if event["T"] == T:
-                    six.print_('Load event at {:.2f} s removed'.format(event["T"]))
+                    logging.debug('{}:Load event at {:.2f} s removed'.format(self.name,event["T"]))
                     self.load_events_list.remove(event)
                     REMOVE_FLAG = True
             if REMOVE_FLAG == False:
-                six.print_('No load event at {:.2f} s'.format(T)) 
+                logging.debug('No load event at {:.2f} s'.format(T)) 
         else:
-            six.print_('Removing all events in load events list and replacing with default event')
+            logging.debug('{}:Removing all events in load events list and replacing with default event'.format(self.name))
             self.load_events_list.clear()
             self.load_events_list.append({'T':5.0,'Zload1_actual':self.Zload1_default})  #Defaut load event
             
@@ -304,7 +311,7 @@ class SimulationEvents():
         self.grid_event_counter = 0
         self.load_event_counter = 0
         
-        six.print_('Simulation event counters reset!')
+        logging.debug('{}:Simulation event counters reset!'.format(self.name))
         
     @property
     def simulation_events_list(self):

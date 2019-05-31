@@ -1,16 +1,19 @@
 """Single phase PV-DER code."""
 
 from __future__ import division
+
+import six
+import pdb
+import warnings
+import logging
+
 import numpy as np
 import math
 import cmath
 import scipy
-import six
-import pdb
-import warnings
-
 from scipy.optimize import fsolve, minimize
 
+from pvder.utility_classes import Logging
 from pvder.DER_components_three_phase import PV_Module
 from pvder.DER_check_and_initialize import PVDER_SetupUtilities
 from pvder.DER_features import PVDER_SmartFeatures
@@ -69,7 +72,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
                              gridVoltagePhaseC = None,\
                              gridFrequency = None,\
                              standAlone=True,STEADY_STATE_INITIALIZATION=False,\
-                             pvderConfig=None,identifier=None): 
+                             pvderConfig=None,identifier=None,verbosity='INFO'): 
         
         """Creates an instance of `SolarPV_DER`.
         
@@ -90,14 +93,17 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
           ValueError: If rated DC link voltage is not sufficient.
         """
         
-        self.standAlone = standAlone
-        self.update_grid_measurements(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
-        self.Vrms_rated = Vrms_rated       
-        
         #Increment count to keep track of number of PV-DER model instances
         SolarPV_DER_SinglePhase.DER_count = SolarPV_DER_SinglePhase.DER_count+1
         #Generate a name for the instance
         self.name_instance(identifier)
+        
+        #Set logging level - {DEBUG,INFO,WARNING,ERROR}
+        self.verbosity = verbosity
+        
+        self.standAlone = standAlone
+        self.update_grid_measurements(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
+        self.Vrms_rated = Vrms_rated
         
         if six.PY3:
             super().__init__(events,Sinverter_rated)  #Initialize PV module class (base class)

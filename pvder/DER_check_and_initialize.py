@@ -1,15 +1,17 @@
 """Code for initializing and validating PV-DER model instances."""
 
 from __future__ import division
-import math
 import logging
+
+import math
 import numpy as np
 from scipy.optimize import fsolve, minimize
 
+from pvder.utility_classes import Logging
 from pvder.grid_components import BaseValues
 from pvder import utility_functions
 
-class PVDER_SetupUtilities(BaseValues):
+class PVDER_SetupUtilities(BaseValues,Logging):
     """
        Utility class for error checking during model initialization.
     """
@@ -20,9 +22,9 @@ class PVDER_SetupUtilities(BaseValues):
         self.PV_DER_ID = self.DER_count  #ID is same as current DER instance count
         
         if type(self).__name__ == 'SolarPV_DER_SinglePhase':
-            self.name = 'PV_DER-1ph_'+str(self.PV_DER_ID)  #Object name
+            self.name = 'PVDER-1ph_'+str(self.PV_DER_ID)  #Object name
         elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
-            self.name = 'PV_DER-3ph_'+str(self.PV_DER_ID)  #Object name
+            self.name = 'PVDER-3ph_'+str(self.PV_DER_ID)  #Object name
         
         if identifier is not None:
             self.name  = str(identifier) + '-' +self.name  #Add additional identifier to object name if it was provided
@@ -247,20 +249,20 @@ class PVDER_SetupUtilities(BaseValues):
         _Lf_min = self.Vdcrated/(16*self.fswitching*_del_I1max)
         _del_I1max_actual = self.Vdcrated/(16*self.fswitching*self.Lf_actual)
         if _del_I1max_actual > _del_I1max:   #Check if ripple current is less than 10 %
-            logging.debug('Filter inductance {:.4} H is acceptable since AC side current ripple is {:.2}% (< 10%)'.format(_Lf_min,_del_I1max_actual/self.Iarated))
+            logging.debug('{}:Filter inductance {:.4} H is acceptable since AC side current ripple is {:.2}% (< 10%)'.format(self.name,_Lf_min,_del_I1max_actual/self.Iarated))
         else:
-            logging.debug('Warning:Filter inductance {:.4} H results in AC side current ripple of {:.2}% (> 10%)'.format(_Lf_min,_del_I1max_actual/self.Iarated))
+            logging.debug('{}:Warning:Filter inductance {:.4} H results in AC side current ripple of {:.2}% (> 10%)'.format(self.name,_Lf_min,_del_I1max_actual/self.Iarated))
         
         _I_ripple = (0.25*self.Vdcrated)/(self.Lf_actual*self.fswitching)  #Maximum ripple voltage (p-p) at DC link
         _V_ripple = self.Vdcrated/(32*self.Lf_actual*self.C_actual*(self.fswitching**2))  #Maximum ripple voltage (p-p) at DC link
         _V_ripple_percentage = (_V_ripple/self.Vdcrated)*100
         if _V_ripple_percentage <= 1.0:   #Check if voltage ripple on DC link is less than 1%
-            logging.debug('DC link capacitance of {:.4} F is acceptable since voltage ripple is only {:.2}% (< 1%)'.format(self.C_actual,_V_ripple_percentage))
+            logging.debug('{}:DC link capacitance of {:.4} F is acceptable since voltage ripple is only {:.2}% (< 1%)'.format(self.name,self.C_actual,_V_ripple_percentage))
         
         else:
             _V_ripple_ideal = self.Vdcrated*0.01  #1% ripple is acceptable
             _C = self.Vdcrated/(32*self.Lf_actual*_V_ripple_ideal*(self.fswitching**2))
-            logging.debug('Warning:DC link capacitance of {:.4} F results in DC link voltage ripple of {:.2}% (> 1%)!Please use at least {} F.'.format(self.C_actual,_V_ripple_percentage,_C))
+            logging.debug('{}:Warning:DC link capacitance of {:.4} F results in DC link voltage ripple of {:.2}% (> 1%)!Please use at least {} F.'.format(self.name,self.C_actual,_V_ripple_percentage,_C))
             #warnings.warn('Warning:DC link capacitance of {} F results in DC link voltage ripple of {:.3}% (> 1%)!Please use at least {} F.'.format(self.C_actual,_V_ripple_percentage,_C))               
      
     def power_error_calc(self,x):
@@ -311,12 +313,17 @@ class PVDER_SetupUtilities(BaseValues):
         return P_PCC_error  + Q_PCC_error + P_error# + Q_error
     
     def steady_state_calc(self):
-        """Return steady state values."""
+        """Find duty cycle and inverter current that minimize steady state error and return steady state values."""        
         
-        #Find duty cycle that minimize steady state error
-        print('Solving for steady state at current operating point.')
+        logging.debug('Solving for steady state at current operating point.')
         x0 = np.array([0.89,0.0,124.0,3.59])
-        result = minimize(self.power_error_calc, x0, method='nelder-mead',options={'xtol': 1e-8, 'disp': True})
+        
+        if self.verbosity == 'DEBUG':
+            disp = True
+        else:
+            disp = False
+        
+        result = minimize(self.power_error_calc, x0, method='nelder-mead',options={'xtol': 1e-8, 'disp': disp})
         
         if result.success == False:
             raise ValueError('Steady state solution did not converge! Change operating point or disable steady state flag and try again.')
@@ -359,19 +366,10 @@ class PVDER_SetupUtilities(BaseValues):
         self.Vrms = self.Vrms_calc()
         self.Irms = self.Irms_calc()
         
-        print('Steady state values for operating point defined by Ppv:{:.2f} W, Vdc:{:.2f} V, va:{:.2f} V found at:'.format(self.Ppv*self.Sbase,self.Vdc*self.Vdcbase,self.va*self.Vbase))
+        logging.debug('{}:Steady state values for operating point defined by Ppv:{:.2f} W, Vdc:{:.2f} V, va:{:.2f} V found at:'.format(self.name,self.Ppv*self.Sbase,self.Vdc*self.Vdcbase,self.va*self.Vbase))
             
-        self.show_PV_DER_states(quantity='power')
-        self.show_PV_DER_states(quantity='duty cycle')
-        self.show_PV_DER_states(quantity='voltage')
-        self.show_PV_DER_states(quantity='current')
-        #print('Pt:{:.2f} W,Qt:{:.2f} VAR'.format(St0.real*self.Sbase,St0.imag*self.Sbase))
-        #print('P_PCC:{:.2f} W,Q_PCC:{:.2f} VAR'.format(S_PCC0.real*self.Sbase,S_PCC0.imag*self.Sbase))
-        #print('Voltage sum:{:.4f}'.format(vta0+vtb0+vtc0))
-        #print('Current sum:{:.4f}'.format(ia0+ib0+ic0))
-        """
-        return [ia0,xa0,ua0,\
-                ib0,xb0,ub0,\
-                ic0,xc0,uc0,\
-                self.Vdc,xDC0,xQ0,xPLL0,wte0]
-        """
+        if self.verbosity == 'DEBUG':
+            self.show_PV_DER_states(quantity='power')
+            self.show_PV_DER_states(quantity='duty cycle')
+            self.show_PV_DER_states(quantity='voltage')
+            self.show_PV_DER_states(quantity='current')

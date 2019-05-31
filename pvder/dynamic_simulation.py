@@ -11,6 +11,7 @@ import six
 import logging
 
 ####from graphviz import Digraph
+from pvder.utility_classes import Logging
 from pvder.grid_components import Grid
 from pvder.simulation_utilities import SimulationUtilities
 from pvder import utility_functions
@@ -60,7 +61,7 @@ class ModelUtilities():
         dot.edge('Transmission_Line', 'Grid')
         dot.render('model_graphs/model.gv', view=True)
 
-class DynamicSimulation(Grid,SimulationUtilities):
+class DynamicSimulation(Grid,SimulationUtilities,Logging):
     """ Utility class for running simulations."""
     
     sim_count = 0
@@ -74,7 +75,7 @@ class DynamicSimulation(Grid,SimulationUtilities):
     DEBUG_POWER = False
     DEBUG_PLL = False
         
-    def __init__(self,PV_model,events,grid_model=None,tStop = 0.5,tInc = 0.001,LOOP_MODE = False,COLLECT_SOLUTION=True):
+    def __init__(self,PV_model,events,grid_model=None,tStop = 0.5,tInc = 0.001,LOOP_MODE = False,COLLECT_SOLUTION=True,verbosity='INFO'):
         """Creates an instance of `GridSimulation`.
         
         Args:
@@ -118,8 +119,8 @@ class DynamicSimulation(Grid,SimulationUtilities):
         if self.LOOP_MODE:
             self.reset_stored_trajectories()
         
-        #Set logging leve - {INFO,DEBUG,WARNING}
-        logging.getLogger().setLevel(logging.INFO)
+        #Set logging level - {DEBUG,INFO,WARNING,ERROR}
+        self.verbosity = verbosity
     
     @property
     def y0(self):
@@ -626,7 +627,7 @@ class DynamicSimulation(Grid,SimulationUtilities):
             timer_start = time.time()
             six.print_("{}:Simulation started at {} s and will end at {} s".format(self.name,self.tStart,self.tStop))
             if self.jacFlag:
-                six.print_("{}:Analytical Jacobian will be provided to ODE solver.".format(self.name))
+                logging.debug("{}:Analytical Jacobian will be provided to ODE solver.".format(self.name))
         
             solution,_,_  = self.call_ODE_solver(self.ODE_model,self.jac_ODE_model,self.y0,self.t)
             six.print_('{}:Simulation was completed in {}'.format(self.name,time.strftime("%H:%M:%S", time.gmtime(time.time()-timer_start))))

@@ -2,10 +2,13 @@
 
 from __future__ import division
 import operator
+import logging
+
 import math
 import cmath
 import numpy as np
-    
+
+from pvder.utility_classes import Logging
 from pvder.grid_components import BaseValues
 from pvder import utility_functions
 
@@ -169,6 +172,7 @@ class PVDER_ModelUtilities(BaseValues):
     
     def wgrid_calc(self):
         """Frequency of grid voltage source."""
+        
         if self.standAlone:
             val = self.grid_model.wgrid
         else:
@@ -182,7 +186,7 @@ class PVDER_ModelUtilities(BaseValues):
         return  self.Kp_PLL*(self.vd) + self.xPLL + 2*math.pi*60.0
         
     def update_Ppv(self,t):
-        """Update load impedance at PCC-LV side."""
+        """Update PV module power output based on solar events and DC link voltage."""
        
         Sinsol_new,Tactual_new = self.events.solar_events(t)
         if abs(self.Sinsol- Sinsol_new) or abs(self.Tactual- Tactual_new) > 0.0:    #Update Iph only if solar insolation changes
@@ -215,7 +219,6 @@ class PVDER_ModelUtilities(BaseValues):
         """Inverter apparent power output - phase a/b/c"""
         
         return (1/2)*(vph*iph.conjugate())
-        #return (1/2)*(self.va*self.ia.conjugate())*1.0
     
     def show_PV_DER_states(self,quantity='voltage'):
         """Display values of states in the DER model quantities.
@@ -414,12 +417,14 @@ class PVDER_ModelUtilities(BaseValues):
             for ref in self.Vdc_ref_list:
                 print('t:{:.3f},Vdc_ref:{:.3f} V'.format(ref['t'],ref['Vdc_ref']*self.Vdcbase))
         else:
-            print("No Vdc references!!!")
+            print("{}:No Vdc references!!!".format(self.name))
     
     def reset_reference_counters(self):
+        """Reset counter for reference change events."""
+        
         self.Vdc_ref_counter = 0
         
-        print('Reference event counters reset!')
+        logging.debug('{}:Reference event counters reset!'.format(self.name))
         
     def initialize_jacobian(self):
         """Create a Jacobian matrix with zero values."""
