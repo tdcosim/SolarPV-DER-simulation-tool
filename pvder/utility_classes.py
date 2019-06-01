@@ -12,6 +12,12 @@ class Logging():
     
     logging_levels = ['DEBUG','INFO']#,'WARNING','ERROR'
     
+    
+    def initialize_logger(self):
+        """Initialize loggers for different classes."""
+        
+        self.logger = logging.getLogger(type(self).__name__)
+    
     @property
     def verbosity(self):
         return self.__verbosity
@@ -26,14 +32,14 @@ class Logging():
         
         #Set logging level - {DEBUG,INFO,WARNING,ERROR}
         if verbosity == 'DEBUG':
-            logging.getLogger().setLevel(logging.DEBUG)
+            self.logger.setLevel(logging.DEBUG)
         
         elif verbosity == 'INFO':
-            logging.getLogger().setLevel(logging.INFO)
+            self.logger.setLevel(logging.INFO)
             
         elif verbosity == 'WARNING':
-            logging.getLogger().setLevel(logging.INFO)
+            self.logger.setLevel(logging.WARNING)
             
-        print('{}:Logging level is set to:{}'.format(self.name,verbosity))
+        self.logger.debug('{}:Logging level is set to:{}'.format(self.name,verbosity))
                     
         return self.__verbosity

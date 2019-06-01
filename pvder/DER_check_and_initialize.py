@@ -93,7 +93,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         """
         
         if str(int(Sinverter_rated/1e3)) in self.Sinverter_list:
-            logging.debug('Creating PV inverter instance for DER with rating:' + str(int(Sinverter_rated/1e3)) + ' kVA')
+            self.logger.debug('Creating PV inverter instance for DER with rating:' + str(int(Sinverter_rated/1e3)) + ' kVA')
             self.Sinverter_rated = Sinverter_rated #Inverter rating in kVA
             self.Sinverter_nominal = (self.Sinverter_rated/BaseValues.Sbase) #Converting to p.u. value
             
@@ -224,7 +224,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         elif self.standAlone and grid_model is None:
             raise ValueError('`Grid` instance need to be provided in stand alone mode for creating `SolarPV_DER` instance`!')
         else: #Grid model is not connected
-            print('{}:No grid model attached since PV-DER instance is not stand alone!'.format(self.name))
+            self.logger.debug('{}:No grid model attached since PV-DER instance is not stand alone!'.format(self.name))
                              
     def check_voltage(self):
         """Method to check whether inverter voltage ratings are feasible.
@@ -249,20 +249,20 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         _Lf_min = self.Vdcrated/(16*self.fswitching*_del_I1max)
         _del_I1max_actual = self.Vdcrated/(16*self.fswitching*self.Lf_actual)
         if _del_I1max_actual > _del_I1max:   #Check if ripple current is less than 10 %
-            logging.debug('{}:Filter inductance {:.4} H is acceptable since AC side current ripple is {:.2}% (< 10%)'.format(self.name,_Lf_min,_del_I1max_actual/self.Iarated))
+            self.logger.debug('{}:Filter inductance {:.4} H is acceptable since AC side current ripple is {:.2}% (< 10%)'.format(self.name,_Lf_min,_del_I1max_actual/self.Iarated))
         else:
-            logging.debug('{}:Warning:Filter inductance {:.4} H results in AC side current ripple of {:.2}% (> 10%)'.format(self.name,_Lf_min,_del_I1max_actual/self.Iarated))
+            self.logger.debug('{}:Warning:Filter inductance {:.4} H results in AC side current ripple of {:.2}% (> 10%)'.format(self.name,_Lf_min,_del_I1max_actual/self.Iarated))
         
         _I_ripple = (0.25*self.Vdcrated)/(self.Lf_actual*self.fswitching)  #Maximum ripple voltage (p-p) at DC link
         _V_ripple = self.Vdcrated/(32*self.Lf_actual*self.C_actual*(self.fswitching**2))  #Maximum ripple voltage (p-p) at DC link
         _V_ripple_percentage = (_V_ripple/self.Vdcrated)*100
         if _V_ripple_percentage <= 1.0:   #Check if voltage ripple on DC link is less than 1%
-            logging.debug('{}:DC link capacitance of {:.4} F is acceptable since voltage ripple is only {:.2}% (< 1%)'.format(self.name,self.C_actual,_V_ripple_percentage))
+            self.logger.debug('{}:DC link capacitance of {:.4} F is acceptable since voltage ripple is only {:.2}% (< 1%)'.format(self.name,self.C_actual,_V_ripple_percentage))
         
         else:
             _V_ripple_ideal = self.Vdcrated*0.01  #1% ripple is acceptable
             _C = self.Vdcrated/(32*self.Lf_actual*_V_ripple_ideal*(self.fswitching**2))
-            logging.debug('{}:Warning:DC link capacitance of {:.4} F results in DC link voltage ripple of {:.2}% (> 1%)!Please use at least {} F.'.format(self.name,self.C_actual,_V_ripple_percentage,_C))
+            self.logger.debug('{}:Warning:DC link capacitance of {:.4} F results in DC link voltage ripple of {:.2}% (> 1%)!Please use at least {} F.'.format(self.name,self.C_actual,_V_ripple_percentage,_C))
             #warnings.warn('Warning:DC link capacitance of {} F results in DC link voltage ripple of {:.3}% (> 1%)!Please use at least {} F.'.format(self.C_actual,_V_ripple_percentage,_C))               
      
     def power_error_calc(self,x):
@@ -315,7 +315,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     def steady_state_calc(self):
         """Find duty cycle and inverter current that minimize steady state error and return steady state values."""        
         
-        logging.debug('Solving for steady state at current operating point.')
+        self.logger.debug('Solving for steady state at current operating point.')
         x0 = np.array([0.89,0.0,124.0,3.59])
         
         if self.verbosity == 'DEBUG':
@@ -366,7 +366,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.Vrms = self.Vrms_calc()
         self.Irms = self.Irms_calc()
         
-        logging.debug('{}:Steady state values for operating point defined by Ppv:{:.2f} W, Vdc:{:.2f} V, va:{:.2f} V found at:'.format(self.name,self.Ppv*self.Sbase,self.Vdc*self.Vdcbase,self.va*self.Vbase))
+        self.logger.debug('{}:Steady state values for operating point defined by Ppv:{:.2f} W, Vdc:{:.2f} V, va:{:.2f} V found at:'.format(self.name,self.Ppv*self.Sbase,self.Vdc*self.Vdcbase,self.va*self.Vbase))
             
         if self.verbosity == 'DEBUG':
             self.show_PV_DER_states(quantity='power')

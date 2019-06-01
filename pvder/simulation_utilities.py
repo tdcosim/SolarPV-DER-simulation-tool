@@ -1,24 +1,29 @@
 """ Manage simulation results and ODE solver."""
 
 from __future__ import division
+import sys
+import six
+import time
+
 import numpy as np
 import math
 import cmath
-import sys
-import six
 from scipy.integrate import odeint
-import time
+
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-class SimulationResults():
+from pvder.utility_classes import Logging
+
+class SimulationResults(Logging):
     """ Utility class for simulation results."""
     
+    results_count = 0
     SAVE_PLOT_JPEG = False
     SAVE_PLOT_SVG = False
     figure_DPI = 1200
 
-    def __init__(self,simulation,figure_index=1,PER_UNIT=True,font_size=18,PLOT_TITLE=True):
+    def __init__(self,simulation,figure_index=1,PER_UNIT=True,font_size=18,PLOT_TITLE=True,verbosity='INFO'):
         """Creates an instance of `SimulationResults`.
         
         Args:
@@ -26,6 +31,7 @@ class SimulationResults():
           figure_index: An integer specifying the figure index.
           font_size: An integer spcifying the font size to be used withing plots.
           PLOT_TITLE: A boolean specifying whether the title will be displayed in plots.
+          verbosity: A string specifying the verbosity level (DEBUG,INFO,WARNING,ERROR).
 
         """
         # do a lazy import. This is against PEP style guidelines. However,
@@ -35,6 +41,16 @@ class SimulationResults():
         # imported.
         #import matplotlib.pyplot as plt
         #import matplotlib.ticker as ticker
+        
+        #Increment count to keep track of number of simulation results instances
+        SimulationResults.results_count = SimulationResults.results_count + 1
+        self.results_ID =SimulationResults.results_count
+        #Object name
+        self.name = 'result_'+str(self.results_ID)
+        
+        self.initialize_logger()
+        #Set logging level - {DEBUG,INFO,WARNING,ERROR}
+        self.verbosity = verbosity
 
         self.figure_index =1
         self.simulation = simulation
@@ -50,12 +66,12 @@ class SimulationResults():
            self.V_multiplier = 1.0
            self.I_multiplier = 1.0
            self.S_multiplier = 1.0
-           six.print_('Using per unit quantities!')
+           self.logger.debug('Using per unit quantities!')
         else:
            self.V_multiplier = self.simulation.Vbase
            self.I_multiplier = self.simulation.Ibase
            self.S_multiplier = self.simulation.Sbase
-           six.print_('Using SI quantities!')
+           self.logger.debug('Using SI quantities!')
     
     def group_quantities_for_plotting(self,plot_type):
         """Plot power from simulation.

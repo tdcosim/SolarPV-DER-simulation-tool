@@ -61,7 +61,7 @@ class PV_Module(object):
            (type(self).__name__ == 'SolarPV_DER_ThreePhase' and Sinverter_rated in {50e3,100e3,250e3}):
            
            _DER_rating = str(int(Sinverter_rated/1e3))
-           logging.debug('Creating PV module instance for {} DER with rating:{} kVA'.format(type(self).__name__.replace('SolarPV_DER_',''),_DER_rating))
+           self.logger.debug('Creating PV module instance for {} DER with rating:{} kVA'.format(type(self).__name__.replace('SolarPV_DER_',''),_DER_rating))
            self.Np = self.module_parameters[str(_DER_rating)]['Np']
            self.Ns = self.module_parameters[str(_DER_rating)]['Ns']
            self.Vdcmpp0 = self.module_parameters[str(_DER_rating)]['Vdcmpp0']
@@ -91,15 +91,17 @@ class PV_Module(object):
                        +(self.Np*self.Iph),self.Vdcmpp0)[0] #This is a time consuming operation 
     
     def Iph_calc(self):
-        """Panel current for given insolation and temperature"""
+        """Panel current for given insolation and temperature."""
+        
         return (self.Iscr+(self.Kv*(self.Tactual-self.T0)))*(self.Sinsol/100.0)
     
     def Ppv_calc(self,Vdc_actual):
-       """PV panel power output from  solar insolation."""
-       self.Iph = self.Iph_calc()
-       self.Ipv = (self.Np*self.Iph)-(self.Np*self.Irs*(math.exp((self.q*Vdc_actual)/(self.k*self.Tactual*self.A*self.Ns))-1))   #Faster  with Pure Python functions
+        """PV panel power output from  solar insolation."""
+    
+        self.Iph = self.Iph_calc()
+        self.Ipv = (self.Np*self.Iph)-(self.Np*self.Irs*(math.exp((self.q*Vdc_actual)/(self.k*self.Tactual*self.A*self.Ns))-1))   #Faster  with Pure Python functions
        
-       return max(0,(self.Ipv*Vdc_actual))/BaseValues.Sbase
+        return max(0,(self.Ipv*Vdc_actual))/BaseValues.Sbase
        
        #return utility_functions.Ppv_calc(self.Iph,self.Np,self.Ns,Vdc_actual,self.Tactual,Grid.Sbase)
     
@@ -201,9 +203,10 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         #Generate a name for the instance
         self.name_instance(identifier)
         
+        self.initialize_logger()
         #Set logging level - {DEBUG,INFO,WARNING,ERROR}
         self.verbosity = verbosity
-        
+                
         self.standAlone = standAlone
         self.update_grid_measurements(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
         self.Vrms_rated = Vrms_rated        

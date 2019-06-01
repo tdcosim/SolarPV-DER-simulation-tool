@@ -98,6 +98,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         #Generate a name for the instance
         self.name_instance(identifier)
         
+        self.initialize_logger()
         #Set logging level - {DEBUG,INFO,WARNING,ERROR}
         self.verbosity = verbosity
         

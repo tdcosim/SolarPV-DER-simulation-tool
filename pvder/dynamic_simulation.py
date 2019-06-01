@@ -94,6 +94,10 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         #Object name
         self.name = 'sim_'+str(self.sim_ID)
         
+        self.initialize_logger()
+        #Set logging level - {DEBUG,INFO,WARNING,ERROR}
+        self.verbosity = verbosity
+        
         self.tStop = tStop
         self.tInc = tInc
         self.t = self.t_calc()
@@ -119,8 +123,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         if self.LOOP_MODE:
             self.reset_stored_trajectories()
         
-        #Set logging level - {DEBUG,INFO,WARNING,ERROR}
-        self.verbosity = verbosity
+        
     
     @property
     def y0(self):
@@ -465,7 +468,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         else:
             self.collect_full_trajectory(solution)
         
-        logging.debug('{}:Stored solution for {} time points starting at {:.3f} s and ending at {:.3f} s!'.format(self.name,len(self.t),self.t[0],self.t[-1]))
+        self.logger.debug('{}:Stored solution for {} time points starting at {:.3f} s and ending at {:.3f} s!'.format(self.name,len(self.t),self.t[0],self.t[-1]))
         
     def collect_last_states(self):
         """Collect states at last time step."""
@@ -618,7 +621,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
                 self.t = t
                 six.print_("{}:Simulation started in loop mode with a step size of {:.4f} s!".format(self.name,self.t[-1]-self.t[0]))
                 if self.jacFlag:
-                    six.print_("{}:Analytical Jacobian will be provided to ODE solver.".format(self.name))
+                    self.logger.debug("{}:Analytical Jacobian will be provided to ODE solver.".format(self.name))
             solution,_,_  = self.call_ODE_solver(self.ODE_model,self.jac_ODE_model,y0,t)
             
         else:
@@ -627,7 +630,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             timer_start = time.time()
             six.print_("{}:Simulation started at {} s and will end at {} s".format(self.name,self.tStart,self.tStop))
             if self.jacFlag:
-                logging.debug("{}:Analytical Jacobian will be provided to ODE solver.".format(self.name))
+                self.logger.debug("{}:Analytical Jacobian will be provided to ODE solver.".format(self.name))
         
             solution,_,_  = self.call_ODE_solver(self.ODE_model,self.jac_ODE_model,self.y0,self.t)
             six.print_('{}:Simulation was completed in {}'.format(self.name,time.strftime("%H:%M:%S", time.gmtime(time.time()-timer_start))))

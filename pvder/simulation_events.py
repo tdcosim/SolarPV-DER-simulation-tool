@@ -36,6 +36,10 @@ class SimulationEvents(Logging):
         #Object name
         self.name = 'events_'+str(self.events_ID)
         
+        self.initialize_logger()
+        #Set logging level - {DEBUG,INFO,WARNING,ERROR}
+        self.verbosity = verbosity
+        
         self.SOLAR_EVENT_ENABLE = SOLAR_EVENT_ENABLE
         self.GRID_EVENT_ENABLE = GRID_EVENT_ENABLE
         self.LOAD_EVENT_ENABLE = LOAD_EVENT_ENABLE
@@ -46,9 +50,6 @@ class SimulationEvents(Logging):
         
         self.update_event_totals()
         self.reset_event_counters()
-        
-        #Set logging level - {DEBUG,INFO,WARNING,ERROR}
-        self.verbosity = verbosity
     
     def solar_events(self,t):
         """List of all simulation events."""
@@ -133,10 +134,10 @@ class SimulationEvents(Logging):
         
         for event in self.solar_events_list:
             if T==event['T']:
-                logging.debug('{}:Removing existing solar event at {:.2f}'.format(self.name,event['T']))
+                self.logger.debug('{}:Removing existing solar event at {:.2f}'.format(self.name,event['T']))
                 self.solar_events_list.remove(event)   # in {}Remove exi,self.events_IDsting event at same time stamp
         
-        logging.debug('{}:Adding new solar event at {:.2f} s'.format(self.name,T))
+        self.logger.debug('{}:Adding new solar event at {:.2f} s'.format(self.name,T))
         self.solar_events_list.append({'T':T,'Sinsol':Sinsol,'Tactual':Tactual})  #Append new event to existing event list
         self.solar_events_list.sort(key=operator.itemgetter('T'))  #Sort new events list
         self.update_event_totals()
@@ -157,10 +158,10 @@ class SimulationEvents(Logging):
         fgrid = float(fgrid)
         for event in self.grid_events_list:
             if T==event['T']:
-                logging.debug('{}:Removing existing grid event at {:.2f}'.format(self.name,event['T']))
+                self.logger.debug('{}:Removing existing grid event at {:.2f}'.format(self.name,event['T']))
                 self.grid_events_list.remove(event)   #Remove existing event at same time stamp
         
-        logging.debug('{}:Adding new grid event at {:.2f} s'.format(self.name,T))
+        self.logger.debug('{}:Adding new grid event at {:.2f} s'.format(self.name,T))
         self.grid_events_list.append({'T':T,'Vgrms':Vgrms,'fgrid':fgrid})  #Append new event to existing event list
         self.grid_events_list.sort(key=operator.itemgetter('T'))  #Sort new events list
         self.update_event_totals()
@@ -182,10 +183,10 @@ class SimulationEvents(Logging):
         
         for event in self.load_events_list:
             if T==event['T']:
-                logging.debug('{}:Removing existing load event at {:.2f}'.format(self.name,event['T']))
+                self.logger.debug('{}:Removing existing load event at {:.2f}'.format(self.name,event['T']))
                 self.load_events_list.remove(event)   #Remove existing event at same time stamp
         
-        logging.debug('{}:Adding new load event at {:.2f} s'.format(self.name,T))
+        self.logger.debug('{}:Adding new load event at {:.2f} s'.format(self.name,T))
         self.load_events_list.append({'T':T,'Zload1_actual':Zload1_actual})  #Append new event to existing event list
         self.load_events_list.sort(key=operator.itemgetter('T'))  #Sort new events list
         self.update_event_totals()
@@ -204,7 +205,7 @@ class SimulationEvents(Logging):
             if REMOVE_FLAG == False:
                 logging.debug('{}:No solar event at {:.2f} s'.format(self.name,T))
         else:
-            logging.debug('{}:Removing all events in solar events list and replacing with default event'.format(self.name))
+            self.logger.debug('{}:Removing all events in solar events list and replacing with default event'.format(self.name))
             self.solar_events_list.clear()
             self.solar_events_list.append({'T':3.0,'Sinsol':self.Sinsol_default,'Tactual':self.Tactual_default})  #Defaut solar event
             
@@ -217,11 +218,11 @@ class SimulationEvents(Logging):
         REMOVE_FLAG = False
         for event in self.grid_events_list:
             if event["T"] == T:
-                logging.debug('{}:Grid event at {:.2f} s removed'.format(self.name,T))
+                self.logger.debug('{}:Grid event at {:.2f} s removed'.format(self.name,T))
                 self.grid_events_list.remove(event)
                 REMOVE_FLAG = True
         if REMOVE_FLAG == False:
-            logging.debug('{}:No grid event at {:.2f} s'.format(self.name,T))
+            self.logger.debug('{}:No grid event at {:.2f} s'.format(self.name,T))
         self.update_event_totals()
     
     def remove_load_event(self,T=None,REMOVE_ALL=False):
@@ -233,13 +234,13 @@ class SimulationEvents(Logging):
             REMOVE_FLAG = False
             for event in self.load_events_list:
                 if event["T"] == T:
-                    logging.debug('{}:Load event at {:.2f} s removed'.format(self.name,event["T"]))
+                    self.logger.debug('{}:Load event at {:.2f} s removed'.format(self.name,event["T"]))
                     self.load_events_list.remove(event)
                     REMOVE_FLAG = True
             if REMOVE_FLAG == False:
-                logging.debug('No load event at {:.2f} s'.format(T)) 
+                self.logger.debug('No load event at {:.2f} s'.format(T)) 
         else:
-            logging.debug('{}:Removing all events in load events list and replacing with default event'.format(self.name))
+            self.logger.debug('{}:Removing all events in load events list and replacing with default event'.format(self.name))
             self.load_events_list.clear()
             self.load_events_list.append({'T':5.0,'Zload1_actual':self.Zload1_default})  #Defaut load event
             
