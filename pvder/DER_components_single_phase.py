@@ -22,7 +22,7 @@ from pvder.grid_components import Grid
 
 from pvder import utility_functions
 
-class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,Grid):
+class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,Grid,Logging):
     """
     Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
     control systems.
@@ -133,11 +133,12 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         self.update_voltages()
         self.update_power()        
         self.update_RMS()
-
-        #Reference currents
-        self.update_iref() 
         
-        self.update_inverter_frequency(t=0.0)        
+        self.update_iref() #Reference currents
+        
+        self.update_inverter_frequency(t=0.0)
+        
+        self.creation_message()
         
     @property                         #Decorator used for auto updating
     def y0(self):

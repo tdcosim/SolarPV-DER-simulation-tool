@@ -46,7 +46,7 @@ class Grid(BaseValues,SimulationUtilities):
         self.events = events
         
         #Object name
-        self.name = 'grid'+str(Grid.grid_count)
+        self.name = 'grid_'+str(Grid.grid_count)
         
         #Voltage unbalance
         self.unbalance_ratio_b = unbalance_ratio_b

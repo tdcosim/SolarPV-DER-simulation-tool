@@ -243,6 +243,8 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         self.update_iref()       
         
         self.update_inverter_frequency(t=0.0)
+        
+        self.creation_message()
     
     @property                         #Decorator used for auto updating
     def y0(self):

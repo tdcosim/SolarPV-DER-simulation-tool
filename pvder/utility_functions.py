@@ -209,63 +209,63 @@ def print_to_terminal(text_string='Printing to terminal!'):
     
     sys.__stdout__.write(text_string+'\n')
     sys.__stdout__.flush()      #Flush buffer to terminal
-
+"""
 def print_LVRT_events(simulation_time,voltage,timer_start=0.0,event_name='',print_inline = False,verbose = False):
-        """Print logs for LVRT events."""
+        #Print logs for LVRT events.
 
         if event_name == 'LV1_start':
-            text_string = '{time_stamp:.4f}:LV1 zone entered at {timer_start:.4f}s for {voltage:.3f} V'\
-                            .format(time_stamp=simulation_time,timer_start=timer_start,voltage=voltage)
+            text_string = '{}:{time_stamp:.4f}:LV1 zone entered at {timer_start:.4f}s for {voltage:.3f} V'\
+                            .format(self.name,time_stamp=simulation_time,timer_start=timer_start,voltage=voltage)
 
         elif event_name == 'LV2_start':
-            text_string = '{time_stamp:.4f}:LV2 zone entered at {timer_start:.4f}s for {voltage:.3f} V'\
-                            .format(time_stamp=simulation_time,timer_start=timer_start,voltage=voltage)
+            text_string = '{}:{time_stamp:.4f}:LV2 zone entered at {timer_start:.4f}s for {voltage:.3f} V'\
+                            .format(self.name,time_stamp=simulation_time,timer_start=timer_start,voltage=voltage)
 
         elif event_name == 'LV1_reset':
-            text_string = '{time_stamp:.4f}:LV1 flag reset at {time_stamp:.4f}s after {time_elasped:.4f} s in LV1 zone for {voltage:.3f} V'\
-                            .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage)
+            text_string = '{}:{time_stamp:.4f}:LV1 flag reset at {time_stamp:.4f}s after {time_elasped:.4f} s in LV1 zone for {voltage:.3f} V'\
+                            .format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage)
 
         elif event_name == 'LV2_reset':
-            text_string = '{time_stamp:.4f}:LV2 flag reset at {time_stamp:.4f}s after {time_elasped:.4f} s in LV2 zone for {voltage:.3f} V'\
-                            .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage)
+            text_string = '{}:{time_stamp:.4f}:LV2 flag reset at {time_stamp:.4f}s after {time_elasped:.4f} s in LV2 zone for {voltage:.3f} V'\
+                            .format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage)
 
         elif event_name == 'LV1_zone' and verbose == True:
-            text_string = '{time_stamp:.4f}:LV1 zone entered at:{timer_start:.4f}s and continuing for {time_elasped:.4f}s'\
-                            .format(time_stamp=simulation_time,timer_start=timer_start,time_elasped=simulation_time-timer_start)
+            text_string = '{}:{time_stamp:.4f}:LV1 zone entered at:{timer_start:.4f}s and continuing for {time_elasped:.4f}s'\
+                            .format(self.name,time_stamp=simulation_time,timer_start=timer_start,time_elasped=simulation_time-timer_start)
 
         elif event_name == 'LV2_zone' and verbose == True:
-            text_string = '{time_stamp:.4f}:LV2 zone entered at:{timer_start:.4f}s and continuing for {time_elasped:.4f}s'\
-                            .format(time_stamp=simulation_time,timer_start=timer_start,time_elasped=simulation_time-timer_start)
+            text_string = '{}:{time_stamp:.4f}:LV2 zone entered at:{timer_start:.4f}s and continuing for {time_elasped:.4f}s'\
+                            .format(self.name,time_stamp=simulation_time,timer_start=timer_start,time_elasped=simulation_time-timer_start)
 
         elif event_name == 'inverter_trip_LV1':
-            text_string = '{time_stamp:.4f}:LV1 violation at {time_stamp:.4f}s after {time_elasped:.4f} s for {voltage:.3f} V - Inverter will be tripped'\
-                            .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage)
+            text_string = '{}:{time_stamp:.4f}:LV1 violation at {time_stamp:.4f}s after {time_elasped:.4f} s for {voltage:.3f} V - Inverter will be tripped'\
+                            .format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage)
             six.print_(text_string)
 
         elif event_name == 'inverter_trip_LV2':
-            text_string = '{time_stamp:.4f}:LV2 violation at {time_stamp:.4f}s after {time_elasped:.4f} s for {voltage:.3f} V - Inverter will be tripped'\
-                            .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage)    
+            text_string = '{}:{time_stamp:.4f}:LV2 violation at {time_stamp:.4f}s after {time_elasped:.4f} s for {voltage:.3f} V - Inverter will be tripped'\
+                            .format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage)    
             six.print_(text_string)
 
         elif event_name == 'reconnect_start':
-            text_string = '{time_stamp:.4f}:Reconnect timer started at {timer_start:.4f} s for {voltage:.3f} V'\
-                            .format(time_stamp=simulation_time,timer_start=timer_start,voltage=voltage)
+            text_string = '{}:{time_stamp:.4f}:Reconnect timer started at {timer_start:.4f} s for {voltage:.3f} V'\
+                            .format(self.name,time_stamp=simulation_time,timer_start=timer_start,voltage=voltage)
 
         elif event_name == 'reconnect_reset':
-            text_string = '{time_stamp:.4f}:Reconnect timer reset after {time_elasped:.4f} s for {voltage:.3f} V'\
-                           .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage)
+            text_string = '{}:{time_stamp:.4f}:Reconnect timer reset after {time_elasped:.4f} s for {voltage:.3f} V'\
+                           .format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage)
 
         elif event_name == 'reconnect_zone' and verbose == True:
-            text_string = '{time_stamp:.4f}:Reconnect timer started at {timer_start:.4f} s and continuing for {time_elasped:.4f} s'\
-                           .format(time_stamp=simulation_time,timer_start=timer_start,time_elasped=simulation_time-timer_start)
+            text_string = '{}:{time_stamp:.4f}:Reconnect timer started at {timer_start:.4f} s and continuing for {time_elasped:.4f} s'\
+                           .format(self.name,time_stamp=simulation_time,timer_start=timer_start,time_elasped=simulation_time-timer_start)
 
         elif event_name == 'inverter_reconnection':
-            text_string = '{time_stamp:.4f}:Inverter reconnecting after LV trip at {time_stamp:.4f}s after {time_elasped:.4f}s for {voltage:.3f} V'\
-                            .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage)
+            text_string = '{}:{time_stamp:.4f}:Inverter reconnecting after LV trip at {time_stamp:.4f}s after {time_elasped:.4f}s for {voltage:.3f} V'\
+                            .format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage)
             six.print_(text_string)
 
         elif event_name == 'inverter_tripped' and verbose == True: 
-            text_string = '{time_stamp:.4f}:Inverter in tripped condition for {voltage:.3f} V'.format(time_stamp=simulation_time,voltage=voltage)
+            text_string = '{}:{time_stamp:.4f}:Inverter in tripped condition for {voltage:.3f} V'.format(self.name,time_stamp=simulation_time,voltage=voltage)
 
         else:
             text_string =''
@@ -278,7 +278,7 @@ def print_LVRT_events(simulation_time,voltage,timer_start=0.0,event_name='',prin
                 print_to_terminal(text_string)
         else:
             pass
-
+"""
 def print_LFRT_events(simulation_time,frequency,timer_start=0.0,event_name='',print_inline = False,verbose = False):
     """Print LFRT events."""    
     
@@ -360,7 +360,7 @@ def print_LFRT_events(simulation_time,frequency,timer_start=0.0,event_name='',pr
     
     if text_string != '':
         if print_inline == True:  #Print in notebook window
-            six.print_(text_string)
+            logging.info(text_string)
         
         else: #Print in console window
             sys.__stdout__.write(text_string+'\n')

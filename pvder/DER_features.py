@@ -1,6 +1,7 @@
 """Code for features inside PV-DER model instances."""
 
 from __future__ import division
+import six
 
 from pvder import utility_functions
 
@@ -14,16 +15,16 @@ class PVDER_SmartFeatures():
     VOLT_WATT_ENABLE = False
     VOLT_WATT_FLAG = False
     
-    LVRT_ENABLE = False
+    #LVRT_ENABLE = False
     LFRT_ENABLE = False
     
     #LVRT variables
-    t_LV1start = 0.0
-    t_LV2start = 0.0
-    t_reconnect = 0.0
-    LVRT_TRIP = False
-    LVRT_RECONNECT = False
-    LVRT_INSTANTANEOUS_TRIP = False
+    #t_LV1start = 0.0
+    #t_LV2start = 0.0
+    #t_reconnect = 0.0
+    #LVRT_TRIP = False
+    #LVRT_RECONNECT = False
+    #LVRT_INSTANTANEOUS_TRIP = False
     
     #LFRT variables
     LFRT_DEBUG = False
@@ -33,17 +34,6 @@ class PVDER_SmartFeatures():
     t_LF_reconnect = 0.0
     LFRT_TRIP = False
     LFRT_RECONNECT = False
-    
-    def __init__(self,pvderConfig=None):
-        """Creates an instance of `PVDER_SmartFeatures`.
-        
-        Args:
-          pvderConfig: A dictionary containing configuration parameters that may be supplied from an external program.
-     
-        Raises:
-          ValueError: If LVRT settings don't make sense.
-        """
-        pass
     
     def update_ridethrough_flags(self,t):
         """Check VRT and FRT logic."""
@@ -63,6 +53,16 @@ class PVDER_SmartFeatures():
     def LVRT_initialize(self):
         """Initialize LVRT settings."""
         
+        #LVRT variables
+        self.t_LV1start = 0.0
+        self.t_LV2start = 0.0
+        self.t_reconnect = 0.0
+        
+        #LVRT flags    
+        self.LVRT_ENABLE = True
+        self.LVRT_TRIP = False
+        self.LVRT_RECONNECT = False
+        
         if self.pvderConfig is None:
             self.pvderConfig = {}
             
@@ -73,16 +73,15 @@ class PVDER_SmartFeatures():
             self.pvderConfig['LVRT_INSTANTANEOUS_TRIP']=False
             self.pvderConfig['LVRT_MOMENTARY_CESSATION']=False
 
-        #IEEE 1547-2018 standards
-        #scaling_factor = pvderConfig['scaling_factor']
+        #IEEE 1547-2018 standards        
         self.V_LV0 = 0.50*self.Vrms_ref  #From IEEE 1557-2018 Category III (Table 16)   
         self.V_LV1 = self.pvderConfig['V_LV1']*self.Vrms_ref  #From IEEE 1557-2018 Category III (Table 16)   
         self.V_LV2 = self.pvderConfig['V_LV2']*self.Vrms_ref  #From IEEE 1557-2018  Category III (Table 16)
-        self.t_LV0_limit = 1.0#/scaling_factor #Time limit for LV0 zone from IEEE 1557-2018 Category III  (Table 16, page 48)
-        self.t_LV1_limit = self.pvderConfig['t_LV1_limit']#/scaling_factor #Time limit for LV2 zone from IEEE 1557-2018 Category III  (Table 16, page 48)
-        self.t_LV2_limit = self.pvderConfig['t_LV2_limit']#/scaling_factor #Time limit for LV2 zone from IEEE 1557-2018 Category III (Table 16, page 48) 
+        self.t_LV0_limit = 1.0 #Time limit for LV0 zone from IEEE 1557-2018 Category III  (Table 16, page 48)
+        self.t_LV1_limit = self.pvderConfig['t_LV1_limit'] #Time limit for LV2 zone from IEEE 1557-2018 Category III  (Table 16, page 48)
+        self.t_LV2_limit = self.pvderConfig['t_LV2_limit'] #Time limit for LV2 zone from IEEE 1557-2018 Category III (Table 16, page 48) 
         
-        self.LVRT_INSTANTANEOUS_TRIP = self.pvderConfig['LVRT_INSTANTANEOUS_TRIP']
+        self.LVRT_INSTANTANEOUS_TRIP = self.pvderConfig['LVRT_INSTANTANEOUS_TRIP'] #Disconnects PV-DER within one cycle for voltage anomaly
         self.LVRT_MOMENTARY_CESSATION = self.pvderConfig['LVRT_MOMENTARY_CESSATION']        
 
         assert (self.V_LV1 < self.V_LV2 and self.t_LV1_limit <= self.t_LV2_limit) == True, "Voltage level 2 should be greater than Voltage level 1"
@@ -189,40 +188,40 @@ class PVDER_SmartFeatures():
             if self.t_LV1start == 0.0 or self.t_LV2start == 0.0:
                 if self.t_LV1start == 0.0 and _Vrms_measured < self.V_LV1:
                     self.t_LV1start = t
-                    utility_functions.print_LVRT_events(t,_Vrms_measured/self.Vrms_ref,self.t_LV1start,event_name='LV1_start')
+                    self.print_LVRT_events(t,_Vrms_measured,self.t_LV1start,event_name='LV1_start')
 
                 if self.t_LV2start == 0.0 and self.Vrms < self.V_LV2:
                     self.t_LV2start = t
-                    utility_functions.print_LVRT_events(t,_Vrms_measured/self.Vrms_ref,self.t_LV2start,event_name='LV2_start')
+                    self.print_LVRT_events(t,_Vrms_measured,self.t_LV2start,event_name='LV2_start')
 
             if self.t_LV1start > 0.0 or self.t_LV2start > 0.0:
 
                 if  _Vrms_measured >= self.V_LV1  or  _Vrms_measured >= self.V_LV2:
                     if  _Vrms_measured >= self.V_LV1 and self.t_LV1start > 0.0:
-                        utility_functions.print_LVRT_events(t,_Vrms_measured/self.Vrms_ref,self.t_LV1start,event_name='LV1_reset')
+                        self.print_LVRT_events(t,_Vrms_measured,self.t_LV1start,event_name='LV1_reset')
                         self.t_LV1start = 0.0
                     if  _Vrms_measured >= self.V_LV2 and self.t_LV2start > 0.0:
-                        utility_functions.print_LVRT_events(t,_Vrms_measured/self.Vrms_ref,self.t_LV2start,event_name='LV2_reset')   
+                        self.print_LVRT_events(t,_Vrms_measured,self.t_LV2start,event_name='LV2_reset')   
                         self.t_LV2start = 0.0
 
                 if t-self.t_LV1start >= self.t_LV1_limit and self.t_LV1start > 0.0:   #Trip inverter if any limit breached
-                        utility_functions.print_LVRT_events(t,_Vrms_measured/self.Vrms_ref,self.t_LV1start,event_name='inverter_trip_LV1')
+                        self.print_LVRT_events(t,_Vrms_measured,self.t_LV1start,event_name='inverter_trip_LV1')
                         #six.print_(t-self.t_LV1start,self.t_LV1_limit)  #debug script
                         self.LVRT_TRIP = True
                         self.t_LV1start = 0.0
                         self.t_LV2start = 0.0
                         self.t_reconnect = 0.0
                 elif t-self.t_LV2start >= self.t_LV2_limit and self.t_LV2start > 0.0:
-                        utility_functions.print_LVRT_events(t,_Vrms_measured/self.Vrms_ref,self.t_LV2start,event_name='inverter_trip_LV2')
+                        self.print_LVRT_events(t,_Vrms_measured,self.t_LV2start,event_name='inverter_trip_LV2')
                         self.LVRT_TRIP = True
                         self.t_LV1start = 0.0
                         self.t_LV2start = 0.0
                         self.t_reconnect = 0.0
 
                 if _Vrms_measured < self.V_LV1 and self.t_LV1start > 0.0:
-                        utility_functions.print_LVRT_events(t,_Vrms_measured/self.Vrms_ref,self.t_LV1start,event_name='LV1_zone') #,verbose = False
+                        self.print_LVRT_events(t,_Vrms_measured,self.t_LV1start,event_name='LV1_zone') #,verbose = False
                 elif _Vrms_measured < self.V_LV2 and self.t_LV2start > 0.0:
-                        utility_functions.print_LVRT_events(t,_Vrms_measured/self.Vrms_ref,self.t_LV2start,event_name='LV2_zone')
+                        self.print_LVRT_events(t,_Vrms_measured,self.t_LV2start,event_name='LV2_zone')
                         #six.print_(self.t_LV2start)
 
         elif self.LVRT_ENABLE == True and t > self.t_stable and self.LVRT_TRIP == True:
@@ -232,23 +231,22 @@ class PVDER_SmartFeatures():
 
             if self.t_reconnect > 0.0:
                 if  _Vrms_measured < self.V_LV2:
-                    utility_functions.print_LVRT_events(t, _Vrms_measured/self.Vrms_ref,self.t_reconnect,event_name='reconnect_reset')
+                    self.print_LVRT_events(t, _Vrms_measured,self.t_reconnect,event_name='reconnect_reset')
                     self.t_reconnect = 0.0
                 elif  _Vrms_measured >= self.V_LV2 and t-self.t_reconnect >= self.t_reconnect_limit:
-                    utility_functions.print_LVRT_events(t, _Vrms_measured/self.Vrms_ref,self.t_reconnect,event_name='inverter_reconnection')
+                    self.print_LVRT_events(t, _Vrms_measured,self.t_reconnect,event_name='inverter_reconnection')
                     self.LVRT_TRIP = False             #Reset trip flag
                     self.LVRT_RECONNECT = True        #Set reconnect flag
                     self.t_reconnect = 0.0    #Reset timer
                 elif _Vrms_measured >= self.V_LV2 and t-self.t_reconnect < self.t_reconnect_limit:
-                    utility_functions.print_LVRT_events(t, _Vrms_measured/self.Vrms_ref,self.t_reconnect,event_name='reconnect_zone')
-
+                    self.print_LVRT_events(t, _Vrms_measured,self.t_reconnect,event_name='reconnect_zone')
 
             elif self.t_reconnect == 0.0:
                 if  _Vrms_measured >= self.V_LV2:
                     self.t_reconnect = t
-                    utility_functions.print_LVRT_events(t, _Vrms_measured/self.Vrms_ref,self.t_reconnect,event_name='reconnect_start')
+                    self.print_LVRT_events(t, _Vrms_measured,self.t_reconnect,event_name='reconnect_start')
                 else:
-                    utility_functions.print_LVRT_events(t, _Vrms_measured/self.Vrms_ref,event_name='inverter_tripped')
+                    self.print_LVRT_events(t, _Vrms_measured,event_name='inverter_tripped')
 
         else:
             self.t_LV1start = 0.0
@@ -415,3 +413,74 @@ class PVDER_SmartFeatures():
             self.t_reconnect_limit = 1000.0 # A really high number to prevent reconnection        
                     
         return self.__LVRT_MOMENTARY_CESSATION
+    
+    def print_LVRT_events(self,simulation_time,voltage,timer_start=0.0,event_name='',print_inline = False,verbose = False):
+        """Print logs for LVRT events."""
+        
+        voltage = (voltage*self.Vbase)/(self.Vrms_ref*self.Vbase)#175
+
+        if event_name == 'LV1_start':
+            text_string = '{}:{time_stamp:.4f}:LV1 zone entered at {timer_start:.4f}s for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'\
+                            .format(self.name,time_stamp=simulation_time,timer_start=timer_start,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
+
+        elif event_name == 'LV2_start':
+            text_string = '{}:{time_stamp:.4f}:LV2 zone entered at {timer_start:.4f}s for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'\
+                            .format(self.name,time_stamp=simulation_time,timer_start=timer_start,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
+
+        elif event_name == 'LV1_reset':
+            text_string = '{}:{time_stamp:.4f}:LV1 flag reset at {time_stamp:.4f}s after {time_elasped:.4f} s in LV1 zone for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'\
+                            .format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
+
+        elif event_name == 'LV2_reset':
+            text_string = '{}:{time_stamp:.4f}:LV2 flag reset at {time_stamp:.4f}s after {time_elasped:.4f} s in LV2 zone for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'\
+                            .format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
+
+        elif event_name == 'LV1_zone' and verbose == True:
+            text_string = '{}:{time_stamp:.4f}:LV1 zone entered at:{timer_start:.4f}s and continuing for {time_elasped:.4f}s'\
+                            .format(self.name,time_stamp=simulation_time,timer_start=timer_start,time_elasped=simulation_time-timer_start)
+
+        elif event_name == 'LV2_zone' and verbose == True:
+            text_string = '{}:{time_stamp:.4f}:LV2 zone entered at:{timer_start:.4f}s and continuing for {time_elasped:.4f}s'\
+                            .format(self.name,time_stamp=simulation_time,timer_start=timer_start,time_elasped=simulation_time-timer_start)
+
+        elif event_name == 'inverter_trip_LV1':
+            text_string = '{}:{time_stamp:.4f}:LV1 violation at {time_stamp:.4f}s after {time_elasped:.4f} s for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V) - Inverter will be tripped'\
+                            .format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
+            six.print_(text_string)
+
+        elif event_name == 'inverter_trip_LV2':
+            text_string = '{}:{time_stamp:.4f}:LV2 violation at {time_stamp:.4f}s after {time_elasped:.4f} s for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V) - Inverter will be tripped'\
+                            .format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)    
+            six.print_(text_string)
+
+        elif event_name == 'reconnect_start':
+            text_string = '{}:{time_stamp:.4f}:Reconnect timer started at {timer_start:.4f} s for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'\
+                            .format(self.name,time_stamp=simulation_time,timer_start=timer_start,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
+
+        elif event_name == 'reconnect_reset':
+            text_string = '{}:{time_stamp:.4f}:Reconnect timer reset after {time_elasped:.4f} s for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'\
+                           .format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
+
+        elif event_name == 'reconnect_zone' and verbose == True:
+            text_string = '{}:{time_stamp:.4f}:Reconnect timer started at {timer_start:.4f} s and continuing for {time_elasped:.4f} s'\
+                           .format(self.name,time_stamp=simulation_time,timer_start=timer_start,time_elasped=simulation_time-timer_start)
+
+        elif event_name == 'inverter_reconnection':
+            text_string = '{}:{time_stamp:.4f}:Inverter reconnecting after LV trip at {time_stamp:.4f}s after {time_elasped:.4f}s for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'\
+                            .format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
+            six.print_(text_string)
+
+        elif event_name == 'inverter_tripped' and verbose == True: 
+            text_string = '{}:{time_stamp:.4f}:Inverter in tripped condition for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'.format(self.name,time_stamp=simulation_time,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
+
+        else:
+            text_string =''
+
+        if text_string != '':
+            if print_inline == True:  #Print in notebook window
+                logging.info(text_string)
+
+            else: #Print in console window
+                utility_functions.print_to_terminal(text_string)
+        else:
+            pass
