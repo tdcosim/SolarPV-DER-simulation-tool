@@ -5,6 +5,7 @@ import operator
 import six
 import logging
 
+import random
 import math
 import numpy as np
 
@@ -335,7 +336,7 @@ class SimulationEvents(Logging):
         
         logging.debug('{}:Simulation event counters reset!'.format(self.name))
     
-    def create_random_events(self,t_event_start,t_event_end,t_event_step,events_type=['insolation,voltage']):
+    def create_random_events(self,t_event_start,t_event_end,t_event_step,events_type=['insolation','voltage']):
         """Create random events of specified types."""
         
         t_events = np.arange(t_event_start,t_event_end,t_event_step)
@@ -353,14 +354,14 @@ class SimulationEvents(Logging):
     def create_random_insolation_events(self,t_event):
         """Create random voltage event at specified time."""
         
-        insolation = self._events_spec['insolation']['min'] + random.random()*(self._events_spec['insolation']['max']-self.events_spec['insolation']['min'])
-        self.sim.simulation_events.add_solar_event(t_event,insolation)
+        insolation = self._events_spec['insolation']['min'] + random.random()*(self._events_spec['insolation']['max']-self._events_spec['insolation']['min'])
+        self.add_solar_event(t_event,insolation)
     
     def create_random_voltage_events(self,t_event):
         """Create random voltage event at specified time."""
         
-        voltage = self._events_spec['voltage']['min'] + random.random()*(self._events_spec['voltage']['max']-self.events_spec['voltage']['min']) 
-        self.sim.simulation_events.add_grid_event(t_event,voltage)    
+        voltage = self._events_spec['voltage']['min'] + random.random()*(self._events_spec['voltage']['max']-self._events_spec['voltage']['min']) 
+        self.add_grid_event(t_event,voltage)    
     
     @property
     def simulation_events_list(self):
