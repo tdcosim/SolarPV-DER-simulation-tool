@@ -212,9 +212,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.Ki_Q = _Ki_Q/self.controller_parameters[_DER_rating]['scale_Ki_Q']   #Reactive power controller Integral constant    
     
     def attach_grid_model(self,grid_model):
-        """Summary line.
-
-        Extended description of function.
+        """Attach a grid model to the PV-DER instance.
 
         Args:
              grid_model: An instance of `GridModel`.
@@ -315,6 +313,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         Q_PCC_error = (S_PCC.imag - self.Q_ref)**2   
         P_error = (St.real - self.Ppv)**2
         Q_error = (St.imag - Qloss_filter - self.Q_ref)**2
+        
         return P_PCC_error  + Q_PCC_error + P_error# + Q_error
     
     def steady_state_calc(self):

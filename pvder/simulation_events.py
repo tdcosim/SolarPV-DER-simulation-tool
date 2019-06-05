@@ -15,11 +15,12 @@ class SimulationEvents(Logging):
     """ Utility class for events."""
     
     events_count = 0
-    Vgrms_default = 1.0  #This is a fraction and not per unit value
-    fgrid_default = 60.0 
-    Sinsol_default = 100.0
     Tactual_default = 298.15
     Zload1_actual_default = 10e6+0j
+    
+    _events_spec = {'insolation':{'default':100.0,'min':25.0,'max':100.0},
+                   'voltage':{'default':1.0,'min':0.1,'max':1.1},  #This is a fraction and not per unit value
+                   'frequency':{'default':60.0,'min':58.5,'max':61.5}}  #Time delay between events
     
     def __init__(self,SOLAR_EVENT_ENABLE = True,GRID_EVENT_ENABLE = True, LOAD_EVENT_ENABLE = True,verbosity='INFO'):
         """Creates an instance of `SimulationEvents`.
@@ -44,7 +45,7 @@ class SimulationEvents(Logging):
         self.GRID_EVENT_ENABLE = GRID_EVENT_ENABLE
         self.LOAD_EVENT_ENABLE = LOAD_EVENT_ENABLE
         
-        self.solar_events_list = [{'T':3.0,'Sinsol':self.Sinsol_default,'Tactual':self.Tactual_default}]
+        self.solar_events_list = []#{'T':3.0,'Sinsol':self.Sinsol_default,'Tactual':self.Tactual_default}]
         self.load_events_list = [] #{'T':4.0,'Zload1_actual':self.Zload1_actual_default}
         self.grid_events_list = [] #{'T':5.0,'Vgrms':self.Vgrms_default,'fgrid':self.fgrid_default}
         
@@ -52,12 +53,16 @@ class SimulationEvents(Logging):
         self.reset_event_counters()
     
     def solar_events(self,t):
-        """List of all simulation events."""
+        """Generate solar event during simulation at specified time.
+        
+        Args:
+           t (float): A scalar specifying the time (s).
+        """
         
         if self.SOLAR_EVENT_ENABLE == True and self.solar_events_list: #Check whether list is empty
             
             if t<self.solar_events_list[0]['T']: 
-                Sinsol = self.Sinsol_default
+                Sinsol = self._events_spec['insolation']['default']
                 Tactual = self.Tactual_default
                 
             elif t<self.solar_events_list[self.solar_event_counter]['T']  and self.solar_event_counter >=1:
@@ -69,34 +74,42 @@ class SimulationEvents(Logging):
                 Tactual = self.solar_events_list[self.solar_event_counter]['Tactual']
                 self.solar_event_counter = min(self.solar_events_total-1,self.solar_event_counter+1)
         else:
-            Sinsol = self.Sinsol_default
+            Sinsol = self._events_spec['insolation']['default']
             Tactual = self.Tactual_default
         return Sinsol,Tactual
     
     def grid_events(self,t):
-        """Generate events during simulation."""
+        """Generate grid event during simulation at specified time.
+        
+        Args:
+           t (float): A scalar specifying the time (s).
+        """
         
         if self.GRID_EVENT_ENABLE == True  and self.grid_events_list: #Check whether list is empty
             
             if t<self.grid_events_list[self.grid_event_counter]['T'] and self.grid_event_counter ==0:
-                Vgrms = self.Vgrms_default
-                fgrid = self.fgrid_default
+                Vgrid = self._events_spec['voltage']['default']
+                fgrid = self._events_spec['frequency']['default']
             elif t<self.grid_events_list[self.grid_event_counter]['T']  and self.grid_event_counter >=1:
-                Vgrms = self.grid_events_list[self.grid_event_counter-1]['Vgrms']
+                Vgrid = self.grid_events_list[self.grid_event_counter-1]['Vgrid']
                 fgrid = self.grid_events_list[self.grid_event_counter-1]['fgrid']
             elif t>=self.grid_events_list[self.grid_event_counter]['T']:
-                Vgrms = self.grid_events_list[self.grid_event_counter]['Vgrms']
+                Vgrid = self.grid_events_list[self.grid_event_counter]['Vgrid']
                 fgrid = self.grid_events_list[self.grid_event_counter]['fgrid']
                 self.grid_event_counter = min(self.grid_events_total-1,self.grid_event_counter+1)
         else:
-            Vgrms = self.Vgrms_default
-            fgrid = self.fgrid_default
+            Vgrid =self._events_spec['voltage']['default']
+            fgrid =self._events_spec['frequency']['default']
         
         Vphase_angle_a = 0.0
-        return Vgrms*pow(math.e,(1j*math.radians(Vphase_angle_a))),2.0*math.pi*fgrid
+        return Vgrid*pow(math.e,(1j*math.radians(Vphase_angle_a))),2.0*math.pi*fgrid
     
     def load_events(self,t):
-        """Generate load events at PCC LV side during simulation."""
+        """Generate load event at PCC LV side during simulation.
+        
+        Args:
+           t (float): A scalar specifying the time (s).
+        """
         
         if self.LOAD_EVENT_ENABLE == True and self.load_events_list: #Check whether list is empty
             
@@ -118,19 +131,20 @@ class SimulationEvents(Logging):
         """Add new solar event.
         
         Args:
-           T: A scalar specifying start time of solar event in seconds.
-           Sinsol: A scalar specifying solar insolation in percentage.
-           Tactual: A scalar specifying module temperature in Kelvin.
+           T (float): A scalar specifying start time of solar event in seconds.
+           Sinsol (float): A scalar specifying solar insolation in percentage.
+           Tactual (float): A scalar specifying module temperature in Kelvin.
         """        
         
         T = float(T)
         Sinsol = float(Sinsol)
         Tactual = float(Tactual)
         
-        if Sinsol >150.0 or Sinsol < 0.0:
-           raise ValueError('{} W/m2 is not a valid value for solar insolation!'.format(Sinsol))
+        if Sinsol < self._events_spec['insolation']['min'] or Sinsol >  self._events_spec['insolation']['max']:
+            raise ValueError('{} W/m2 is not a valid value for solar insolation! - Min:{},Max:{}'.format(Sinsol,self._events_spec['insolation']['min'],self._events_spec['insolation']['max']))
+        
         if Tactual >375.0 or Tactual < 250.0:
-           raise ValueError('{} K is not a valid value for temperature!'.format(Tactual))
+            raise ValueError('{} K is not a valid value for temperature!'.format(Tactual))
         
         for event in self.solar_events_list:
             if T==event['T']:
@@ -142,27 +156,34 @@ class SimulationEvents(Logging):
         self.solar_events_list.sort(key=operator.itemgetter('T'))  #Sort new events list
         self.update_event_totals()
     
-    def add_grid_event(self,T,Vgrms=1.0,fgrid=60.0):
-        """Add new solar event.
+    def add_grid_event(self,T,Vgrid=1.0,fgrid=60.0):
+        """Add new grid event.
         
         Args:
-           T: A scalar specifying start time of grid event in seconds.
-           Vgrms: A scalar specifying grid voltage in fraction.
-           fgrid: A scalar specifying grid frequency in Hz.
+           T (float): A scalar specifying start time of grid event in seconds.
+           Vgrid (float): A scalar specifying grid voltage in fraction.
+           fgrid (float): A scalar specifying grid frequency in Hz.
         """
         
-        assert Vgrms >=0.0 and Vgrms <=1.2 and fgrid >= 0.0 and fgrid <= 100.0, 'Grid event {} is not within feasible limits'.format(Vgrms,fgrid)
+        if Vgrid < self._events_spec['voltage']['min'] or Vgrid >  self._events_spec['voltage']['max']:
+            raise ValueError('{} V p.u. is not a valid value for grid voltage! - Min:{},Max:{}'.format(Vgrid,self._events_spec['voltage']['min'],self._events_spec['voltage']['max']))
+        
+        if fgrid < self._events_spec['frequency']['min'] or fgrid >  self._events_spec['frequency']['max']:
+            raise ValueError('{} Hz is not a valid value for grid frequency! - Min:{},Max:{}'.format(fgrid,self._events_spec['frequency']['min'],self._events_spec['frequency']['max']))
+            
+        #assert Vgrms >=0.0 and Vgrms <=1.2 and fgrid >= 0.0 and fgrid <= 100.0, 'Grid event {} is not within feasible limits'.format(Vgrms,fgrid)
         
         T = float(T)
-        Vgrms = float(Vgrms)
+        Vgrid = float(Vgrid)
         fgrid = float(fgrid)
+        
         for event in self.grid_events_list:
             if T==event['T']:
                 self.logger.debug('{}:Removing existing grid event at {:.2f}'.format(self.name,event['T']))
                 self.grid_events_list.remove(event)   #Remove existing event at same time stamp
         
         self.logger.debug('{}:Adding new grid event at {:.2f} s'.format(self.name,T))
-        self.grid_events_list.append({'T':T,'Vgrms':Vgrms,'fgrid':fgrid})  #Append new event to existing event list
+        self.grid_events_list.append({'T':T,'Vgrid':Vgrid,'fgrid':fgrid})  #Append new event to existing event list
         self.grid_events_list.sort(key=operator.itemgetter('T'))  #Sort new events list
         self.update_event_totals()
     
@@ -289,9 +310,9 @@ class SimulationEvents(Logging):
            
            for event in self.simulation_events_list:
                 if 'S' and 'Tactual' in event.keys():
-                   six.print_('t:{:.3f},Solar event, Solar insolation is {:.2f} W/cm2, Temperature is {:.2f}'.format(event['T'],event['Sinsol'],event['Tactual']))
-                if 'Vgrms' and 'fgrid' in event.keys():
-                   six.print_('t:{:.3f},Grid event, Grid voltage is {:.2f} V, Frequency is {:.2f}'.format(event['T'],event['Vgrms'],event['fgrid']))
+                    six.print_('t:{:.3f},Solar event, Solar insolation is {:.2f} W/cm2, Temperature is {:.2f}'.format(event['T'],event['Sinsol'],event['Tactual']))
+                if 'Vgrid' and 'fgrid' in event.keys():
+                    six.print_('t:{:.3f},Grid event, Grid voltage is {:.2f} V, Frequency is {:.2f}'.format(event['T'],event['Vgrid'],event['fgrid']))
                 if 'Zload1_actual' in event.keys():
                     six.print_('t:{:.3f},Load event, Impedance is {:.2f} ohm'.format(event['T'],event['Zload1_actual']))
         else:
@@ -313,7 +334,34 @@ class SimulationEvents(Logging):
         self.load_event_counter = 0
         
         logging.debug('{}:Simulation event counters reset!'.format(self.name))
+    
+    def create_random_events(self,t_event_start,t_event_end,t_event_step,events_type=['insolation,voltage']):
+        """Create random events of specified types."""
         
+        t_events = np.arange(t_event_start,t_event_end,t_event_step)
+        
+        for t_event in t_events:
+            event_choice = random.choice(events_type)
+            
+            if event_choice == 'insolation':
+                self.create_random_insolation_events(t_event)
+            elif event_choice == 'voltage':
+                self.create_random_voltage_events(t_event)
+            else:
+                print('{}:{} is not a valid event choice!'.format(self.name,event_choice))
+    
+    def create_random_insolation_events(self,t_event):
+        """Create random voltage event at specified time."""
+        
+        insolation = self._events_spec['insolation']['min'] + random.random()*(self._events_spec['insolation']['max']-self.events_spec['insolation']['min'])
+        self.sim.simulation_events.add_solar_event(t_event,insolation)
+    
+    def create_random_voltage_events(self,t_event):
+        """Create random voltage event at specified time."""
+        
+        voltage = self._events_spec['voltage']['min'] + random.random()*(self._events_spec['voltage']['max']-self.events_spec['voltage']['min']) 
+        self.sim.simulation_events.add_grid_event(t_event,voltage)    
+    
     @property
     def simulation_events_list(self):
         """List of all simulation events."""
