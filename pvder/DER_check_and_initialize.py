@@ -49,7 +49,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         """
         
          #Initialize all states with steady state values at current operating point
-        if self.STEADY_STATE_INITIALIZATION == True:
+        if self.STEADY_STATE_INITIALIZATION:
             #ia0,xa0,ua0,ib0,xb0,ub0,ic0,xc0,uc0,Vdc0,xDC0,xQ0,xPLL0,wte0
             self.steady_state_calc()
         else:
@@ -329,7 +329,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         
         result = minimize(self.power_error_calc, x0, method='nelder-mead',options={'xtol': 1e-8, 'disp': disp})
         
-        if result.success == False:
+        if not result.success:
             raise ValueError('Steady state solution did not converge! Change operating point or disable steady state flag and try again.')
         
         ma0 = result.x[0] + 1j*result.x[1]

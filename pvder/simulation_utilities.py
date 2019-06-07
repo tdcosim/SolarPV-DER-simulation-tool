@@ -62,7 +62,7 @@ class SimulationResults(Logging):
     def change_units(self):
         """Change units from per unit to S.I. or vice versa."""
         
-        if self.PER_UNIT == True:
+        if self.PER_UNIT:
            self.V_multiplier = 1.0
            self.I_multiplier = 1.0
            self.S_multiplier = 1.0
@@ -91,7 +91,7 @@ class SimulationResults(Logging):
         time = self.simulation.t_t    
         self.change_units()
         
-        if self.PER_UNIT == True:
+        if self.PER_UNIT:
            _voltage_label = 'V (p.u.)'
            _current_label = 'A (p.u.)'
            _power_label = 'W/VAR (p.u.)'
@@ -295,7 +295,7 @@ class SimulationResults(Logging):
     def save_plot(self,plot_object,plot_name='results'):
         """Save the plots."""
         
-        if self.SAVE_PLOT_JPEG == True:
+        if self.SAVE_PLOT_JPEG:
            plot_object.savefig(plot_name+".jpg", dpi=self.figure_DPI)
         if self.SAVE_PLOT_SVG == True:
            plot_object.savefig(plot_name+".svg", dpi=self.figure_DPI)

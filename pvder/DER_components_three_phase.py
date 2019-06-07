@@ -57,7 +57,7 @@ class PV_Module(object):
         """
         
         self.events = events
-        if (type(self).__name__ == 'SolarPV_DER_SinglePhase' and Sinverter_rated in {10e3}) or\
+        if ((type(self).__name__ == 'SolarPV_DER_SinglePhase' or type(self).__name__ == 'SolarPVDERSinglePhaseEMT') and Sinverter_rated in {10e3}) or\
            (type(self).__name__ == 'SolarPV_DER_ThreePhase' and Sinverter_rated in {50e3,100e3,250e3}):
            
            _DER_rating = str(int(Sinverter_rated/1e3))
@@ -163,7 +163,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
     fswitching  = 10e3
     
      #Time delay before activating logic for MPP, Volt-VAR control,  LVRT/LFRT 
-    t_stable = 1.0
+    t_stable = 0.5
     
     #Duty cycle
     m_steady_state = 0.96 #Expected duty cycle at steady state    
@@ -422,8 +422,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         
         self.update_inverter_frequency(t)
         self.update_ridethrough_flags(t)
-        
-        #print(self.S.imag*self.Sbase,self.S_PCC.imag*self.Sbase)
+        self.check_and_trip()
         
         #Phase a inverter output current
         diaR = (1/self.Lf)*(-self.Rf*self.ia.real - self.va.real + self.vta.real) + (self.winv/self.wbase)*self.ia.imag 
@@ -618,12 +617,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         
         self.update_inverter_frequency(t)
        
-        #LVRT trip logic
-        if self.LVRT_TRIP == True and self.LVRT_RECONNECT == False:
-            self.PV_DER_disconnect()
-        #LFRT trip logic
-        if self.LFRT_TRIP == True and self.LFRT_RECONNECT == False:
-            self.PV_DER_disconnect() 
+        self.check_and_trip()
         
         #Phase a inverter output current
         

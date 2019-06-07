@@ -224,7 +224,7 @@ class SimulationEvents(Logging):
                     logging.debug('{}:Solar event at {:.2f} s removed'.format(self.name,T))
                     self.solar_events_list.remove(event)
                     REMOVE_FLAG = True
-            if REMOVE_FLAG == False:
+            if not REMOVE_FLAG:
                 logging.debug('{}:No solar event at {:.2f} s'.format(self.name,T))
         else:
             self.logger.debug('{}:Removing all events in solar events list and replacing with default event'.format(self.name))
@@ -243,7 +243,7 @@ class SimulationEvents(Logging):
                 self.logger.debug('{}:Grid event at {:.2f} s removed'.format(self.name,T))
                 self.grid_events_list.remove(event)
                 REMOVE_FLAG = True
-        if REMOVE_FLAG == False:
+        if not REMOVE_FLAG:
             self.logger.debug('{}:No grid event at {:.2f} s'.format(self.name,T))
         self.update_event_totals()
     
@@ -259,7 +259,7 @@ class SimulationEvents(Logging):
                     self.logger.debug('{}:Load event at {:.2f} s removed'.format(self.name,event["T"]))
                     self.load_events_list.remove(event)
                     REMOVE_FLAG = True
-            if REMOVE_FLAG == False:
+            if not REMOVE_FLAG:
                 self.logger.debug('No load event at {:.2f} s'.format(T)) 
         else:
             self.logger.debug('{}:Removing all events in load events list and replacing with default event'.format(self.name))

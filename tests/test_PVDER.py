@@ -213,11 +213,11 @@ class TestPVDER(unittest.TestCase):
         """Check whether ride through is working."""
                  
         if pvder_object.Vrms <= pvder_object.V_LV2:
-                """Check if LVRT trip flag is True"""
+                #Check if LVRT trip flag is True
                 self.assertTrue(pvder_object.LVRT_TRIP, msg='{}: Inverter trip flag  not set despite low voltage!'.format(pvder_object.name))
-                """Check if Inverter stopped supplying power"""
+                #Check if Inverter stopped supplying power
                 self.assertAlmostEqual(abs(pvder_object.S_PCC), 0.0, places=4, msg='{}:Inverter power output is {:.2f} VA despite trip status!'.format(pvder_object.name,pvder_object.S_PCC*pvder_object.Sbase))
-                """Check if DC link voltage limits are breached."""
+                #Check if DC link voltage limits are breached
                 self.assertTrue(pvder_object.Vdc*pvder_object.Vdcbase >= pvder_object.Vdcmpp_min or pvder_object.Vdc*pvder.PV_model.Vdcbase <= pvder_object.Vdcmpp_max, msg='{}:DC link voltage exceeded limits!'.format(pvder_object.name))
                 
         elif pvder_object.Vrms > pvder_object.V_LV2 and pvder_object.LVRT_MOMENTARY_CESSATION:

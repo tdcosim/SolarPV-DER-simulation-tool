@@ -39,16 +39,27 @@ class PVDER_SmartFeatures():
         """Check VRT and FRT logic."""
         
         #LVRT trip logic        
-        if self.LVRT_ENABLE == True:
+        if self.LVRT_ENABLE:
             self.LVRT(t)
-            if self.LVRT_TRIP == True and self.LVRT_RECONNECT == False:
-                self.PV_DER_disconnect()
+            #if self.LVRT_TRIP and not self.LVRT_RECONNECT:
+            #    self.PV_DER_disconnect()
         
         #LFRT trip logic
-        if self.LFRT_ENABLE == True:
+        if self.LFRT_ENABLE:
             self.FRT(t)
-            if self.LFRT_TRIP == True and self.LFRT_RECONNECT == False:
-                self.PV_DER_disconnect() 
+            #if self.LFRT_TRIP and not self.LFRT_RECONNECT:
+            #    self.PV_DER_disconnect() 
+    
+    def check_and_trip(self):
+        """Check whether any trip flags are true and trip DER."""
+        
+         #LVRT trip logic
+        if self.LVRT_TRIP and not self.LVRT_RECONNECT:
+            self.PV_DER_disconnect()
+        
+        #LFRT trip logic
+        if self.LFRT_TRIP and not self.LFRT_RECONNECT:
+            self.PV_DER_disconnect()         
     
     def LVRT_initialize(self):
         """Initialize LVRT settings."""
@@ -136,8 +147,8 @@ class PVDER_SmartFeatures():
         _Vrms_measured = self.Vrms
         
         _del_V = 0.02
-        if self.VOLT_VAR_ENABLE == True and (_Vrms_measured < V2_Volt_VAR or _Vrms_measured > V3_Volt_VAR) and t>self.t_stable:
-            if self.VOLT_VAR_FLAG == True:
+        if self.VOLT_VAR_ENABLE and (_Vrms_measured < V2_Volt_VAR or _Vrms_measured > V3_Volt_VAR) and t>self.t_stable:
+            if self.VOLT_VAR_FLAG:
                 if (_Vrms_measured > V1_Volt_VAR - _del_V and _Vrms_measured < V4_Volt_VAR + _del_V):
                     
                     Qref = self.Qsetpoint_calc(t)                    
@@ -435,11 +446,11 @@ class PVDER_SmartFeatures():
             text_string = '{}:{time_stamp:.4f}:LV2 flag reset at {time_stamp:.4f}s after {time_elasped:.4f} s in LV2 zone for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'\
                             .format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
 
-        elif event_name == 'LV1_zone' and verbose == True:
+        elif event_name == 'LV1_zone' and verbose:
             text_string = '{}:{time_stamp:.4f}:LV1 zone entered at:{timer_start:.4f}s and continuing for {time_elasped:.4f}s'\
                             .format(self.name,time_stamp=simulation_time,timer_start=timer_start,time_elasped=simulation_time-timer_start)
 
-        elif event_name == 'LV2_zone' and verbose == True:
+        elif event_name == 'LV2_zone' and verbose:
             text_string = '{}:{time_stamp:.4f}:LV2 zone entered at:{timer_start:.4f}s and continuing for {time_elasped:.4f}s'\
                             .format(self.name,time_stamp=simulation_time,timer_start=timer_start,time_elasped=simulation_time-timer_start)
 
@@ -461,7 +472,7 @@ class PVDER_SmartFeatures():
             text_string = '{}:{time_stamp:.4f}:Reconnect timer reset after {time_elasped:.4f} s for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'\
                            .format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
 
-        elif event_name == 'reconnect_zone' and verbose == True:
+        elif event_name == 'reconnect_zone' and verbose:
             text_string = '{}:{time_stamp:.4f}:Reconnect timer started at {timer_start:.4f} s and continuing for {time_elasped:.4f} s'\
                            .format(self.name,time_stamp=simulation_time,timer_start=timer_start,time_elasped=simulation_time-timer_start)
 
@@ -470,14 +481,14 @@ class PVDER_SmartFeatures():
                             .format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
             six.print_(text_string)
 
-        elif event_name == 'inverter_tripped' and verbose == True: 
+        elif event_name == 'inverter_tripped' and verbose: 
             text_string = '{}:{time_stamp:.4f}:Inverter in tripped condition for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'.format(self.name,time_stamp=simulation_time,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
 
         else:
             text_string =''
 
         if text_string != '':
-            if print_inline == True:  #Print in notebook window
+            if print_inline:  #Print in notebook window
                 logging.info(text_string)
 
             else: #Print in console window

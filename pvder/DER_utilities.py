@@ -332,7 +332,7 @@ class PVDER_ModelUtilities(BaseValues):
     
     def get_Qref(self,t):
         """Output reactive power set-point."""
-        if self.VOLT_VAR_ENABLE == True:
+        if self.VOLT_VAR_ENABLE:
             _Qref= self.Volt_VAR_logic(t)
         elif self.Qref_EXTERNAL:
             _Qref = self.Q_ref
@@ -343,7 +343,7 @@ class PVDER_ModelUtilities(BaseValues):
     def MPP_table(self):
         """Method to output Vdc reference corresponding to MPP at different insolation levels values."""
         
-        if self.USE_POLYNOMIAL_MPP == True:
+        if self.USE_POLYNOMIAL_MPP:
              _Vdcmpp = np.polyval(self.z , self.Sinsol)
         else:
             _Vdcmpp = self.Vdcrated
@@ -430,7 +430,8 @@ class PVDER_ModelUtilities(BaseValues):
         """Create a Jacobian matrix with zero values."""
         
         self.J = np.zeros((self.n_total_ODE,self.n_total_ODE))
-        self.varInd={}; n=0
+        self.varInd={}
+        n=0
         
         if type(self).__name__ == 'SolarPV_DER_SinglePhase':
             state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
