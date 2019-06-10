@@ -150,9 +150,11 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         self._t_t = np.array(0.0)
         self.Vdc_t = self._Vdc_t = np.array(self.PV_model.Vdc)
+        
         self.ma_absolute_t = self._ma_absolute_t = np.array(abs(self.PV_model.ma))
-        self.mb_absolute_t = self._mb_absolute_t = np.array(abs(self.PV_model.mb))
-        self.mc_absolute_t = self._mc_absolute_t = np.array(abs(self.PV_model.mc))
+        if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+            self.mb_absolute_t = self._mb_absolute_t = np.array(abs(self.PV_model.mb))
+            self.mc_absolute_t = self._mc_absolute_t = np.array(abs(self.PV_model.mc))
         
         self.Irms_t = self._Irms_t = np.array(self.PV_model.Irms)
         self.Ppv_t = self._Ppv_t = np.array(self.PV_model.Ppv)
@@ -475,9 +477,11 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         self._t_t = np.append(self._t_t,self.t[1:])
         self._Vdc_t = np.append(self._Vdc_t,self.Vdc_t[1:])
+        
         self._ma_absolute_t = np.append(self._ma_absolute_t,self.ma_absolute_t[1:])
-        self._mb_absolute_t = np.append(self._mb_absolute_t,self.mb_absolute_t[1:])
-        self._mc_absolute_t = np.append(self._mc_absolute_t,self.mc_absolute_t[1:])
+        if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+            self._mb_absolute_t = np.append(self._mb_absolute_t,self.mb_absolute_t[1:])
+            self._mc_absolute_t = np.append(self._mc_absolute_t,self.mc_absolute_t[1:])
         
         self._Irms_t = np.append(self._Irms_t,self.Irms_t[1:])        
 
@@ -591,8 +595,9 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.Vdc_t = self._Vdc_t
         
         self.ma_absolute_t = self._ma_absolute_t
-        self.mb_absolute_t = self._mb_absolute_t
-        self.mc_absolute_t = self._mc_absolute_t
+        if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+            self.mb_absolute_t = self._mb_absolute_t
+            self.mc_absolute_t = self._mc_absolute_t
                 
         self.Vtrms_t = self._Vtrms_t
         self.Vrms_t = self._Vrms_t
@@ -609,7 +614,8 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         #solution  = self.solve_ODE(t)
         
         if self.LOOP_MODE:
-            if type(gridVoltagePhaseA) == complex and y0 != None and t != None:
+            if isinstance(gridVoltagePhaseA,complex) and y0 != None and t != None:
+            #if type(gridVoltagePhaseA) == complex and y0 != None and t != None:
                 self.PV_model.gridVoltagePhaseA = gridVoltagePhaseA
                 self.PV_model.gridVoltagePhaseB = gridVoltagePhaseB
                 self.PV_model.gridVoltagePhaseC = gridVoltagePhaseC

@@ -322,10 +322,11 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.logger.debug('Solving for steady state at current operating point.')
         x0 = np.array([0.89,0.0,124.0,3.59])
         
-        if self.verbosity == 'DEBUG':
-            disp = True
-        else:
-            disp = False
+        #if self.verbosity == 'DEBUG':
+        #    disp = True
+        #else:
+        #    disp = False
+        disp = bool(self.verbosity == 'DEBUG')
         
         result = minimize(self.power_error_calc, x0, method='nelder-mead',options={'xtol': 1e-8, 'disp': disp})
         

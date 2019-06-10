@@ -57,7 +57,7 @@ class PV_Module(object):
         """
         
         self.events = events
-        if ((type(self).__name__ == 'SolarPV_DER_SinglePhase' or type(self).__name__ == 'SolarPVDERSinglePhaseEMT') and Sinverter_rated in {10e3}) or\
+        if (type(self).__name__ == 'SolarPV_DER_SinglePhase' and Sinverter_rated in {10e3}) or\
            (type(self).__name__ == 'SolarPV_DER_ThreePhase' and Sinverter_rated in {50e3,100e3,250e3}):
            
            _DER_rating = str(int(Sinverter_rated/1e3))

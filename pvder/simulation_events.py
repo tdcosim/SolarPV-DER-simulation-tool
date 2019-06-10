@@ -20,18 +20,18 @@ class SimulationEvents(Logging):
     Zload1_actual_default = 10e6+0j
     
     _events_spec = {'insolation':{'default':100.0,'min':25.0,'max':100.0},
-                   'voltage':{'default':1.0,'min':0.1,'max':1.1},  #This is a fraction and not per unit value
-                   'frequency':{'default':60.0,'min':58.5,'max':61.5}}  #Time delay between events
+                    'voltage':{'default':1.0,'min':0.1,'max':1.1},  #This is a fraction and not per unit value
+                    'frequency':{'default':60.0,'min':58.5,'max':61.5}}  #Time delay between events
     
-    def __init__(self,SOLAR_EVENT_ENABLE = True,GRID_EVENT_ENABLE = True, LOAD_EVENT_ENABLE = True,verbosity='INFO'):
+    def __init__(self,events_spec = None,SOLAR_EVENT_ENABLE = True,GRID_EVENT_ENABLE = True, LOAD_EVENT_ENABLE = True,verbosity='INFO'):
         """Creates an instance of `SimulationEvents`.
         
         Args:
           SOLAR_EVENT_ENABLE: A boolean to enable solar insolation events.
           GRID_EVENT_ENABLE: A boolean to enable grid voltage or frequency events.
           LOAD_EVENT_ENABLE: A boolean to enable load change events at PCC-LV side.
-        """
-                
+        """                
+                   
         #Increment count to keep track of number of simulation events instances
         SimulationEvents.events_count = SimulationEvents.events_count + 1
         self.events_ID =SimulationEvents.events_count
@@ -41,6 +41,9 @@ class SimulationEvents(Logging):
         self.initialize_logger()
         #Set logging level - {DEBUG,INFO,WARNING,ERROR}
         self.verbosity = verbosity
+        
+        if events_spec is not None:
+            self.update_events_spec(events_spec)
         
         self.SOLAR_EVENT_ENABLE = SOLAR_EVENT_ENABLE
         self.GRID_EVENT_ENABLE = GRID_EVENT_ENABLE
@@ -52,6 +55,23 @@ class SimulationEvents(Logging):
         
         self.update_event_totals()
         self.reset_event_counters()
+    
+    def update_events_spec(self,events_spec):
+        """Update the _events_spec dictionary."""
+        
+        if isinstance(events_spec, dict):
+            _keys1 = events_spec.keys()
+            assert set(_keys1).issubset(self._events_spec.keys()), '{} is not a valid events spec dictionary!'.format(events_spec)
+                
+            for key1 in _keys1:
+                _keys2 = events_spec[key1].keys()
+                #assert set(_keys2).issubset(self._events_spec[key1].keys()), '{} is not a valid events spec dictionary!'.format(events_spec)
+            
+                for key2 in _keys2:
+                    if key2 in self._events_spec[key1].keys():
+                        self._events_spec[key1][key2] = events_spec[key1][key2]
+                    else:
+                        self.logger.debug('{}:{} does not exist in event spec dictionary!'.format(self.name,key2))
     
     def solar_events(self,t):
         """Generate solar event during simulation at specified time.
@@ -197,7 +217,8 @@ class SimulationEvents(Logging):
         """
         
         T = float(T)
-        if type(Zload1_actual) != complex:
+        #if type(Zload1_actual) != complex:
+        if isinstance(Zload1_actual,complex):
             Zload1_actual = complex(Zload1_actual)
         
         if Zload1_actual.real < 0.0:

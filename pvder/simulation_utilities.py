@@ -269,7 +269,8 @@ class SimulationResults(Logging):
         assert len(plot_values) == len(time_values) == len(legends),  " The number of legends should be equal to the number of quantities"
         fig = plt.figure(self.figure_index, figsize=(8,8))
         
-        for i in range(len(plot_values)):
+        #for i in range(len(plot_values)):
+        for i,item in enumerate(plot_values):
             
             plt.plot(time_values[i],plot_values[i],label=legends[i])
         
@@ -297,7 +298,7 @@ class SimulationResults(Logging):
         
         if self.SAVE_PLOT_JPEG:
            plot_object.savefig(plot_name+".jpg", dpi=self.figure_DPI)
-        if self.SAVE_PLOT_SVG == True:
+        if self.SAVE_PLOT_SVG:
            plot_object.savefig(plot_name+".svg", dpi=self.figure_DPI)
     
     def compare_with_external(self,external_time_values,external_plot_values,external_plot_legends,plot_type='power'):
