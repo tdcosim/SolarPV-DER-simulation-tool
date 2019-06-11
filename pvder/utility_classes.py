@@ -10,7 +10,7 @@ import logging
 class Logging():
     """ Utility class for common methods."""
     
-    logging_levels = ['DEBUG','INFO']#,'WARNING','ERROR'
+    logging_levels = ['DEBUG','INFO','WARNING']#,'ERROR'
     
     
     def initialize_logger(self):

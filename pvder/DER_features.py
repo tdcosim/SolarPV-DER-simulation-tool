@@ -95,7 +95,7 @@ class PVDER_SmartFeatures():
         self.LVRT_INSTANTANEOUS_TRIP = self.pvderConfig['LVRT_INSTANTANEOUS_TRIP'] #Disconnects PV-DER within one cycle for voltage anomaly
         self.LVRT_MOMENTARY_CESSATION = self.pvderConfig['LVRT_MOMENTARY_CESSATION']        
 
-        assert (self.V_LV1 < self.V_LV2 and self.t_LV1_limit <= self.t_LV2_limit) == True, "Voltage level 2 should be greater than Voltage level 1"
+        assert (self.V_LV1 < self.V_LV2 and self.t_LV1_limit <= self.t_LV2_limit), "Voltage level 2 should be greater than Voltage level 1"
         self.check_LVRT_settings()
 
         #V1 to V2 - zone 2,V1 < - zone 1
@@ -135,7 +135,7 @@ class PVDER_SmartFeatures():
     def Volt_VAR_logic(self,t):
         """Function for volt_var control."""
         
-        assert (self.VOLT_VAR_ENABLE and self.VOLT_WATT_ENABLE) == False, "Volt-VAR and Volt-Watt cannot be active at the same time"
+        assert not (self.VOLT_VAR_ENABLE and self.VOLT_WATT_ENABLE), "Volt-VAR and Volt-Watt cannot be active at the same time"
         
         #Volt-VAR logic
         V1_Volt_VAR = self.Vrms_ref - 0.04*self.Vrms_ref #From IEEE 1547-2018 Catergy B (Table 8 - page 39)
@@ -194,7 +194,7 @@ class PVDER_SmartFeatures():
         #Select RMS voltage source
         _Vrms_measured = self.Vrms   #Select PCC - LV side voltage     
 
-        if self.LVRT_ENABLE == True and t > self.t_stable and self.LVRT_TRIP == False:
+        if self.LVRT_ENABLE and t > self.t_stable and not self.LVRT_TRIP:
 
             if self.t_LV1start == 0.0 or self.t_LV2start == 0.0:
                 if self.t_LV1start == 0.0 and _Vrms_measured < self.V_LV1:
@@ -235,7 +235,7 @@ class PVDER_SmartFeatures():
                         self.print_LVRT_events(t,_Vrms_measured,self.t_LV2start,event_name='LV2_zone')
                         #six.print_(self.t_LV2start)
 
-        elif self.LVRT_ENABLE == True and t > self.t_stable and self.LVRT_TRIP == True:
+        elif self.LVRT_ENABLE and t > self.t_stable and self.LVRT_TRIP:
             
             #Select RMS voltage source
             _Vrms_measured = self.Vrms   #Select PCC - LV side voltage     
@@ -295,14 +295,14 @@ class PVDER_SmartFeatures():
         t_LF3_limit = 0.0
                
         del_f =0.02
-        assert (F_LF1 < F_LF2) and (t_LF1_limit < t_LF2_limit) == True, "Frequency level 2 should be greater than frequency level 1"
+        assert (F_LF1 < F_LF2) and (t_LF1_limit < t_LF2_limit), "Frequency level 2 should be greater than frequency level 1"
 
         #Use grid frequency as estimated by PLL
         fgrid = self.we/(2.0*math.pi)
         
-        if self.LFRT_ENABLE == True and t >  self.t_stable and self.LFRT_TRIP == False:
+        if self.LFRT_ENABLE and t >  self.t_stable and not self.LFRT_TRIP:
             
-            if self.LFRT_DEBUG == True:
+            if self.LFRT_DEBUG:
                 text_string = '{time_stamp:.4f} -- fgrid:{f1:.3f} Hz, t_LF1start:{t1:.3f} s, t_LF2start:{t2:.3f} s, t_LF3start:{t3:.3f} s'\
                                .format(time_stamp=t,f1 = fgrid,t1=self.t_LF1start,t2=self.t_LF2start,t3=self.t_LF3start)
                 utility_functions.print_to_terminal(text_string)
@@ -355,7 +355,7 @@ class PVDER_SmartFeatures():
                         utility_functions.print_LFRT_events(t,fgrid,self.t_LF3start,event_name='LF3_zone')
                         #six.print_(self.t_LF2start)
 
-        elif self.LFRT_ENABLE == True and t > self.t_stable and self.LFRT_TRIP == True:
+        elif self.LFRT_ENABLE and t > self.t_stable and self.LFRT_TRIP:
 
             if self.t_LF_reconnect > 0.0:
                 if fgrid < F_LF3:

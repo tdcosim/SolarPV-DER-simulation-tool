@@ -39,8 +39,7 @@ class SimulationEvents(Logging):
         self.name = 'events_'+str(self.events_ID)
         
         self.initialize_logger()
-        #Set logging level - {DEBUG,INFO,WARNING,ERROR}
-        self.verbosity = verbosity
+        self.verbosity = verbosity #Set logging level - {DEBUG,INFO,WARNING,ERROR}
         
         if events_spec is not None:
             self.update_events_spec(events_spec)
@@ -80,7 +79,7 @@ class SimulationEvents(Logging):
            t (float): A scalar specifying the time (s).
         """
         
-        if self.SOLAR_EVENT_ENABLE == True and self.solar_events_list: #Check whether list is empty
+        if self.SOLAR_EVENT_ENABLE and self.solar_events_list: #Check whether list is empty
             
             if t<self.solar_events_list[0]['T']: 
                 Sinsol = self._events_spec['insolation']['default']
@@ -106,7 +105,7 @@ class SimulationEvents(Logging):
            t (float): A scalar specifying the time (s).
         """
         
-        if self.GRID_EVENT_ENABLE == True  and self.grid_events_list: #Check whether list is empty
+        if self.GRID_EVENT_ENABLE and self.grid_events_list: #Check whether list is empty
             
             if t<self.grid_events_list[self.grid_event_counter]['T'] and self.grid_event_counter ==0:
                 Vgrid = self._events_spec['voltage']['default']
@@ -132,7 +131,7 @@ class SimulationEvents(Logging):
            t (float): A scalar specifying the time (s).
         """
         
-        if self.LOAD_EVENT_ENABLE == True and self.load_events_list: #Check whether list is empty
+        if self.LOAD_EVENT_ENABLE and self.load_events_list: #Check whether list is empty
             
             if t<self.load_events_list[0]['T']: 
                 Zload1_actual = self.Zload1_actual_default
@@ -217,7 +216,7 @@ class SimulationEvents(Logging):
         """
         
         T = float(T)
-        #if type(Zload1_actual) != complex:
+        
         if isinstance(Zload1_actual,complex):
             Zload1_actual = complex(Zload1_actual)
         
