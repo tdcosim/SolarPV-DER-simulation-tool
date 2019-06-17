@@ -586,7 +586,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
                        dxPLL,
                        dwte]
         
-        return result
+        return np.array(result)
 
     def jac_ODE_model(self,y,t):
         """Jacobian for the system of ODE's."""
@@ -766,59 +766,87 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         if abs(self.Kp_GCC*self.ub + self.xb)>self.m_limit:
             if np.sign( (self.wp)*(-self.ub.real +  self.ib_ref.real - self.ib.real)) == np.sign(self.ub.real):
                 #dubR = 0.0
+                J[varInd['ubR'],varInd['iaR']]= 0.0
+                J[varInd['ubR'],varInd['iaI']]= 0.0 
                 J[varInd['ubR'],varInd['ibR']]= 0.0
+                J[varInd['ubR'],varInd['ibI']]= 0.0
                 J[varInd['ubR'],varInd['ubR']]= 0.0
+                J[varInd['ubR'],varInd['icR']]= 0.0
+                J[varInd['ubR'],varInd['icI']]= 0.0
+                
                 J[varInd['ubR'],varInd['Vdc']]= 0.0
                 J[varInd['ubR'],varInd['xDC']]= 0.0
+                J[varInd['ubR'],varInd['xQ']]= 0.0
             else:
                 #dubR = (self.wp)*(-self.ub.real +  self.ib_ref.real - self.ib.real)
-                J[varInd['ubR'],varInd['ibR']]= -self.wp
+                J[varInd['ubR'],varInd['iaR']]= 0.866025403*(self.Kp_Q*self.wp*self.va.imag/2)
+                J[varInd['ubR'],varInd['iaI']]= -0.866025403*(self.Kp_Q*self.wp*self.va.real/2)
+                J[varInd['ubR'],varInd['ibR']]= -self.wp + 0.866025403*(self.Kp_Q*self.wp*self.vb.imag/2)
+                J[varInd['ubR'],varInd['ibI']]= -0.866025403*(self.Kp_Q*self.wp*self.vb.real/2)
                 J[varInd['ubR'],varInd['ubR']]= -self.wp
-                J[varInd['ubR'],varInd['Vdc']]= -self.wp*self.Kp_DC
-                J[varInd['ubR'],varInd['xDC']]= self.wp  
+                J[varInd['ubR'],varInd['icR']]= 0.866025403*(self.Kp_Q*self.wp*self.vc.imag/2)
+                J[varInd['ubR'],varInd['icI']]= -0.866025403*(self.Kp_Q*self.wp*self.vc.real/2)
+                
+                J[varInd['ubR'],varInd['Vdc']]= 0.5*self.wp*self.Kp_DC
+                J[varInd['ubR'],varInd['xDC']]= -0.5*self.wp  
+                J[varInd['ubR'],varInd['xQ']]= 0.866025403*self.wp
                     
             if np.sign((self.wp)*(-self.ub.imag +  self.ib_ref.imag - self.ib.imag)) == np.sign(self.ub.imag):
                 #dubI = 0.0
+                J[varInd['ubI'],varInd['iaR']]= 0.0
+                J[varInd['ubI'],varInd['iaI']]= 0.0
                 J[varInd['ubI'],varInd['ibR']]= 0.0
                 J[varInd['ubI'],varInd['ibI']]= 0.0
                 J[varInd['ubI'],varInd['ubI']]= 0.0
-                J[varInd['ubI'],varInd['xQ']]= 0.0
-                    
-                J[varInd['ubI'],varInd['iaR']]= 0.0
-                J[varInd['ubI'],varInd['iaI']]= 0.0
                 J[varInd['ubI'],varInd['icR']]= 0.0
                 J[varInd['ubI'],varInd['icI']]= 0.0
                 
+                J[varInd['ubI'],varInd['Vdc']]= 0.0
+                J[varInd['ubI'],varInd['xDC']]= 0.0
+                J[varInd['ubI'],varInd['xQ']]= 0.0
+                
             else:
                 #dubI = (self.wp)*(-self.ub.imag +  self.ib_ref.imag - self.ib.imag)
-                J[varInd['ubI'],varInd['ibR']]= (self.Kp_Q*self.wp*self.vb.imag/2)
-                J[varInd['ubI'],varInd['ibI']]= -self.wp - (self.Kp_Q*self.wp*self.vb.real/2)
-                J[varInd['ubI'],varInd['ubI']]= -self.wp
-                J[varInd['ubI'],varInd['xQ']]= self.wp
-                    
-                J[varInd['ubI'],varInd['iaR']]= (self.Kp_Q*self.wp*self.va.imag/2)
-                J[varInd['ubI'],varInd['iaI']]= - (self.Kp_Q*self.wp*self.va.real/2)
-                J[varInd['ubI'],varInd['icR']]= (self.Kp_Q*self.wp*self.vc.imag/2)
-                J[varInd['ubI'],varInd['icI']]= - (self.Kp_Q*self.wp*self.vc.real/2)
+                J[varInd['ubI'],varInd['iaR']]= -(self.Kp_Q*self.wp*self.va.imag/4)
+                J[varInd['ubI'],varInd['iaI']]= (self.Kp_Q*self.wp*self.va.real/4)
+                J[varInd['ubI'],varInd['ibR']]= -(self.Kp_Q*self.wp*self.vb.imag/4)
+                J[varInd['ubI'],varInd['ibI']]= -self.wp + (self.Kp_Q*self.wp*self.vb.real/4)
+                J[varInd['ubI'],varInd['ubI']]= -self.wp                
+                J[varInd['ubI'],varInd['icR']]= -(self.Kp_Q*self.wp*self.vc.imag/4)
+                J[varInd['ubI'],varInd['icI']]= (self.Kp_Q*self.wp*self.vc.real/4)
+                
+                J[varInd['ubI'],varInd['Vdc']]= 0.866025403*self.Kp_DC*self.wp
+                J[varInd['ubI'],varInd['xDC']]= -0.866025403*self.wp
+                J[varInd['ubI'],varInd['xQ']]= -0.5*self.wp
                     
         else:
             #dubR = (self.wp)*(-self.ub.real +  self.ib_ref.real - self.ib.real)
             #dubI = (self.wp)*(-self.ub.imag +  self.ib_ref.imag - self.ib.imag)
-            J[varInd['ubR'],varInd['ibR']]= -self.wp
+            
+            J[varInd['ubR'],varInd['iaR']]= 0.866025403*(self.Kp_Q*self.wp*self.va.imag/2)
+            J[varInd['ubR'],varInd['iaI']]= -0.866025403*(self.Kp_Q*self.wp*self.va.real/2)
+            J[varInd['ubR'],varInd['ibR']]= -self.wp + 0.866025403*(self.Kp_Q*self.wp*self.vb.imag/2)
+            J[varInd['ubR'],varInd['ibI']]= -0.866025403*(self.Kp_Q*self.wp*self.vb.real/2)
             J[varInd['ubR'],varInd['ubR']]= -self.wp
-            J[varInd['ubR'],varInd['Vdc']]= -self.wp*self.Kp_DC
-            J[varInd['ubR'],varInd['xDC']]= self.wp
+            J[varInd['ubR'],varInd['icR']]= 0.866025403*(self.Kp_Q*self.wp*self.vc.imag/2)
+            J[varInd['ubR'],varInd['icI']]= -0.866025403*(self.Kp_Q*self.wp*self.vc.real/2)
+            
+            J[varInd['ubR'],varInd['Vdc']]= 0.5*self.wp*self.Kp_DC
+            J[varInd['ubR'],varInd['xDC']]= -0.5*self.wp  
+            J[varInd['ubR'],varInd['xQ']]= 0.866025403*self.wp
                     
-            J[varInd['ubI'],varInd['ibR']]= (self.Kp_Q*self.wp*self.vb.imag/2)
-            J[varInd['ubI'],varInd['ibI']]= -self.wp - (self.Kp_Q*self.wp*self.vb.real/2)
-            J[varInd['ubI'],varInd['ubI']]= -self.wp
-            J[varInd['ubI'],varInd['xQ']]= self.wp
-                    
-            J[varInd['ubI'],varInd['iaR']]= (self.Kp_Q*self.wp*self.va.imag/2)
-            J[varInd['ubI'],varInd['iaI']]= - (self.Kp_Q*self.wp*self.va.real/2)
-            J[varInd['ubI'],varInd['icR']]= (self.Kp_Q*self.wp*self.vc.imag/2)
-            J[varInd['ubI'],varInd['icI']]= - (self.Kp_Q*self.wp*self.vc.real/2)
-        
+            J[varInd['ubI'],varInd['iaR']]= -(self.Kp_Q*self.wp*self.va.imag/4)
+            J[varInd['ubI'],varInd['iaI']]= (self.Kp_Q*self.wp*self.va.real/4)
+            J[varInd['ubI'],varInd['ibR']]= -(self.Kp_Q*self.wp*self.vb.imag/4)
+            J[varInd['ubI'],varInd['ibI']]= -self.wp + (self.Kp_Q*self.wp*self.vb.real/4)
+            J[varInd['ubI'],varInd['ubI']]= -self.wp                
+            J[varInd['ubI'],varInd['icR']]= -(self.Kp_Q*self.wp*self.vc.imag/4)
+            J[varInd['ubI'],varInd['icI']]= (self.Kp_Q*self.wp*self.vc.real/4)
+                
+            J[varInd['ubI'],varInd['Vdc']]= 0.866025403*self.Kp_DC*self.wp
+            J[varInd['ubI'],varInd['xDC']]= -0.866025403*self.wp
+            J[varInd['ubI'],varInd['xQ']]= -0.5*self.wp                    
+            
         #Phase c inverter output current
         #dicR = (1/self.Lf)*(-self.Rf*self.ic.real - self.vc.real + self.vtc.real) + (self.winv/self.wbase)*self.ic.imag 
         #dicI = (1/self.Lf)*(-self.Rf*self.ic.imag - self.vc.imag + self.vtc.imag) - (self.winv/self.wbase)*self.ic.real 
@@ -867,16 +895,29 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         if abs(self.Kp_GCC*self.uc + self.xc)>self.m_limit:
             if np.sign( (self.wp)*(-self.uc.real +  self.ic_ref.real - self.ic.real)) == np.sign(self.uc.real):
                 #ducR = 0.0
+                J[varInd['ucR'],varInd['iaR']]= 0.0
+                J[varInd['ucR'],varInd['iaI']]= 0.0
+                J[varInd['ucR'],varInd['ibR']]= 0.0
+                J[varInd['ucR'],varInd['ibI']]= 0.0
                 J[varInd['ucR'],varInd['icR']]= 0.0
+                J[varInd['ucR'],varInd['icI']]= 0.0
                 J[varInd['ucR'],varInd['ucR']]= 0.0
                 J[varInd['ucR'],varInd['Vdc']]= 0.0
                 J[varInd['ucR'],varInd['xDC']]= 0.0
+                J[varInd['ucR'],varInd['xQ']]= 0.0
             else:
-                ducR = (self.wp)*(-self.uc.real +  self.ic_ref.real - self.ic.real)
-                J[varInd['ucR'],varInd['icR']]= -self.wp
+                #ducR = (self.wp)*(-self.uc.real +  self.ic_ref.real - self.ic.real)
+                J[varInd['ucR'],varInd['iaR']]= -0.866025403*(self.Kp_Q*self.wp*self.va.imag/2)
+                J[varInd['ucR'],varInd['iaI']]= 0.866025403*(self.Kp_Q*self.wp*self.va.real/2)
+                J[varInd['ucR'],varInd['ibR']]= -0.866025403*(self.Kp_Q*self.wp*self.vb.imag/2)
+                J[varInd['ucR'],varInd['ibI']]= 0.866025403*(self.Kp_Q*self.wp*self.vb.real/2)
+                J[varInd['ucR'],varInd['icR']]= -self.wp  -0.866025403*(self.Kp_Q*self.wp*self.vc.imag/2)
+                J[varInd['ucR'],varInd['icI']]= 0.866025403*(self.Kp_Q*self.wp*self.vc.real/2)
                 J[varInd['ucR'],varInd['ucR']]= -self.wp
-                J[varInd['ucR'],varInd['Vdc']]= -self.wp*self.Kp_DC
-                J[varInd['ucR'],varInd['xDC']]= self.wp
+                
+                J[varInd['ucR'],varInd['Vdc']]=  0.5*self.wp*self.Kp_DC
+                J[varInd['ucR'],varInd['xDC']]=  -0.5*self.wp
+                J[varInd['ucR'],varInd['xQ']]=  -0.866025403*self.wp
                     
             if np.sign((self.wp)*(-self.uc.imag +  self.ic_ref.imag - self.ic.imag)) == np.sign(self.uc.imag):
                 #ducI = 0.0
@@ -895,14 +936,13 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
                     
             else:
                 #ducI = (self.wp)*(-self.uc.imag +  self.ic_ref.imag - self.ic.imag)
-                J[varInd['ucI'],varInd['icR']]= -(self.Kp_Q*self.wp*self.vc.imag/4)
-                J[varInd['ucI'],varInd['icI']]= -self.wp + (self.Kp_Q*self.wp*self.vc.real/4)
-                J[varInd['ucI'],varInd['ucI']]= -self.wp
-                    
                 J[varInd['ucI'],varInd['iaR']]= -self.Kp_Q*self.wp*self.va.imag/4
                 J[varInd['ucI'],varInd['iaI']]= self.Kp_Q*self.wp*self.va.real/4
                 J[varInd['ucI'],varInd['ibR']]= -self.Kp_Q*self.wp*self.vb.imag/4
                 J[varInd['ucI'],varInd['ibI']]= self.Kp_Q*self.wp*self.vb.real/4
+                J[varInd['ucI'],varInd['icR']]= -(self.Kp_Q*self.wp*self.vc.imag/4)
+                J[varInd['ucI'],varInd['icI']]= -self.wp + (self.Kp_Q*self.wp*self.vc.real/4)
+                J[varInd['ucI'],varInd['ucI']]= -self.wp
                     
                 J[varInd['ucI'],varInd['Vdc']]= -0.8660254037*self.Kp_DC*self.wp
                 J[varInd['ucI'],varInd['xDC']]= 0.8660254037*self.wp
@@ -910,19 +950,25 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         else:
             #ducR = (self.wp)*(-self.uc.real +  self.ic_ref.real - self.ic.real)
             #ducI = (self.wp)*(-self.uc.imag +  self.ic_ref.imag - self.ic.imag)
-            J[varInd['ucR'],varInd['icR']]= -self.wp
+            J[varInd['ucR'],varInd['iaR']]= -0.866025403*(self.Kp_Q*self.wp*self.va.imag/2)
+            J[varInd['ucR'],varInd['iaI']]= 0.866025403*(self.Kp_Q*self.wp*self.va.real/2)
+            J[varInd['ucR'],varInd['ibR']]= -0.866025403*(self.Kp_Q*self.wp*self.vb.imag/2)
+            J[varInd['ucR'],varInd['ibI']]= 0.866025403*(self.Kp_Q*self.wp*self.vb.real/2)
+            J[varInd['ucR'],varInd['icR']]= -self.wp  -0.866025403*(self.Kp_Q*self.wp*self.vc.imag/2)
+            J[varInd['ucR'],varInd['icI']]= 0.866025403*(self.Kp_Q*self.wp*self.vc.real/2)
             J[varInd['ucR'],varInd['ucR']]= -self.wp
-            J[varInd['ucR'],varInd['Vdc']]= -self.wp*self.Kp_DC
-            J[varInd['ucR'],varInd['xDC']]= self.wp
                 
-            J[varInd['ucI'],varInd['icR']]= -(self.Kp_Q*self.wp*self.vc.imag/4)
-            J[varInd['ucI'],varInd['icI']]= -self.wp + (self.Kp_Q*self.wp*self.vc.real/4)
-            J[varInd['ucI'],varInd['ucI']]= -self.wp
+            J[varInd['ucR'],varInd['Vdc']]=  0.5*self.wp*self.Kp_DC
+            J[varInd['ucR'],varInd['xDC']]=  -0.5*self.wp
+            J[varInd['ucR'],varInd['xQ']]=  -0.866025403*self.wp
                 
             J[varInd['ucI'],varInd['iaR']]= -self.Kp_Q*self.wp*self.va.imag/4
             J[varInd['ucI'],varInd['iaI']]= self.Kp_Q*self.wp*self.va.real/4
             J[varInd['ucI'],varInd['ibR']]= -self.Kp_Q*self.wp*self.vb.imag/4
             J[varInd['ucI'],varInd['ibI']]= self.Kp_Q*self.wp*self.vb.real/4
+            J[varInd['ucI'],varInd['icR']]= -(self.Kp_Q*self.wp*self.vc.imag/4)
+            J[varInd['ucI'],varInd['icI']]= -self.wp + (self.Kp_Q*self.wp*self.vc.real/4)
+            J[varInd['ucI'],varInd['ucI']]= -self.wp
                 
             J[varInd['ucI'],varInd['Vdc']]= -0.8660254037*self.Kp_DC*self.wp
             J[varInd['ucI'],varInd['xDC']]= 0.8660254037*self.wp
