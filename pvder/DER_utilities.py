@@ -424,25 +424,5 @@ class PVDER_ModelUtilities(BaseValues):
         
         self.Vdc_ref_counter = 0
         
-        logging.debug('{}:Reference event counters reset!'.format(self.name))
-        
-    def initialize_jacobian(self):
-        """Create a Jacobian matrix with zero values."""
-        
-        self.J = np.zeros((self.n_total_ODE,self.n_total_ODE))
-        self.varInd={}
-        n=0
-        
-        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
-            state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
-                          'Vdc','xDC','xQ','xPLL','wte']
-        
-        elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
-            state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
-                          'ibR','ibI','xbR','xbI','ubR','ubI',
-                          'icR','icI','xcR','xcI','ucR','ucI',
-                          'Vdc','xDC','xQ','xPLL','wte']            
-            
-        for entry in state_list:
-            self.varInd[entry]=n
-            n+=1
+        logging.debug('{}:Reference event counters reset!'.format(self.name))        
+    

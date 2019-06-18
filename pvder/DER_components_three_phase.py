@@ -154,9 +154,16 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
     controller_parameters = {'50':{'scale_Kp_GCC':0.05,'scale_Ki_GCC':0.05,\
                                    'scale_Kp_DC':0.05,'scale_Ki_DC' : 0.05,\
                                    'scale_Kp_Q' : 0.05,'scale_Ki_Q' : 0.05,'wp' : 20e4},
-                             '250':{'scale_Kp_GCC':0.1,'scale_Ki_GCC':0.1,\
+                             '250':{'scale_Kp_GCC':0.05,'scale_Ki_GCC':0.05,\
+                                    'scale_Kp_DC':0.05,'scale_Ki_DC' : 0.05,\
+                                    'scale_Kp_Q' : 0.05,'scale_Ki_Q' : 0.05,'wp' : 20e4},
+                             '250_1':{'scale_Kp_GCC':0.1,'scale_Ki_GCC':0.1,\
                                     'scale_Kp_DC':0.01,'scale_Ki_DC' : 0.01,\
                                     'scale_Kp_Q' : 0.01,'scale_Ki_Q' : 0.01,'wp' : 20e4}}
+    
+    steadystate_values = {'50':{'maR0':0.89,'maI0':0.0,'iaR0':124.0,'iaI0':3.59},
+                          '250':{'maR0':0.7,'maI0':0.01,'iaR0':675.0,'iaI0':0.0}}
+    
     Sinverter_list = inverter_ratings.keys()
     #Frequency
     winv = we = 2.0*math.pi*60.0

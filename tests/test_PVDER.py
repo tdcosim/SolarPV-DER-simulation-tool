@@ -23,8 +23,9 @@ from pvder.simulation_utilities import SimulationResults
 
 def suite():
     """Define a test suite."""
-    
-    tests = test_options.options #['LVRT1'] #,,'LVRT2','LVRT3'
+    avoid_tests = ['LVRT3']
+    tests = test_options.options #['LVRT1'] #,,'LVRT2','LVRT3'   
+    tests = list(set(tests) - set(avoid_tests))
     print('Following unittest scenarios will be run:{}'.format(tests))
     suite = unittest.TestSuite()
     
@@ -117,7 +118,7 @@ class TestPVDER(unittest.TestCase):
                                                                   STEADY_STATE_INITIALIZATION=SteadyState))
 
             self.sim_list.append(DynamicSimulation(grid_model=self.grid_list[-1],PV_model=self.DER_model_list[-1],events = self.events_list[-1],LOOP_MODE=False,COLLECT_SOLUTION=True))
-            self.sim_list[-1].jacFlag = True      #Provide analytical Jacobian to ODE solver
+            self.sim_list[-1].jacFlag = False      #Provide analytical Jacobian to ODE solver
             self.sim_list[-1].DEBUG_SOLVER = False #Check whether solver is failing to converge at any step
             
             self.results_list.append(SimulationResults(simulation = self.sim_list[-1],PER_UNIT=True))
@@ -253,7 +254,7 @@ parser = argparse.ArgumentParser(description='Unit tests for LVRT operation in O
 test_options = TestPVDER.test_scenarios.keys()
 #test_options.sort()
 test_options = sorted(test_options)
-print(test_options)
+
 parser.add_argument('-i', '--item', action='store', dest='options',
                     type=str, nargs='*', default=test_options,choices=test_options,
                     help="Examples: -i LVRT1 LVRT2, -i LVRT3")

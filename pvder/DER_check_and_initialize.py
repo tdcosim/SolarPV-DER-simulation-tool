@@ -211,6 +211,27 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.Kp_Q = _Kp_Q/self.controller_parameters[_DER_rating]['scale_Kp_Q']  #Reactive power controller Proportional constant
         self.Ki_Q = _Ki_Q/self.controller_parameters[_DER_rating]['scale_Ki_Q']   #Reactive power controller Integral constant    
     
+    def initialize_jacobian(self):
+        """Create a Jacobian matrix with zero values."""
+        
+        self.J = np.zeros((self.n_total_ODE,self.n_total_ODE))
+        self.varInd={}
+        n=0
+        
+        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
+            state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
+                          'Vdc','xDC','xQ','xPLL','wte']
+        
+        elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
+                          'ibR','ibI','xbR','xbI','ubR','ubI',
+                          'icR','icI','xcR','xcI','ucR','ucI',
+                          'Vdc','xDC','xQ','xPLL','wte']            
+            
+        for entry in state_list:
+            self.varInd[entry]=n
+            n+=1
+    
     def attach_grid_model(self,grid_model):
         """Attach a grid model to the PV-DER instance.
 
@@ -224,6 +245,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         #Connect grid instance only if working in stand alone mode
         if self.standAlone and grid_model is not None:
             self.grid_model = grid_model
+            self.logger.debug('{}:Grid model {} attached since PV-DER instance is stand alone!'.format(grid_model.name,self.name))
         elif self.standAlone and grid_model is None:
             raise ValueError('`Grid` instance need to be provided in stand alone mode for creating `SolarPV_DER` instance`!')
         else: #Grid model is not connected
@@ -320,7 +342,12 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         """Find duty cycle and inverter current that minimize steady state error and return steady state values."""        
         
         self.logger.debug('Solving for steady state at current operating point.')
-        x0 = np.array([0.89,0.0,124.0,3.59])
+        _DER_rating = str(int(self.Sinverter_rated/1e3))
+        #x0 = np.array([0.89,0.0,124.0,3.59])
+        x0 = np.array([self.steadystate_values[_DER_rating]['maR0'],
+                       self.steadystate_values[_DER_rating]['maI0'],
+                       self.steadystate_values[_DER_rating]['iaR0'],
+                       self.steadystate_values[_DER_rating]['iaI0']])
                 
         disp = bool(self.verbosity == 'DEBUG')
         
@@ -374,3 +401,50 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             self.show_PV_DER_states(quantity='duty cycle')
             self.show_PV_DER_states(quantity='voltage')
             self.show_PV_DER_states(quantity='current')
+            
+    def check_jacobian(self,t=0.0):
+        """Compare analytical and numerical Jacobian of the ODE model."""
+        
+        #Calculate numerical Jacobian using finite differences
+        x = self.y0
+        x0 = x.copy()
+
+        eps = 1e-6
+        Jn = np.zeros([len(x), len(x)], dtype = np.float)
+
+        for i in range(len(x)):
+            x1 = x.copy()
+            x2 = x.copy()
+
+            x1[i] += eps
+            x2[i] -= eps
+
+            f1 = self.ODE_model(x1,t)
+            f2 = self.ODE_model(x2,t)
+
+            Jn[ : , i] = (f1 - f2) / (2 * eps)
+        
+        Ja = self.jac_ODE_model(x0,t) #Calculate analytical Jacobian
+        
+        #Compare numerical Jacobian with analytical Jacobian
+        err=np.abs(Ja-Jn)
+        err[err<1e-2]=0
+        ind=np.where(err>0)
+
+        nErr=len(ind[0])
+        err=[]
+        
+        if nErr > 0:
+            print('Differences in analytical and numerical Jacobian found in {} entries!'.format(nErr))
+            jac_CHECK = False
+            for r,c in zip(ind[0],ind[1]):
+                err.append([r,c,Jn[r,c],Ja[r,c]])
+                #print(r,c,Jn[r,c],Ja[r,c])
+                r_char = list(self.varInd.keys())[list(self.varInd.values()).index(r)]
+                c_char = list(self.varInd.keys())[list(self.varInd.values()).index(c)]
+                print('J[{}][{}]--Jn:{},Ja:{}'.format(r_char,c_char,Jn[r,c],Ja[r,c]))
+        else:
+            jac_CHECK = True
+            print('No differences in analytical and numerical Jacobian!')
+        
+        return jac_CHECK,Jn,Ja
