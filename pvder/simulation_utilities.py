@@ -8,7 +8,7 @@ import time
 import numpy as np
 import math
 import cmath
-from scipy.integrate import odeint
+from scipy.integrate import odeint,ode
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -18,12 +18,12 @@ from pvder.utility_classes import Logging
 class SimulationResults(Logging):
     """ Utility class for simulation results."""
     
-    results_count = 0
+    count = 0
     SAVE_PLOT_JPEG = False
     SAVE_PLOT_SVG = False
     figure_DPI = 1200
 
-    def __init__(self,simulation,figure_index=1,PER_UNIT=True,font_size=18,PLOT_TITLE=True,verbosity='INFO'):
+    def __init__(self,simulation,figure_index=1,PER_UNIT=True,font_size=18,PLOT_TITLE=True,SOLUTION_TIME=True,verbosity='INFO',identifier=None):
         """Creates an instance of `SimulationResults`.
         
         Args:
@@ -43,13 +43,12 @@ class SimulationResults(Logging):
         #import matplotlib.ticker as ticker
         
         #Increment count to keep track of number of simulation results instances
-        SimulationResults.results_count = SimulationResults.results_count + 1
-        self.results_ID =SimulationResults.results_count
-        #Object name
-        self.name = 'result_'+str(self.results_ID)
+        SimulationResults.count = SimulationResults.count + 1
         
-        self.initialize_logger()
-        #Set logging level - {DEBUG,INFO,WARNING,ERROR}
+        #Generate a name for the instance
+        self.name_instance(identifier)
+        
+        self.initialize_logger()  #Set logging level - {DEBUG,INFO,WARNING,ERROR}       
         self.verbosity = verbosity
 
         self.figure_index =1
@@ -57,8 +56,9 @@ class SimulationResults(Logging):
         
         self.PER_UNIT = PER_UNIT
         self.PLOT_TITLE = PLOT_TITLE
+        self.SOLUTION_TIME = SOLUTION_TIME
         self.font_size = font_size
-
+   
     def change_units(self):
         """Change units from per unit to S.I. or vice versa."""
         
@@ -83,7 +83,7 @@ class SimulationResults(Logging):
              ValueError: If `plot_type` is not available. 
         """
         
-        if plot_type not in {'power','active_power','active_power_Ppv_Pac_PCC','active_power_Pac_PCC','reactive_power','reactive_power_Q_PCC','reactive_power_Q_PCC_smoothed','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','voltage_Vpcclv_smoothed','current','phase_angle','frequency','duty_cycle'}:
+        if plot_type not in {'power','active_power','active_power_Ppv_Pac_PCC','active_power_Pac_PCC','reactive_power','reactive_power_Q_PCC','reactive_power_Q_PCC_smoothed','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','voltage_Vpcclv_smoothed','current','phase_angle','frequency','duty_cycle','voltage_Vpcclv_all_phases'}:
             raise ValueError('Unknown plot type: ' + str(plot_type))
         
         if self.simulation.LOOP_MODE:
@@ -137,6 +137,18 @@ class SimulationResults(Logging):
             legends=[r"$v^{PCC-LV}_{rms}$"] 
             plot_title='PCC-LV side: L-G RMS voltage'
             y_labels=_voltage_label
+        
+        elif plot_type == 'voltage_Vpcclv_all_phases':
+            plot_values = [self.simulation.Varms_t*self.V_multiplier]
+            legends=[r"$v^{PCC-LV}_{arms}$"] 
+            #legends=['Vpcclv-a']
+            
+            if type(self.simulation.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+                plot_values = plot_values + [self.simulation.Vbrms_t*self.V_multiplier,self.simulation.Vcrms_t*self.V_multiplier]
+                legends = legends + [r"$v^{PCC-LV}_{brms}$",r"$v^{PCC-LV}_{crms}$"] 
+            
+            plot_title='PCC-LV side: L-G RMS voltage - all phases'
+            y_labels=_voltage_label        
         
         elif plot_type == 'voltage_HV':
             if not self.simulation.PV_model.standAlone:
@@ -248,6 +260,9 @@ class SimulationResults(Logging):
         
         plot_title = self.simulation.PV_model.name + ' -- ' + plot_title
         
+        if self.simulation.solution_time is not None and self.SOLUTION_TIME:
+            plot_title = plot_title + '\nSolution time:{:.4f} seconds'.format(self.simulation.solution_time) 
+        
         for plot_value in plot_values:
             assert (plot_value.size == time.size) and time.size > 1, 'Number of time points should be greater than one and equal to number of value points!'
         
@@ -319,10 +334,24 @@ class SimulationResults(Logging):
 class SimulationUtilities():
     """ Utility class for dynamic simulations."""
     
-    max_steps = 1000   
+    max_steps = 1000
+    solver_list = ['odeint','ode-vode-bdf']
     
     def call_ODE_solver(self,derivatives,jacobian,y,t):
         """Call the SciPy ODE solver."""
+               
+        if self.solver_type == 'odeint':
+            solution,infodict = self.call_odeint_solver(derivatives,jacobian,y,t)
+            self.check_simulation(infodict,t) #Check whether solver successful for all time intervals
+        elif self.solver_type == 'ode-vode-bdf':
+            solution,infodict = self.call_ode_solver()            
+        else:
+            self.logger.debug('Solver not found!')              
+        
+        return solution,infodict,self.SOLVER_CONVERGENCE
+    
+    def call_odeint_solver(self,derivatives,jacobian,y,t):
+        """Use the SciPy odeint solver."""
         
         if self.jacFlag:
             solution,infodict = odeint(derivatives,y,t,Dfun=jacobian,full_output=1,printmessg=True,\
@@ -331,12 +360,77 @@ class SimulationUtilities():
             solution,infodict =  odeint(derivatives,y,t,full_output=1,printmessg=True,\
                                        hmax = 1/120.,mxstep=self.max_steps,atol=1e-4,rtol=1e-4)
         #return odeint(derivatives,y,t,full_output=1,printmessg=True,\
-        #hmax =1/120.,mxstep=1000)#atol=1.49012e-6
+        #hmax =1/120.,mxstep=1000)#atol=1.49012e-6    
         
-        self.check_simulation(infodict,t) #Check whether solver successful for all time intervals
+        return solution,infodict    
+     
+    def call_ode_solver(self):
+        """Use the SciPy ode solver."""
         
-        return solution,infodict,self.SOLVER_CONVERGENCE
+        solution = self.ode_solver.y
+        self.t =  np.array([self.ode_solver.t]) #np.array([0.0])
+        info = []
+        #print('t:',self.ode_solver.t,'y1:',solution[0])
+        
+        #while self.ode_solver.successful() and self.ode_solver.t < self.tStop:
+        while self.ode_solver.successful() and  (self.tStop + 1e-6 - self.ode_solver.t) >= self.tInc:        
+            
+            y = self.ode_solver.integrate(self.ode_solver.t+self.tInc)
+            return_code = self.ode_solver.get_return_code()
+            info.append(return_code)
+            
+            #print('t:',self.ode_solver.t,'y1:',y[0])
+            solution = np.vstack((solution, y))
+            self.t = np.hstack((self.t, np.array([self.ode_solver.t])))
+            
+        #print('Solution shape:',solution.shape)
+        #print('Time steps shape:',self.t.shape)
+        
+        return solution,info
+    
+    def initialize_solver(self,solver_type,t0=0.0):
+        """Initialize an integrator."""
+        
+        assert solver_type in self.solver_list, 'Solver type {} is not available!'.format(self.solver_type)
+        
+        self.solver_type = solver_type
+        
+        if self.solver_type == 'ode-vode-bdf':
+            self.ode_solver = ode(self.ODE_model_ode,self.jac_ODE_model_ode).set_integrator('vode',method='bdf',rtol=1e-4,atol=1e-4)
+            self.ode_solver.set_initial_value(self.y0,t0)        
+            
+        elif self.solver_type == 'odeint':
+            pass   #Initialization not required if using odeint
+        
+        self.logger.debug('{}:{} solver initialized.'.format(self.name,self.solver_type))
+    
+    def ODE_model_ode(self,t,y):
+        """" Combine all derivatives when using ode method"""
+        #print('y:',y,'t:',t)
+        y1 = y[0:self.PV_model.n_ODE]
+        
+        if self.PV_model.standAlone:
+            self.grid_model.steady_state_model(t)
+            
+        y = self.PV_model.ODE_model(y1,t)
+        
+        if self.DEBUG_SIMULATION:
+            self.debug_simulation(t)
 
+        return y
+        
+    def jac_ODE_model_ode(self,t,y):
+        """ Combine all derivatives."""
+        #print('yj:',y,'tj:',t)
+        y1 = y[0:self.PV_model.n_ODE]
+        
+        if self.PV_model.standAlone:
+            self.grid_model.steady_state_model(t)
+            
+        y = self.PV_model.jac_ODE_model(y1,t)
+
+        return y
+    
     def check_simulation(self,infodict,t):
         """Check whether the ODE solver failed at any time step."""
         
