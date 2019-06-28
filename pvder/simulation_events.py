@@ -15,7 +15,7 @@ from pvder import utility_functions
 class SimulationEvents(Logging):
     """ Utility class for events."""
     
-    events_count = 0
+    count = 0
     Tactual_default = 298.15
     Zload1_actual_default = 10e6+0j
     
@@ -23,7 +23,7 @@ class SimulationEvents(Logging):
                     'voltage':{'default':1.0,'min':0.1,'max':1.1},  #This is a fraction and not per unit value
                     'frequency':{'default':60.0,'min':58.5,'max':61.5}}  #Time delay between events
     
-    def __init__(self,events_spec = None,SOLAR_EVENT_ENABLE = True,GRID_EVENT_ENABLE = True, LOAD_EVENT_ENABLE = True,verbosity='INFO'):
+    def __init__(self,events_spec = None,SOLAR_EVENT_ENABLE = True,GRID_EVENT_ENABLE = True, LOAD_EVENT_ENABLE = True,verbosity='INFO',identifier=None):
         """Creates an instance of `SimulationEvents`.
         
         Args:
@@ -33,10 +33,8 @@ class SimulationEvents(Logging):
         """                
                    
         #Increment count to keep track of number of simulation events instances
-        SimulationEvents.events_count = SimulationEvents.events_count + 1
-        self.events_ID =SimulationEvents.events_count
-        #Object name
-        self.name = 'events_'+str(self.events_ID)
+        SimulationEvents.count = SimulationEvents.count + 1
+        self.name_instance(identifier)  #Generate a name for the instance
         
         self.initialize_logger()
         self.verbosity = verbosity #Set logging level - {DEBUG,INFO,WARNING,ERROR}

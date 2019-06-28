@@ -17,6 +17,11 @@ def Urms_time_series(ua,ub,uc):
     
     return np.sqrt((np.square(np.abs(ua))+np.square(np.abs(ub))+np.square(np.abs(uc)))/3.0)/math.sqrt(2)
 
+def Uphrms_time_series(uph):
+    """Function to calculate rms value of single phasor quantity."""
+    
+    return np.abs(uph)/math.sqrt(2)
+
 def Uabsolute_time_series(u):
     """Function to calculate rms value of phasor quantities."""
     

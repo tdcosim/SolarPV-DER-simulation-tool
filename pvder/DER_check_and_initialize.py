@@ -16,19 +16,6 @@ class PVDER_SetupUtilities(BaseValues,Logging):
        Utility class for error checking during model initialization.
     """
     
-    def name_instance(self,identifier):
-        """Provide a name to the instance."""
-        
-        self.PV_DER_ID = self.DER_count  #ID is same as current DER instance count
-        
-        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
-            self.name = 'PVDER-1ph_'+str(self.PV_DER_ID)  #Object name
-        elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
-            self.name = 'PVDER-3ph_'+str(self.PV_DER_ID)  #Object name
-        
-        if identifier is not None:
-            self.name  = str(identifier) + '-' +self.name  #Add additional identifier to object name if it was provided
-    
     def creation_message(self):
         """Message after PV-DER instance was created."""
         
@@ -185,7 +172,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.Lload1 = self.Lload1_actual/BaseValues.Lbase  #inductance in per unit value
         self.Zload1 = self.Zload1_actual/BaseValues.Zbase
         
-        self.transformer_name = 'transformer_'+str(self.PV_DER_ID)
+        self.transformer_name = 'transformer_'+str(self.ID)
         
         self.check_PV_DER_parameters()  #Check PV-DER parameters
         
