@@ -28,11 +28,11 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
     control systems.
     
     Attributes:
-         DER_count (int): Number of `SolarPV_DER_SinglePhase` instances.
+         count (int): Number of `SolarPV_DER_SinglePhase` instances.
          Ioverload (float): Overload current rating of inverter.
     """
     
-    DER_count = 0
+    count = 0
     #Number of ODE's
     n_ODE = 11
     
@@ -52,6 +52,10 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
                                    'scale_Kp_DC':0.025,'scale_Ki_DC' : 0.025,\
                                    'scale_Kp_Q' : 0.025,'scale_Ki_Q' : 0.025,'wp' : 20e4},
                              }
+    
+    steadystate_values = {'10':{'maR0':0.7,'maI0':0.0,'iaR0':0.5,'iaI0':0.01}
+                         }
+    
     Sinverter_list = inverter_ratings.keys()
     #Frequency
     winv = we = 2.0*math.pi*60.0
@@ -94,13 +98,11 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         """
         
         #Increment count to keep track of number of PV-DER model instances
-        SolarPV_DER_SinglePhase.DER_count = SolarPV_DER_SinglePhase.DER_count+1
-        #Generate a name for the instance
-        self.name_instance(identifier)
+        SolarPV_DER_SinglePhase.count = SolarPV_DER_SinglePhase.count+1
+        self.name_instance(identifier) #Generate a name for the instance        
         
         self.initialize_logger()
-        #Set logging level - {DEBUG,INFO,WARNING,ERROR}
-        self.verbosity = verbosity
+        self.verbosity = verbosity  #Set logging level - {DEBUG,INFO,WARNING,ERROR}
         
         self.standAlone = standAlone
         self.update_grid_measurements(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
@@ -377,7 +379,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
                        dxPLL,
                        dwte]
         
-        return result
+        return np.array(result)
 
     def jac_ODE_model(self,y,t):
         """Jacobian for the system of ODE's.

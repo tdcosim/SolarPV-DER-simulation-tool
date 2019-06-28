@@ -135,7 +135,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
        Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
        control systems.
     """
-    DER_count = 0
+    count = 0
     #Number of ODE's
     n_ODE = 23
     
@@ -161,8 +161,8 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
                                     'scale_Kp_DC':0.01,'scale_Ki_DC' : 0.01,\
                                     'scale_Kp_Q' : 0.01,'scale_Ki_Q' : 0.01,'wp' : 20e4}}
     
-    steadystate_values = {'50':{'maR0':0.89,'maI0':0.0,'iaR0':124.0,'iaI0':3.59},
-                          '250':{'maR0':0.7,'maI0':0.01,'iaR0':675.0,'iaI0':0.0}}
+    steadystate_values = {'50':{'maR0':0.89,'maI0':0.0,'iaR0':1.0,'iaI0':0.001},
+                          '250':{'maR0':0.7,'maI0':0.01,'iaR0':6.0,'iaI0':0.001}}
     
     Sinverter_list = inverter_ratings.keys()
     #Frequency
@@ -206,9 +206,8 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         """
         
         #Increment count to keep track of number of PV-DER model instances
-        SolarPV_DER_ThreePhase.DER_count = SolarPV_DER_ThreePhase.DER_count+1
-        #Generate a name for the instance
-        self.name_instance(identifier)
+        SolarPV_DER_ThreePhase.count = SolarPV_DER_ThreePhase.count+1
+        self.name_instance(identifier)  #Generate a name for the instance
         
         self.initialize_logger()
         #Set logging level - {DEBUG,INFO,WARNING,ERROR}
