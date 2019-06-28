@@ -14,6 +14,8 @@ from pvder.dynamic_simulation import DynamicSimulation
 from pvder.simulation_events import SimulationEvents
 from pvder.simulation_utilities import SimulationResults
 
+from unittest_utilities import show_DER_status, plot_DER_trajectories
+
 #working_folder = os.path.dirname(os.path.dirname(os.path.dirname(os.getcwd())))
 #module_folder = os.path.dirname(os.path.abspath(__file__))
 
@@ -179,11 +181,8 @@ class TestPVDER(unittest.TestCase):
        
         return _variable
     
-    
-    
     def loop_and_check(self,n_time_steps):
-        """Loop trhough DER instances and check."""
-        
+        """Loop trhough DER instances and check."""        
         
         for i in range(self.n_instances):
             pvder_object =  self.DER_model_list[i]
@@ -192,9 +191,10 @@ class TestPVDER(unittest.TestCase):
             
             for convergence_failure in sim_object.convergence_failure_list:
                 print('Failure event:{}'.format(convergence_failure))
-            self.show_DER_status(pvder_object)
+            
+            show_DER_status(pvder_object)
             self.check_DER_state(pvder_object)
-            self.plot_DER_trajectories(results_object)
+            plot_DER_trajectories(results_object)
             self.check_LVRT_status(pvder_object)
              
             #self.assertTrue(len(sim_object.t_t) == len(sim_object.Vdc_t) == n_time_steps+1, msg='{}:The number of states collected should be {} but it is actually {}!'.format(sim_object.name,n_time_steps+1,len(sim_object.t_t)))
@@ -223,31 +223,7 @@ class TestPVDER(unittest.TestCase):
                 
         elif pvder_object.Vrms > pvder_object.V_LV2 and pvder_object.LVRT_MOMENTARY_CESSATION:
                 #Check if LVRT trip flag is False
-                self.assertFalse(pvder_object.LVRT_TRIP, msg='{}: Inverter trip flag set despite nominal voltage!'.format(pvder_object.name))
-        
-    def show_DER_status(self,pvder_object):
-        """Show DER states."""     
-        
-        pvder_object.show_PV_DER_states(quantity='power')
-        pvder_object.show_PV_DER_states(quantity='current')
-        pvder_object.show_PV_DER_states(quantity='voltage')                
-        pvder_object.show_PV_DER_states(quantity='duty cycle')
-        pvder_object.show_RT_settings(settings_type='LVRT')    
-    
-    def plot_DER_trajectories(self,results_object):
-        """PLot DER trajectory."""
-        
-        results_object.PER_UNIT = False
-        results_object.PLOT_TITLE = True
-        results_object.font_size = 18
-        
-        results_object.plot_DER_simulation(plot_type='active_power_Ppv_Pac_PCC')#
-        results_object.plot_DER_simulation(plot_type='reactive_power')
-        results_object.plot_DER_simulation(plot_type='current')
-        results_object.plot_DER_simulation(plot_type='voltage_Vdc')
-        results_object.plot_DER_simulation(plot_type='voltage_LV')
-        results_object.plot_DER_simulation(plot_type='duty_cycle')              
-   
+                self.assertFalse(pvder_object.LVRT_TRIP, msg='{}: Inverter trip flag set despite nominal voltage!'.format(pvder_object.name))    
         
 parser = argparse.ArgumentParser(description='Unit tests for LVRT operation in OpenDSS - PVDER simulation.')
 
