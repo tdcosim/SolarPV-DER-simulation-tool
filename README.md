@@ -1,38 +1,46 @@
 **Status:** Expect regular updates and bug fixes.
-# Utilitiy for simulating dynamics of PV-DER
+# Utility for simulating dynamics of PV-DER
 
 [![Build Status](https://travis-ci.org/sibyjackgrove/SolarPV-DER-simulation-utility.svg?branch=master)](https://travis-ci.org/sibyjackgrove/SolarPV-DER-simulation-utility)
 [![CodeFactor](https://www.codefactor.io/repository/github/sibyjackgrove/solarpv-der-simulation-utility/badge)](https://www.codefactor.io/repository/github/sibyjackgrove/solarpv-der-simulation-utility)
 
-Solar photovoltaic distributed energy resources (PV-DER) are power electronic inverter based generation (IBG) connected to the electric power distribution system (eg. roof top solar PV systems). This utility can be used to simulate the behaviour a single DER connected to a stiff voltage source as shown in the following schematic:
+Solar photovoltaic distributed energy resources (PV-DER) are power electronic inverter based generation (IBG) connected to the electric power distribution system (eg. roof top solar PV systems). This utility can be used to simulate the dynamics of a single DER connected to a stiff voltage source as shown in the following schematic:
 
 ![schematic of PV-DER](PVDER_schematic.png)
 
 ## Basics
-The dynamics of the DER are modelled using dynamic phasors. Detailed description of the concepts behind this utility can be found in the IEEE publication **Dynamic Modeling of Solar PV Systems for Distribution System Stability Analysis** and detailed list of equations can be found in the [Model specification document.](docs/PV_DER_model_specification_rev3.docx)
+The dynamics of the DER are modelled using dynamic phasors. Detailed description of the concepts behind this utility can be found in the IEEE publication [Dynamic Modeling of Solar PV Systems for Distribution System Stability Analysis](https://www.researchgate.net/publication/333985171_Dynamic_Modeling_of_Solar_PV_Systems_for_Distribution_System_Stability_Analysis) and detailed list of equations can be found in the [Model specification document.](docs/PV_DER_model_specification_rev3.docx)
 
 ## Links
 * Source code repository: https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility
 * API Documentation: https://solarpv-der-simulation-utility.readthedocs.io/en/latest/
 
 ## Installation
-You can install the module directly from github with following commands:
+You can install the module directly from GitHub with following commands:
 ```
 git clone https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility.git
 cd SolarPV-DER-simulation-utility
 pip install -e .
 ```
+
+## Use cases
+Following projects are using Solar PV-DER simulation utility:
+1. [Argonne Transmission and Distribution systems Co-Simulation tool (TDcoSim)](https://github.com/tdcosim/TDcoSim)
+2. [OpenAI Gym Distributed Energy Resource Environment  (Gym-DER)](https://github.com/sibyjackgrove/gym-SolarPVDER-environment)
+
 ## Using the module
 The module can be imported as a normal python module:
-```
+
+```python
 import pvder
 ```
 The following features are available currently:
-1. Single phase or three phase DER models.
+1. Single phase or three phase DER models (phase voltages may be unbalanced).
 2. Run simulation in stand alone mode with internal grid voltage source model.
-3. Run simulation in loop mode where grid voltage is supplied every time step by outside program.
-4. Introduce solar insolation events (in all modes), grid voltage, and frequency change events (in stand alone mode).
-5. Enable Low voltage ride through (LVRT) and Volt-VAR control logic. 
+3. Run simulation in loop mode where grid voltage and frequency is supplied every time step by outside program.
+4. Visualize simulation results for voltages, current, active, and reactive power.
+5. Introduce solar insolation events (in all modes), grid voltage, and frequency change events (in stand alone mode).
+6. Enable Low voltage ride through (LVRT) and Volt-VAR control logic.
 
 ### Using the stand alone single phase DER model with 10 kW power rating
 The following steps are required:
@@ -100,7 +108,12 @@ Dependencies: SciPy, Numpy, Matlplotlib
 Please feel free to raise an issue when bugs are encountered or if you are need further documentation.
 
 ## Who is responsible?
+
+**Core developer:**
 - Siby Jose Plathottam splathottam@anl.gov
+
+**Support:**
+
 - Karthikeyan Balasubramaniam kbalasubramaniam@anl.gov
 
 ## Acknowledgement
