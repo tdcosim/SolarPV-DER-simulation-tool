@@ -129,29 +129,29 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         self.initialize_y0_t()
     
-    @property
-    def y0(self):
-        """ Combine all initial conditions."""
+    #@property
+    #def y0(self):
+    #    """ Combine all initial conditions."""
 
-        y0 = self.PV_model.y0
+    #    y0 = self.PV_model.y0
         
-        return y0
+    #    return y0
    
     @property
-    def y0_t(self):
+    def y0(self):
         """ Combine all initial conditions from solution."""
         
         if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
-            y0_t = [self.iaR_t[-1], self.iaI_t[-1], self.xaR_t[-1], self.xaI_t[-1], self.uaR_t[-1],self.uaI_t[-1],\
+            y0 = [self.iaR_t[-1], self.iaI_t[-1], self.xaR_t[-1], self.xaI_t[-1], self.uaR_t[-1],self.uaI_t[-1],\
                     self.ibR_t[-1], self.ibI_t[-1], self.xbR_t[-1], self.xbI_t[-1], self.ubR_t[-1],self.ubI_t[-1],\
                     self.icR_t[-1], self.icI_t[-1], self.xcR_t[-1], self.xcI_t[-1], self.ucR_t[-1],self.ucI_t[-1],\
                     self.Vdc_t[-1],self.xDC_t[-1],self.xQ_t[-1],self.xPLL_t[-1],self.wte_t[-1]]    
         
         elif type(self.PV_model).__name__ == 'SolarPV_DER_SinglePhase':
-            y0_t =[self.iaR_t[-1], self.iaI_t[-1], self.xaR_t[-1], self.xaI_t[-1], self.uaR_t[-1],self.uaI_t[-1],\
+            y0 =[self.iaR_t[-1], self.iaI_t[-1], self.xaR_t[-1], self.xaI_t[-1], self.uaR_t[-1],self.uaI_t[-1],\
                    self.Vdc_t[-1],self.xDC_t[-1],self.xQ_t[-1],self.xPLL_t[-1],self.wte_t[-1]]
         
-        return y0_t
+        return y0
     
     #@property
     def t_calc(self):
@@ -164,43 +164,43 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
     def initialize_y0_t(self):
         """Initialize y0_t."""
         
-        self.iaR_t = np.array([self.y0[0]])
-        self.iaI_t = np.array([self.y0[1]])
-        self.xaR_t = np.array([self.y0[2]])
-        self.xaI_t = np.array([self.y0[3]])
-        self.uaR_t = np.array([self.y0[4]])
-        self.uaI_t = np.array([self.y0[5]])
+        self.iaR_t = np.array([self.PV_model.y0[0]])
+        self.iaI_t = np.array([self.PV_model.y0[1]])
+        self.xaR_t = np.array([self.PV_model.y0[2]])
+        self.xaI_t = np.array([self.PV_model.y0[3]])
+        self.uaR_t = np.array([self.PV_model.y0[4]])
+        self.uaI_t = np.array([self.PV_model.y0[5]])
         
         if type(self.PV_model).__name__ == 'SolarPV_DER_SinglePhase':
             #DC link voltage variables
-            self.Vdc_t = np.array([self.y0[6]])
-            self.xDC_t = np.array([self.y0[7]])
-            self.xQ_t = np.array([self.y0[8]])
+            self.Vdc_t = np.array([self.PV_model.y0[6]])
+            self.xDC_t = np.array([self.PV_model.y0[7]])
+            self.xQ_t = np.array([self.PV_model.y0[8]])
             #PLL variables
-            self.xPLL_t = np.array([self.y0[9]])
+            self.xPLL_t = np.array([self.PV_model.y0[9]])
             #Frequency integration to get angle
-            self.wte_t = np.array([self.y0[10]])
+            self.wte_t = np.array([self.PV_model.y0[10]])
         
         elif type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
-            self.ibR_t = np.array([self.y0[6]])
-            self.ibI_t = np.array([self.y0[7]])
-            self.xbR_t = np.array([self.y0[8]])
-            self.xbI_t = np.array([self.y0[9]])
-            self.ubR_t = np.array([self.y0[10]])
-            self.ubI_t = np.array([self.y0[11]])
+            self.ibR_t = np.array([self.PV_model.y0[6]])
+            self.ibI_t = np.array([self.PV_model.y0[7]])
+            self.xbR_t = np.array([self.PV_model.y0[8]])
+            self.xbI_t = np.array([self.PV_model.y0[9]])
+            self.ubR_t = np.array([self.PV_model.y0[10]])
+            self.ubI_t = np.array([self.PV_model.y0[11]])
 
-            self.icR_t = np.array([self.y0[12]])
-            self.icI_t = np.array([self.y0[13]])
-            self.xcR_t = np.array([self.y0[14]])
-            self.xcI_t = np.array([self.y0[15]])
-            self.ucR_t = np.array([self.y0[16]])
-            self.ucI_t = np.array([self.y0[17]])
+            self.icR_t = np.array([self.PV_model.y0[12]])
+            self.icI_t = np.array([self.PV_model.y0[13]])
+            self.xcR_t = np.array([self.PV_model.y0[14]])
+            self.xcI_t = np.array([self.PV_model.y0[15]])
+            self.ucR_t = np.array([self.PV_model.y0[16]])
+            self.ucI_t = np.array([self.PV_model.y0[17]])
 
-            self.Vdc_t = np.array([self.y0[18]])
-            self.xDC_t = np.array([self.y0[19]])
-            self.xQ_t = np.array([self.y0[20]])
-            self.xPLL_t = np.array([self.y0[21]])
-            self.wte_t = np.array([self.y0[22]])
+            self.Vdc_t = np.array([self.PV_model.y0[18]])
+            self.xDC_t = np.array([self.PV_model.y0[19]])
+            self.xQ_t = np.array([self.PV_model.y0[20]])
+            self.xPLL_t = np.array([self.PV_model.y0[21]])
+            self.wte_t = np.array([self.PV_model.y0[22]])
 
     def reset_stored_trajectories(self):
         """Reset for plotting."""
@@ -717,6 +717,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             
         else:
             self.t = self.t_calc()
+            self.initialize_y0_t()
             
             timer_start = time.time()
             six.print_("{}:Simulation started at {} s and will end at {} s".format(self.name,self.tStart,self.tStop))
@@ -725,10 +726,10 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
                 self.logger.debug("{}:Analytical Jacobian will be provided to ODE solver.".format(self.name))
                 
             if self.solver_type != 'odeint':
-                self.ode_solver.set_initial_value(self.y0_t,self.tStart) 
-                self.logger.debug("{}:Resetting {} internal time step to {} and states to:\n{}.".format(self.name,self.solver_type,self.tStart,self.y0_t))
+                self.ode_solver.set_initial_value(self.y0,self.tStart) 
+                self.logger.debug("{}:Resetting {} internal time step to {} and states to:\n{}.".format(self.name,self.solver_type,self.tStart,self.y0))
         
-            solution,_,_  = self.call_ODE_solver(self.ODE_model,self.jac_ODE_model,self.y0_t,self.t)
+            solution,_,_  = self.call_ODE_solver(self.ODE_model,self.jac_ODE_model,self.y0,self.t)
             
             self.solution_time = time.time() - timer_start
             
@@ -743,6 +744,23 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             self.collect_states(solution)  #Atleast states must be collected    
         
     def show_simulation_time(self):
-        """Call the ODE solver and collect states."""
+        """Show simulation time."""
         
         print('{}:Simulation was completed in {}'.format(self.name,time.strftime("%H:%M:%S", time.gmtime(self.solution_time))))
+        
+    def get_trajectories(self):
+        """Return trajectories as a dictionary."""
+        
+        trajectory_dictionary = {'ia_t':self.ia_t,
+                                 'Vdc_t':self.va_t,'vta_t':self.va_t,'va_t':self.va_t,
+                                 'Irms_t':self.Irms_t,'Vtrms_t':self.Vtrms_t,'Vrms_t':self.Vrms_t,
+                                 'Ppv_t':self.Ppv_t,'S_t':self.S_t,'S_PCC_t':self.S_PCC_t
+                                }
+        
+        if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+            
+            trajectory_dictionary.update({'ib_t':self.ib_t,'ic_t':self.ic_t,
+                                   'vtb_t':self.vtb_t,'vtc_t':self.vtc_t,
+                                   'vb_t':self.vb_t,'vc_t':self.vc_t})     
+                                     
+        return trajectory_dictionary
