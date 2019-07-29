@@ -45,6 +45,8 @@ class PV_Module(object):
                          '50':{'Np':11,'Ns':735,'Vdcmpp0':550.0,'Vdcmpp_min': 520.0,'Vdcmpp_max': 650.0},
                          '250':{'Np':45,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 650.0,'Vdcmpp_max': 1000.0}}
     
+    module_parameters_list = module_parameters.keys()
+    
     def __init__(self,events,Sinverter_rated):
         """Creates an instance of `PV_Module`.
         
@@ -59,17 +61,19 @@ class PV_Module(object):
         self.events = events
         if (type(self).__name__ == 'SolarPV_DER_SinglePhase' and Sinverter_rated in {10e3}) or\
            (type(self).__name__ == 'SolarPV_DER_ThreePhase' and Sinverter_rated in {50e3,100e3,250e3}):
+            
+            #_DER_rating = str(int(Sinverter_rated/1e3))
+            self.logger.debug('Creating PV module instance for {} DER with rating:{} kVA'.format(type(self).__name__.replace('SolarPV_DER_',''),str(int(Sinverter_rated/1e3))))
+            self.initialize_module_parameters()
            
-           _DER_rating = str(int(Sinverter_rated/1e3))
-           self.logger.debug('Creating PV module instance for {} DER with rating:{} kVA'.format(type(self).__name__.replace('SolarPV_DER_',''),_DER_rating))
-           self.Np = self.module_parameters[str(_DER_rating)]['Np']
-           self.Ns = self.module_parameters[str(_DER_rating)]['Ns']
-           self.Vdcmpp0 = self.module_parameters[str(_DER_rating)]['Vdcmpp0']
-           self.Vdcmpp_min = self.module_parameters[str(_DER_rating)]['Vdcmpp_min']
-           self.Vdcmpp_max = self.module_parameters[str(_DER_rating)]['Vdcmpp_max']
+           #self.Np = self.module_parameters[str(_DER_rating)]['Np']
+           #self.Ns = self.module_parameters[str(_DER_rating)]['Ns']
+           #self.Vdcmpp0 = self.module_parameters[str(_DER_rating)]['Vdcmpp0']
+           #self.Vdcmpp_min = self.module_parameters[str(_DER_rating)]['Vdcmpp_min']
+           #self.Vdcmpp_max = self.module_parameters[str(_DER_rating)]['Vdcmpp_max']
            
-        else:
-            raise ValueError('PV module parameters not available for DER with rating: ' + str(Sinverter_rated/1e3)+' kVA')
+        #else:
+        #    raise ValueError('PV module parameters not available for DER with rating: ' + str(Sinverter_rated/1e3)+' kVA')
         
         #Fit polynomial
         if self.MPPT_ENABLE and self.USE_POLYNOMIAL_MPP:
@@ -128,7 +132,21 @@ class PV_Module(object):
         _x = np.array(_Sinsol_list)
         _y = np.array(_Vdcmpp_list)
         self.z = np.polyfit(_x, _y, 3)
-        utility_functions.print_to_terminal('Found polynomial for MPP :{:.4f}x^3 + {:.4f}x^2 +{:.4f}x^1 + {:.4f}!'.format(self.z[0],self.z[1],self.z[2], self.z[3]))
+        utility_functions.print_to_terminal('Found polynomial for MPP :{:.4f}x^3 + {:.4f}x^2 +{:.4f}x^1 + {:.4f}!'.format(self.z[0],self.z[1],self.z[2], self.z[3]))        
+        
+    def initialize_module_parameters(self):
+        """Initialize PV module parameters."""
+                
+        if self.check_parameter_ID(self.parameter_ID,self.module_parameters):
+            
+            self.Np = self.module_parameters[str(self.parameter_ID)]['Np']
+            self.Ns = self.module_parameters[str(self.parameter_ID)]['Ns']
+            self.Vdcmpp0 = self.module_parameters[str(self.parameter_ID)]['Vdcmpp0']
+            self.Vdcmpp_min = self.module_parameters[str(self.parameter_ID)]['Vdcmpp_min']
+            self.Vdcmpp_max = self.module_parameters[str(self.parameter_ID)]['Vdcmpp_max']
+            
+        else:
+            raise ValueError('PV module parameters not available for parameter ID {} '.format(self.parameter_ID))
     
 class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,BaseValues):
     """
@@ -143,10 +161,11 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
     Kp_PLL = 180 #1800
     Ki_PLL = 320 #32000
     
-    #Inverter current overload rating (Max 10s)
-    Ioverload = 1.5
-    inverter_ratings = {'50':{'Varated':245.0,'Vdcrated':550.0},
-                        '250':{'Varated':360.0,'Vdcrated':750.0}}
+   
+    #Ioverload = 1.5  #Inverter current overload rating (Max 10s)
+    
+    inverter_ratings = {'50':{'Srated':50e3,'Varated':245.0,'Vdcrated':550.0,'Ioverload':1.5},
+                        '250':{'Srated':250e3,'Varated':360.0,'Vdcrated':750.0,'Ioverload':1.5}}
     
     circuit_parameters = {'50':{'Rf_actual':0.002,'Lf_actual' :25.0e-6,'C_actual':300.0e-6,'Z1_actual':0.0019 + 1j*0.0561},
                           '250':{'Rf_actual':0.002,'Lf_actual':300.0e-6,'C_actual':300.0e-6,'Z1_actual':0.0019 + 1j*0.0561}}
@@ -164,7 +183,11 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
     steadystate_values = {'50':{'maR0':0.89,'maI0':0.0,'iaR0':1.0,'iaI0':0.001},
                           '250':{'maR0':0.7,'maI0':0.01,'iaR0':6.0,'iaI0':0.001}}
     
-    Sinverter_list = inverter_ratings.keys()
+    inverter_ratings_list = inverter_ratings.keys()
+    circuit_parameters_list = circuit_parameters.keys()
+    controller_parameters_list = controller_parameters.keys()
+    steadystate_values_list = steadystate_values.keys()    
+    
     #Frequency
     winv = we = 2.0*math.pi*60.0
     fswitching  = 10e3
@@ -175,16 +198,17 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
     #Duty cycle
     m_steady_state = 0.96 #Expected duty cycle at steady state    
     
-    def __init__(self,events,grid_model=None,\
-                             Sinverter_rated = 50.0e3,Vrms_rated = None,
-                             ia0 = 0+0j,xa0 =0+0j , ua0 = 0+0j,\
-                             xDC0 = 0,xQ0 = 0,xPLL0 = 0.0,wte0 = 2*math.pi,\
+    def __init__(self,events,grid_model = None,\
+                             Sinverter_rated = 50.0e3, Vrms_rated = None,
+                             ia0 = 0+0j, xa0 = 0+0j, ua0 = 0+0j,\
+                             xDC0 = 0, xQ0 = 0, xPLL0 = 0.0, wte0 = 2*math.pi,\
                              gridVoltagePhaseA = None,\
                              gridVoltagePhaseB = None,\
                              gridVoltagePhaseC = None,\
                              gridFrequency = None,\
-                             standAlone=True,STEADY_STATE_INITIALIZATION=False,\
-                             pvderConfig=None,identifier=None,verbosity='INFO'): #.50+0j,.25-.43301270j,-.25+.43301270j,2*math.pi*60.0
+                             standAlone = True, STEADY_STATE_INITIALIZATION = False,\
+                             pvderConfig = None, identifier = None, verbosity = 'INFO',
+                             parameter_ID = None):
         
         """Creates an instance of `SolarPV_DER_ThreePhase`.
         
@@ -209,13 +233,13 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         SolarPV_DER_ThreePhase.count = SolarPV_DER_ThreePhase.count+1
         self.name_instance(identifier)  #Generate a name for the instance
         
-        self.initialize_logger()
-        #Set logging level - {DEBUG,INFO,WARNING,ERROR}
-        self.verbosity = verbosity
-                
+        self.initialize_logger(logging_level=verbosity)  #Set logging level - {DEBUG,INFO,WARNING,ERROR} 
+               
         self.standAlone = standAlone
         self.update_grid_measurements(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
         self.Vrms_rated = Vrms_rated        
+        
+        self.parameter_ID = self.create_parameter_ID(Sinverter_rated,parameter_ID)
         
         if six.PY3:
             super().__init__(events,Sinverter_rated)  #Initialize PV module class (base class)
@@ -225,7 +249,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         self.STEADY_STATE_INITIALIZATION = STEADY_STATE_INITIALIZATION
         
         self.attach_grid_model(grid_model)
-        self.initialize_DER(Sinverter_rated,pvderConfig)
+        self.initialize_DER(pvderConfig)
                 
         self.LVRT_initialize() #LVRT settings
         self.initialize_jacobian()
@@ -342,7 +366,10 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         #Update PCC LV side voltage
         self.va = self.va_calc()
         self.vb = self.vb_calc()
-        self.vc = self.vc_calc()        
+        self.vc = self.vc_calc()
+        
+        #self.vtunbalance = utility_functions.Uunbalance_calc(self.vta,self.vtb,self.vtc)
+        #self.vunbalance = utility_functions.Uunbalance_calc(self.va,self.vb,self.vc)
    
     def update_RMS(self):
         """Update RMS voltages."""

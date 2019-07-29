@@ -15,6 +15,10 @@ import matplotlib.ticker as ticker
 
 from pvder.utility_classes import Logging
 
+# Changing these adjusts the size and layout of the visualization
+FIGURE_WIDTH = 8
+FIGURE_HEIGHT = 8
+
 class SimulationResults(Logging):
     """ Utility class for simulation results."""
     
@@ -22,6 +26,11 @@ class SimulationResults(Logging):
     SAVE_PLOT_JPEG = False
     SAVE_PLOT_SVG = False
     figure_DPI = 1200
+    
+    parameters= {"figure":{"height": FIGURE_HEIGHT,
+                           "width": FIGURE_WIDTH
+                          }
+                }
 
     def __init__(self,simulation,figure_index=1,PER_UNIT=True,font_size=18,PLOT_TITLE=True,SOLUTION_TIME=True,verbosity='INFO',identifier=None):
         """Creates an instance of `SimulationResults`.
@@ -48,9 +57,8 @@ class SimulationResults(Logging):
         #Generate a name for the instance
         self.name_instance(identifier)
         
-        self.initialize_logger()  #Set logging level - {DEBUG,INFO,WARNING,ERROR}       
-        self.verbosity = verbosity
-
+        self.initialize_logger(logging_level=verbosity)  #Set logging level - {DEBUG,INFO,WARNING,ERROR}       
+        
         self.figure_index =1
         self.simulation = simulation
         
@@ -282,7 +290,7 @@ class SimulationResults(Logging):
         """Function to plot multiple time series on same plot."""
         
         assert len(plot_values) == len(time_values) == len(legends),  " The number of legends should be equal to the number of quantities"
-        fig = plt.figure(self.figure_index, figsize=(8,8))
+        fig = plt.figure(self.figure_index, figsize=(self.parameters["figure"]["width"], self.parameters["figure"]["height"])) #figsize=(8,8)
         
         #for i in range(len(plot_values)):
         for i,item in enumerate(plot_values):

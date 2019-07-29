@@ -66,7 +66,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
     
     count = 0
     tStart = 0.0
-    jacFlag = False
+    #jacFlag = False
     DEBUG_SOLVER = False
     DEBUG_SIMULATION = False
     DEBUG_CONTROLLERS = False
@@ -75,7 +75,9 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
     DEBUG_POWER = False
     DEBUG_PLL = False
         
-    def __init__(self,PV_model,events,grid_model=None,tStop = 0.5,tInc = 0.001,LOOP_MODE = False,COLLECT_SOLUTION=True,verbosity='INFO',solver_type='odeint',identifier=None):
+    def __init__(self,PV_model,events,grid_model = None,tStop = 0.5,tInc = 0.001,
+                 LOOP_MODE = False,COLLECT_SOLUTION = True,jacFlag = False,
+                 verbosity ='INFO',solver_type ='odeint',identifier = None):
         """Creates an instance of `GridSimulation`.
         
         Args:
@@ -93,9 +95,8 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         DynamicSimulation.count = DynamicSimulation.count + 1
         self.name_instance(identifier) #Generate a name for the instance
         
-        self.initialize_logger()
-        self.verbosity = verbosity  #Set logging level - {DEBUG,INFO,WARNING,ERROR}               
-        
+        self.initialize_logger(logging_level=verbosity) #Set logging level - {DEBUG,INFO,WARNING,ERROR}  
+       
         self.tStop = tStop
         self.tInc = tInc
         self.t = self.t_calc()
@@ -109,6 +110,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         self.LOOP_MODE = LOOP_MODE
         self.COLLECT_SOLUTION = COLLECT_SOLUTION
+        self.jacFlag = jacFlag
         
         if self.PV_model.standAlone and grid_model is not None:
             self.grid_model = grid_model

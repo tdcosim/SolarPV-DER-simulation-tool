@@ -42,7 +42,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
     
     #Inverter current overload rating (Max 10s)
     Ioverload = 1.5
-    inverter_ratings = {'10':{'Varated':250.0,'Vdcrated':550.0},
+    inverter_ratings = {'10':{'Srated':10e3,'Varated':250.0,'Vdcrated':550.0,'Ioverload':1.5},
                         }
     
     circuit_parameters = {'10':{'Rf_actual':0.002,'Lf_actual' :25.0e-6,'C_actual':300.0e-6,'Z1_actual':0.0019 + 1j*0.0561},
@@ -56,7 +56,13 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
     steadystate_values = {'10':{'maR0':0.7,'maI0':0.0,'iaR0':0.5,'iaI0':0.01}
                          }
     
-    Sinverter_list = inverter_ratings.keys()
+    #Sinverter_list = inverter_ratings.keys()
+    
+    inverter_ratings_list = inverter_ratings.keys()
+    circuit_parameters_list = circuit_parameters.keys()
+    controller_parameters_list = controller_parameters.keys()
+    steadystate_values_list = steadystate_values.keys()    
+    
     #Frequency
     winv = we = 2.0*math.pi*60.0
     fswitching  = 10e3
@@ -76,7 +82,8 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
                              gridVoltagePhaseC = None,\
                              gridFrequency = None,\
                              standAlone=True,STEADY_STATE_INITIALIZATION=False,\
-                             pvderConfig=None,identifier=None,verbosity='INFO'): 
+                             pvderConfig=None,identifier=None,verbosity='INFO',
+                             parameter_ID = None): 
         
         """Creates an instance of `SolarPV_DER`.
         
@@ -101,12 +108,13 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         SolarPV_DER_SinglePhase.count = SolarPV_DER_SinglePhase.count+1
         self.name_instance(identifier) #Generate a name for the instance        
         
-        self.initialize_logger()
-        self.verbosity = verbosity  #Set logging level - {DEBUG,INFO,WARNING,ERROR}
+        self.initialize_logger(logging_level=verbosity)  #Set logging level - {DEBUG,INFO,WARNING,ERROR}       
         
         self.standAlone = standAlone
         self.update_grid_measurements(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
         self.Vrms_rated = Vrms_rated
+        
+        self.parameter_ID = self.create_parameter_ID(Sinverter_rated,parameter_ID)
         
         if six.PY3:
             super().__init__(events,Sinverter_rated)  #Initialize PV module class (base class)
@@ -116,7 +124,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         self.STEADY_STATE_INITIALIZATION = STEADY_STATE_INITIALIZATION
         
         self.attach_grid_model(grid_model)
-        self.initialize_DER(Sinverter_rated,pvderConfig)
+        self.initialize_DER(pvderConfig)
         
         self.LVRT_initialize() #LVRT settings
         self.initialize_jacobian()

@@ -36,8 +36,7 @@ class SimulationEvents(Logging):
         SimulationEvents.count = SimulationEvents.count + 1
         self.name_instance(identifier)  #Generate a name for the instance
         
-        self.initialize_logger()
-        self.verbosity = verbosity #Set logging level - {DEBUG,INFO,WARNING,ERROR}
+        self.initialize_logger(logging_level=verbosity) #Set logging level - {DEBUG,INFO,WARNING,ERROR}
         
         if events_spec is not None:
             self.update_events_spec(events_spec)
@@ -352,23 +351,26 @@ class SimulationEvents(Logging):
         self.grid_event_counter = 0
         self.load_event_counter = 0
         
-        logging.debug('{}:Simulation event counters reset!'.format(self.name))
+        self.logger.debug('{}:Simulation event counters reset!'.format(self.name))
     
     def create_random_events(self,t_event_start,t_event_end,t_event_step,events_type=['insolation','voltage']):
         """Create random events of specified types."""
         
         t_events = np.arange(t_event_start,t_event_end,t_event_step)
         
-        for t_event in t_events:
-            event_choice = random.choice(events_type)
-            
-            if event_choice == 'insolation':
-                self.create_random_insolation_events(t_event)
-            elif event_choice == 'voltage':
-                self.create_random_voltage_events(t_event)
-            else:
-                print('{}:{} is not a valid event choice!'.format(self.name,event_choice))
-    
+        if len(events_type) >= 1:
+            for t_event in t_events:
+                event_choice = random.choice(events_type)
+
+                if event_choice == 'insolation':
+                    self.create_random_insolation_events(t_event)
+                elif event_choice == 'voltage':
+                    self.create_random_voltage_events(t_event)
+                else:
+                    print('{}:{} is not a valid event choice!'.format(self.name,event_choice))
+        else:
+            self.logger.debug('No event was specified - random events will not be created!')
+
     def create_random_insolation_events(self,t_event):
         """Create random voltage event at specified time."""
         
