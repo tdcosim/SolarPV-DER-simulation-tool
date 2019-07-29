@@ -3,6 +3,9 @@
 from __future__ import division
 import operator
 import logging
+import pprint
+import json
+import pickle
 
 import math
 import cmath
@@ -256,30 +259,30 @@ class PVDER_ModelUtilities(BaseValues):
             if type(self).__name__ == 'SolarPV_DER_ThreePhase':
                 print('mb:{:.2f},mc:{:.2f}\nm0:{:.2f}'.format(self.mb,self.mc,(self.ma+self.mb+self.mc)))
     
-    def show_PV_DER_parameters(self,quantity='inverter_ratings'):
+    def show_PV_DER_parameters(self,parameter_type='inverter_ratings'):
         """Display rated values.
         
         Args:
-          quantity (str): A string ('inverter_ratings','controller_gains','circuit_parameters') specifying the parameter to be displayed.
+          parameter_type (str): A string ('inverter_ratings','controller_gains','circuit_parameters') specifying the parameter to be displayed.
         
         """
         
-        if quantity not in {'module_parameters','inverter_ratings','controller_gains','circuit_parameters','all'}:
-            raise ValueError('Unknown quantity: ' + str(quantity))
+        if parameter_type not in {'module_parameters','inverter_ratings','controller_gains','circuit_parameters','all'}:
+            raise ValueError('Unknown quantity: ' + str(parameter_type))
         
-        if quantity ==  'module_parameters' or quantity ==  'all':
+        if parameter_type ==  'module_parameters' or parameter_type ==  'all':
             print('Np:{},Ns:{}'.format(self.Np,self.Ns))
             print('Vdcmpp0:{:.3f} V\nVdcmpp_min:{:.3f} V\nVdcmpp_max:{:.3f} V'.format(self.Vdcmpp0,self.Vdcmpp_min,self.Vdcmpp_max))
         
-        if quantity ==  'inverter_ratings' or quantity ==  'all':
+        if parameter_type ==  'inverter_ratings' or parameter_type ==  'all':
             print('Srated:{:.3f} VA'.format(self.Sinverter_rated))
             print('Vdcrated:{:.3f} V'.format(self.Vdcrated))
             print('Vtrated (L-G peak):{:.3f} V\nVrated (L-G peak):{:.3f} V'.format((self.Vdcrated/2)*self.m_steady_state,self.Varated))
         
-        if quantity == 'circuit_parameters' or quantity ==  'all':
+        if parameter_type == 'circuit_parameters' or parameter_type ==  'all':
             print('Cdc:{:.9f} F\nLf:{:.6f} H\nRf:{:.3f} Ohm'.format(self.C*self.Cbase,self.Lf*self.Lbase,self.Rf*self.Zbase))
         
-        if quantity == 'controller_gains' or quantity ==  'all':
+        if parameter_type == 'controller_gains' or parameter_type ==  'all':
             print('Current controller:\nKp_GCC:{:.3f}, Ki_GCC:{:.3f}, wp:{:.3f}'.format(self.Kp_GCC,self.Ki_GCC,self.wp))
             print('DC link voltage controller:\nKp_DC:{:.3f}, Ki_DC:{:.3f}'.format(self.Kp_DC,self.Ki_DC))
             print('Reactive power controller:\nKp_Q:{:.3f}, Ki_Q:{:.3f}'.format(self.Kp_Q,self.Ki_Q))
@@ -379,6 +382,7 @@ class PVDER_ModelUtilities(BaseValues):
     
     def get_Vdc_ref(self,t):
         """Output Vdc reference."""
+        
         if self.Vdc_ref_list: #Check whether list is empty
             
             if t<self.Vdc_ref_list[0]['t']: 
@@ -400,8 +404,8 @@ class PVDER_ModelUtilities(BaseValues):
         """Create a ramp signal for voltage reference that ramps at 1 V/s.
         
         Arguments:
-          tstart: A scalar specifying start time of ramp in seconds.
-          Vdc_ref_target: A scalar specifying target Vdc reference seconds in volts.
+          tstart (float): A scalar specifying start time of ramp in seconds.
+          Vdc_ref_target (float): A scalar specifying target Vdc reference seconds in volts.
         """
         
         Vdc_ref_start = self.get_Vdc_ref(t=tstart)*self.Vdcbase
@@ -451,7 +455,7 @@ class PVDER_ModelUtilities(BaseValues):
         self.logger.debug('{}:Creating parameter dicitonary with ID {}!'.format(self.name,parameter_ID))        
     
     def initialize_parameter_dict(self,parameter_ID,source_parameter_ID):
-        """Copy parameters from existing to new parameter dict."""
+        """Initialize a new parameter dictinary with values from an existing parameter dictionary."""
         
         if not self.check_parameter_exists(parameter_ID):
             self.create_parameter_dict(parameter_ID)
@@ -460,7 +464,9 @@ class PVDER_ModelUtilities(BaseValues):
         self.update_parameter_dict(parameter_ID,'inverter_ratings',self.inverter_ratings[source_parameter_ID])
         self.update_parameter_dict(parameter_ID,'circuit_parameters',self.circuit_parameters[source_parameter_ID])  
         self.update_parameter_dict(parameter_ID,'controller_parameters',self.controller_parameters[source_parameter_ID])
-        self.update_parameter_dict(parameter_ID,'steadystate_values',self.steadystate_values[source_parameter_ID])  
+        self.update_parameter_dict(parameter_ID,'steadystate_values',self.steadystate_values[source_parameter_ID])
+        
+        self.logger.info('{}:Created and initialized new parameter dicitonary {} with source dictionary {}.'.format(self.name,parameter_ID,source_parameter_ID))
     
     def update_parameter_dict(self,parameter_ID,parameter_type,parameter_dict):
         """Update parameters."""
@@ -491,19 +497,120 @@ class PVDER_ModelUtilities(BaseValues):
             else:
                 print('{} is invalid parameter!'.format(parameter_type))
                 
-            self.logger.info('{}:Updating {} in parameter dicitonary with {}!'.format(self.name,parameter,parameter_dict[parameter]))                
+            self.logger.debug('{}:Updating {} in parameter dicitonary {} with {}!'.format(self.name,parameter,parameter_ID,parameter_dict[parameter]))
         
         if self.parameter_ID == parameter_ID:
             self.initialize_DER()    
     
     def check_parameter_exists(self,parameter_ID):
-        """Check existence of parameter ID."""
-        
-        #return (parameter_ID in self.module_parameters) and (parameter_ID in self.module_parameters)            
+        """Check existence of parameter ID within the parameter dictionaries."""
         
         return (self.check_parameter_ID(parameter_ID,self.module_parameters) and 
                 self.check_parameter_ID(parameter_ID,self.inverter_ratings)  and 
                 self.check_parameter_ID(parameter_ID,self.circuit_parameters) and
                 self.check_parameter_ID(parameter_ID,self.controller_parameters)
                )   
+    
+    def show_parameter_dictionaries(self):
+        """Show all parameter dictionary types and their ID's."""
+        
+        print('-----Parameter dictionary: Parameter IDs-----')
+        
+        utility_functions.print_dictionary_keys(self.module_parameters,'module_parameters')
+        utility_functions.print_dictionary_keys(self.inverter_ratings,'inverter_ratings')
+        utility_functions.print_dictionary_keys(self.circuit_parameters,'circuit_parameters')
+        utility_functions.print_dictionary_keys(self.controller_parameters,'controller_parameters')
+        utility_functions.print_dictionary_keys(self.steadystate_values,'steadystate_values')
+    
+    def show_parameter_types(self):
+        """Show all parameters within all parameter dictionary types."""
+        
+        print('-----Parameter dictionary: Parameter types-----')        
+        
+        key1 = list(self.module_parameters.keys())[0]
+        key2 = list(self.inverter_ratings.keys())[0]
+        
+        utility_functions.print_dictionary_keys(self.module_parameters[key1],'module_parameters')
+        utility_functions.print_dictionary_keys(self.inverter_ratings[key2],'inverter_ratings')
+        utility_functions.print_dictionary_keys(self.circuit_parameters[key2],'circuit_parameters')
+        utility_functions.print_dictionary_keys(self.controller_parameters[key2],'controller_parameters')
+        utility_functions.print_dictionary_keys(self.steadystate_values[key2],'steadystate_values')
+    
+    def get_parameter_dictionary(self,parameter_type,parameter_ID,SHOW_DICTIONARY=True):
+        """Return parameter values.
+        
+        Args:
+          parameter_type (str): Specify type of parameter.
+          parameter_ID (str): Specify parameter ID or 'all'.
+          
+        Returns:
+             dict: Parameters and their values
+        """
+        
+        if parameter_type not in {'module_parameters','inverter_ratings','controller_gains','circuit_parameters','all'}:
+            raise ValueError('Unknown parameter type: ' + str(parameter_type))
                 
+        parameter_dict = {}
+        
+        if parameter_type == 'module_parameters' or parameter_type == 'all':
+            parameter_dict.update(self.module_parameters[parameter_ID]) 
+                      
+        if parameter_type == 'inverter_ratings' or parameter_type == 'all':
+            parameter_dict.update(self.inverter_ratings[parameter_ID])            
+            
+        if parameter_type == 'circuit_parameters' or parameter_type == 'all':
+            parameter_dict.update(self.circuit_parameters[parameter_ID])                
+                
+        if parameter_type == 'controller_parameters' or parameter_type == 'all':
+            parameter_dict.update(self.controller_parameters[parameter_ID])
+            
+        if parameter_type == 'steadystate_values' or parameter_type == 'all':
+            parameter_dict.update(self.steadystate_values[parameter_ID])
+        
+        if SHOW_DICTIONARY:
+            self.pp.pprint(parameter_dict)
+        
+        return parameter_dict     
+    
+    def save_parameter_dictionary(self,parameter_ID,save_format='pickle',SHOW_DICTIONARY=False):
+        """Save parameter dictionary."""
+    
+        parameter_dict = self.get_parameter_dictionary(parameter_type='all',parameter_ID=parameter_ID,SHOW_DICTIONARY=SHOW_DICTIONARY)
+        
+        if save_format == 'pickle':
+            file_name = parameter_ID + '.pkl'
+            
+            pickle_out = open(file_name,"wb")
+            pickle.dump(parameter_dict, pickle_out)
+            pickle_out.close()
+            
+            self.logger.info('{}:Saved all the parameter dicitonaries as a {} file in {}.'.format(self.name,save_format,file_name))
+        
+        #elif save_format == 'json':
+        #    file_name = parameter_ID + '.json'            
+        #    json = json.dumps(parameter_dict)
+        #    f = open(file_name,"w")
+        #    f.write(json)
+        #    f.close()    
+        
+        else:
+            print('Unknown file format!')
+            
+        return file_name
+            
+    def load_parameter_dictionary(self,file_name): 
+        """Load parameter dictionary from saved file."""
+        
+        pickle_in = open(file_name,"rb")
+        
+        parameter_dict = pickle.load(pickle_in)
+        
+        if isinstance(parameter_dict,dict):
+            print('Read following parameter dictionary from {}:'.format(file_name))
+            self.pp.pprint(parameter_dict)
+            
+        else:
+            raise ValueError('Did not read dictionary!')
+           
+        return parameter_dict            
+            
