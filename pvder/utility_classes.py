@@ -33,10 +33,12 @@ class Logging(object):
         if identifier is not None:
             self.name  = str(identifier) + '-' +self.name  #Add additional identifier to object name if it was provided
     
-    def initialize_logger(self):
+    def initialize_logger(self,logging_level):
         """Initialize loggers for different classes."""
         
         self.logger = logging.getLogger(type(self).__name__)
+        
+        self.verbosity = logging_level
     
     @property
     def verbosity(self):
@@ -52,10 +54,10 @@ class Logging(object):
         
         #Set logging level - {DEBUG,INFO,WARNING,ERROR}
         if verbosity == 'DEBUG':
-            self.logger.setLevel(logging.DEBUG)
+            self.logger.setLevel(logging.DEBUG)            
         
         elif verbosity == 'INFO':
-            self.logger.setLevel(logging.INFO)
+            self.logger.setLevel(logging.INFO)            
             
         elif verbosity == 'WARNING':
             self.logger.setLevel(logging.WARNING)
