@@ -264,17 +264,22 @@ class PVDER_ModelUtilities(BaseValues):
         
         """
         
-        if quantity not in {'inverter_ratings','controller_gains','circuit_parameters'}:
+        if quantity not in {'module_parameters','inverter_ratings','controller_gains','circuit_parameters','all'}:
             raise ValueError('Unknown quantity: ' + str(quantity))
         
-        if quantity ==  'inverter_ratings':
+        if quantity ==  'module_parameters' or quantity ==  'all':
+            print('Np:{},Ns:{}'.format(self.Np,self.Ns))
+            print('Vdcmpp0:{:.3f} V\nVdcmpp_min:{:.3f} V\nVdcmpp_max:{:.3f} V'.format(self.Vdcmpp0,self.Vdcmpp_min,self.Vdcmpp_max))
+        
+        if quantity ==  'inverter_ratings' or quantity ==  'all':
+            print('Srated:{:.3f} VA'.format(self.Sinverter_rated))
             print('Vdcrated:{:.3f} V'.format(self.Vdcrated))
             print('Vtrated (L-G peak):{:.3f} V\nVrated (L-G peak):{:.3f} V'.format((self.Vdcrated/2)*self.m_steady_state,self.Varated))
         
-        elif quantity == 'circuit_parameters':
+        if quantity == 'circuit_parameters' or quantity ==  'all':
             print('Cdc:{:.9f} F\nLf:{:.6f} H\nRf:{:.3f} Ohm'.format(self.C*self.Cbase,self.Lf*self.Lbase,self.Rf*self.Zbase))
         
-        elif quantity == 'controller_gains':
+        if quantity == 'controller_gains' or quantity ==  'all':
             print('Current controller:\nKp_GCC:{:.3f}, Ki_GCC:{:.3f}, wp:{:.3f}'.format(self.Kp_GCC,self.Ki_GCC,self.wp))
             print('DC link voltage controller:\nKp_DC:{:.3f}, Ki_DC:{:.3f}'.format(self.Kp_DC,self.Ki_DC))
             print('Reactive power controller:\nKp_Q:{:.3f}, Ki_Q:{:.3f}'.format(self.Kp_Q,self.Ki_Q))
@@ -332,6 +337,7 @@ class PVDER_ModelUtilities(BaseValues):
     
     def get_Qref(self,t):
         """Output reactive power set-point."""
+        
         if self.VOLT_VAR_ENABLE:
             _Qref= self.Volt_VAR_logic(t)
         elif self.Qref_EXTERNAL:
@@ -424,5 +430,80 @@ class PVDER_ModelUtilities(BaseValues):
         
         self.Vdc_ref_counter = 0
         
-        logging.debug('{}:Reference event counters reset!'.format(self.name))        
+        self.logger.debug('{}:Reference event counters reset!'.format(self.name))        
     
+    def create_parameter_dict(self,parameter_ID):
+        """Create a DER mode."""
+        
+        assert isinstance(parameter_ID, str), 'Expected parameter_ID to be a string, but got {}!'.format(type(parameter_ID))
+        
+        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
+            default_ID = '10'
+        elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            default_ID = '50'            
+        
+        self.module_parameters[parameter_ID] = dict.fromkeys(list(self.module_parameters[default_ID].keys()), None)
+        self.inverter_ratings[parameter_ID] = dict.fromkeys(list(self.inverter_ratings[default_ID].keys()), None)
+        self.circuit_parameters[parameter_ID] = dict.fromkeys(list(self.circuit_parameters[default_ID].keys()), None)
+        self.controller_parameters[parameter_ID] = dict.fromkeys(list(self.controller_parameters[default_ID].keys()), None)
+        self.steadystate_values[parameter_ID] = dict.fromkeys(list(self.steadystate_values[default_ID].keys()), None)
+        
+        self.logger.debug('{}:Creating parameter dicitonary with ID {}!'.format(self.name,parameter_ID))        
+    
+    def initialize_parameter_dict(self,parameter_ID,source_parameter_ID):
+        """Copy parameters from existing to new parameter dict."""
+        
+        if not self.check_parameter_exists(parameter_ID):
+            self.create_parameter_dict(parameter_ID)
+        
+        self.update_parameter_dict(parameter_ID,'module_parameters',self.module_parameters[source_parameter_ID])
+        self.update_parameter_dict(parameter_ID,'inverter_ratings',self.inverter_ratings[source_parameter_ID])
+        self.update_parameter_dict(parameter_ID,'circuit_parameters',self.circuit_parameters[source_parameter_ID])  
+        self.update_parameter_dict(parameter_ID,'controller_parameters',self.controller_parameters[source_parameter_ID])
+        self.update_parameter_dict(parameter_ID,'steadystate_values',self.steadystate_values[source_parameter_ID])  
+    
+    def update_parameter_dict(self,parameter_ID,parameter_type,parameter_dict):
+        """Update parameters."""
+        
+        if not self.check_parameter_exists(parameter_ID):
+            raise ValueError('Unknown parameter ID: ' + str(parameter_type))
+        
+        if parameter_type not in ['module_parameters','inverter_ratings','circuit_parameters','controller_parameters','steadystate_values']:
+            raise ValueError('Unknown parameter type: ' + str(parameter_type))
+        
+        for parameter in parameter_dict.keys():
+            
+            if parameter_type == 'module_parameters':            
+                self.module_parameters[parameter_ID][parameter] = parameter_dict[parameter]        
+                      
+            elif parameter_type == 'inverter_ratings':        
+                self.inverter_ratings[parameter_ID][parameter] = parameter_dict[parameter]
+            
+            elif parameter_type == 'circuit_parameters':        
+                self.circuit_parameters[parameter_ID][parameter] = parameter_dict[parameter]
+                
+            elif parameter_type == 'controller_parameters':        
+                self.controller_parameters[parameter_ID][parameter] = parameter_dict[parameter]
+            
+            elif parameter_type == 'steadystate_values':        
+                self.steadystate_values[parameter_ID][parameter] = parameter_dict[parameter]
+            
+            else:
+                print('{} is invalid parameter!'.format(parameter_type))
+                
+            self.logger.info('{}:Updating {} in parameter dicitonary with {}!'.format(self.name,parameter,parameter_dict[parameter]))                
+        
+        if self.parameter_ID == parameter_ID:
+            self.initialize_DER()    
+    
+    def check_parameter_exists(self,parameter_ID):
+        """Check existence of parameter ID."""
+        
+        #return (parameter_ID in self.module_parameters) and (parameter_ID in self.module_parameters)            
+        
+        return (self.check_parameter_ID(parameter_ID,self.module_parameters) and 
+                self.check_parameter_ID(parameter_ID,self.inverter_ratings)  and 
+                self.check_parameter_ID(parameter_ID,self.circuit_parameters) and
+                self.check_parameter_ID(parameter_ID,self.controller_parameters)
+               )   
+                
