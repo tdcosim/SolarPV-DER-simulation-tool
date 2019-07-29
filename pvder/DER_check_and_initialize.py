@@ -36,7 +36,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             assert isinstance(power_rating,float), 'Inverter power ratings should be a float.'
             parameter_ID = str(int(power_rating/1e3)) 
         else:
-            assert isinstance(parameter_ID,float), 'parameter_ID should be a string.'
+            assert isinstance(parameter_ID,str), 'parameter_ID should be a string.'
             parameter_ID = parameter_ID       
                    
         return parameter_ID    
@@ -53,8 +53,25 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         """
         
         return parameter_ID  in parameter_list
-        #    raise ValueError('Parameter ID {} is not available!'.format(parameter_ID))
         
+    def modify_DER_parameters(self,parameter_ID):
+        """Modify the DER parameters to parameters corresponding to the given parameter ID.
+        
+        Args:
+             parameter_ID (str): User specified parameter ID (can be None). 
+        """
+        
+        self.parameter_ID = self.create_parameter_ID(power_rating=None,parameter_ID=parameter_ID)
+        self.initialize_module_parameters()
+        self.initialize_DER(self.pvderConfig)
+        
+        self.initialize_states(ia0 = 0+0j, xa0 = 0+0j, ua0 = 0+0j,\
+                               xDC0 = 0, xQ0 = 0, xPLL0 = 0.0,wte0 = 2*math.pi)
+        
+        self.initialize_derived_quantities()
+        
+        self.logger.info('{}:PV-DER parameters updated with parameters from  parameter dictionary {}!'.format(self.name,self.parameter_ID))
+    
     def initialize_states(self,ia0,xa0,ua0,xDC0,xQ0,xPLL0,wte0):
         """Initialize inverter states.
 
@@ -65,7 +82,10 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             xa0 (float): Initial controller state
             ua0 (float): Initial controller state
 
-        """
+        """        
+       
+        self.Vdc = self.Vdc_ref  #DC link voltage        
+        self.Ppv = self.Ppv_calc(self.Vdc_actual) #PV module power output    
         
          #Initialize all states with steady state values at current operating point
         if self.STEADY_STATE_INITIALIZATION:
@@ -104,23 +124,29 @@ class PVDER_SetupUtilities(BaseValues,Logging):
                 self.xc = xc0   #Shift by +120 degrees
                 self.uc = uc0
 
+    
+    def initialize_derived_quantities(self):
+        """Initialize quantities other than states."""
+        
+        self.update_voltages()
+        self.update_power()        
+        self.update_RMS()        
+       
+        self.update_iref() #Reference currents
+        self.update_inverter_frequency(t=0.0)
+    
     def initialize_DER(self,pvderConfig=None):
         """Initialize DER ratings.
-
-        Extended description of function.
 
         Args:
              Sinverter_rated (float): Rated inverter power output in W at unity power factor.
 
         Raises:
-             ValueError: If specified parameters correponding to `Sinverter_rated` is not available.
+             ValueError: If specified parameters correponding to `parameter_ID` is not available.
         """
         
-        #if str(int(Sinverter_rated/1e3)) in self.Sinverter_list:
         self.logger.debug('Creating inverter instance for DER with parameter ID:{}!'.format(self.parameter_ID))
         
-        #self.Sinverter_rated = self.inverter_ratings[self.parameter_ID]['Srated'] #Sinverter_rated #Inverter rating in kVA
-        #self.Sinverter_nominal = (self.Sinverter_rated/BaseValues.Sbase) #Converting to p.u. value
             
         self.pvderConfig = pvderConfig #Protection and ridethrough settings from external programs (can be None)
             
@@ -130,11 +156,8 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.initialize_circuit_parameters()
         self.check_circuit_parameters()  #Check PV-DER circuit parameters
             
-        self.initialize_controller_gains()  #Initialize control loop gains according to DER rating
-           
-        #else:
-        #    raise ValueError('PV inverter parameters not available for DER with rating: ' + Sinverter_rated +' kVA')    
-    
+        self.initialize_controller_gains()  #Initialize control loop gains according to DER rating           
+        
     def initialize_inverter_ratings(self):
         """Initialize inverter voltage and power ratings."""
         
@@ -177,8 +200,6 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     
     def initialize_circuit_parameters(self):
         """Initialize C, Lf, and Rf parameters."""
-        
-        #_DER_rating = str(int(self.Sinverter_rated/1e3))
         
         if self.check_parameter_ID(self.parameter_ID,self.inverter_ratings):
         
@@ -319,20 +340,20 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         _Lf_min = self.Vdcrated/(16*self.fswitching*_del_I1max)
         _del_I1max_actual = self.Vdcrated/(16*self.fswitching*self.Lf_actual)
         if _del_I1max_actual > _del_I1max:   #Check if ripple current is less than 10 %
-            self.logger.debug('{}:Filter inductance {:.4} H is acceptable since AC side current ripple is {:.2}% (< 10%)'.format(self.name,_Lf_min,_del_I1max_actual/self.Iarated))
+            self.logger.debug('{}:Filter inductance {:.4f} H is acceptable since AC side current ripple is {:.2f}% (< 10%)'.format(self.name,_Lf_min,_del_I1max_actual/self.Iarated))
         else:
-            self.logger.debug('{}:Warning:Filter inductance {:.4} H results in AC side current ripple of {:.2}% (> 10%)'.format(self.name,_Lf_min,_del_I1max_actual/self.Iarated))
+            self.logger.debug('{}:Warning:Filter inductance {:.4f} H results in AC side current ripple of {:.2f}% (> 10%)'.format(self.name,_Lf_min,_del_I1max_actual/self.Iarated))
         
         _I_ripple = (0.25*self.Vdcrated)/(self.Lf_actual*self.fswitching)  #Maximum ripple voltage (p-p) at DC link
         _V_ripple = self.Vdcrated/(32*self.Lf_actual*self.C_actual*(self.fswitching**2))  #Maximum ripple voltage (p-p) at DC link
         _V_ripple_percentage = (_V_ripple/self.Vdcrated)*100
         if _V_ripple_percentage <= 1.0:   #Check if voltage ripple on DC link is less than 1%
-            self.logger.debug('{}:DC link capacitance of {:.4} F is acceptable since voltage ripple is only {:.2}% (< 1%)'.format(self.name,self.C_actual,_V_ripple_percentage))
+            self.logger.debug('{}:DC link capacitance of {:.4f} F is acceptable since voltage ripple is only {:.2f}% (< 1%)'.format(self.name,self.C_actual,_V_ripple_percentage))
         
         else:
             _V_ripple_ideal = self.Vdcrated*0.01  #1% ripple is acceptable
             _C = self.Vdcrated/(32*self.Lf_actual*_V_ripple_ideal*(self.fswitching**2))
-            self.logger.debug('{}:Warning:DC link capacitance of {:.4} F results in DC link voltage ripple of {:.2}% (> 1%)!Please use at least {} F.'.format(self.name,self.C_actual,_V_ripple_percentage,_C))
+            self.logger.debug('{}:Warning:DC link capacitance of {:.4f} F results in DC link voltage ripple of {:.2}% (> 1%)!Please use at least {} F.'.format(self.name,self.C_actual,_V_ripple_percentage,_C))
             #warnings.warn('Warning:DC link capacitance of {} F results in DC link voltage ripple of {:.3}% (> 1%)!Please use at least {} F.'.format(self.C_actual,_V_ripple_percentage,_C))               
      
     def power_error_calc(self,x):
@@ -386,13 +407,13 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     def steady_state_calc(self):
         """Find duty cycle and inverter current that minimize steady state error and return steady state values."""        
         
-        self.logger.debug('Solving for steady state at current operating point.')
-        _DER_rating = str(int(self.Sinverter_rated/1e3))
+        self.logger.debug('Solving for steady state at current operating point.')        
+        
         #x0 = np.array([0.89,0.0,124.0,3.59])
-        x0 = np.array([self.steadystate_values[_DER_rating]['maR0'],
-                       self.steadystate_values[_DER_rating]['maI0'],
-                       self.steadystate_values[_DER_rating]['iaR0'],
-                       self.steadystate_values[_DER_rating]['iaI0']])
+        x0 = np.array([self.steadystate_values[self.parameter_ID]['maR0'],
+                       self.steadystate_values[self.parameter_ID]['maI0'],
+                       self.steadystate_values[self.parameter_ID]['iaR0'],
+                       self.steadystate_values[self.parameter_ID]['iaI0']])
                 
         disp = bool(self.verbosity == 'DEBUG')
         

@@ -62,18 +62,8 @@ class PV_Module(object):
         if (type(self).__name__ == 'SolarPV_DER_SinglePhase' and Sinverter_rated in {10e3}) or\
            (type(self).__name__ == 'SolarPV_DER_ThreePhase' and Sinverter_rated in {50e3,100e3,250e3}):
             
-            #_DER_rating = str(int(Sinverter_rated/1e3))
             self.logger.debug('Creating PV module instance for {} DER with rating:{} kVA'.format(type(self).__name__.replace('SolarPV_DER_',''),str(int(Sinverter_rated/1e3))))
             self.initialize_module_parameters()
-           
-           #self.Np = self.module_parameters[str(_DER_rating)]['Np']
-           #self.Ns = self.module_parameters[str(_DER_rating)]['Ns']
-           #self.Vdcmpp0 = self.module_parameters[str(_DER_rating)]['Vdcmpp0']
-           #self.Vdcmpp_min = self.module_parameters[str(_DER_rating)]['Vdcmpp_min']
-           #self.Vdcmpp_max = self.module_parameters[str(_DER_rating)]['Vdcmpp_max']
-           
-        #else:
-        #    raise ValueError('PV module parameters not available for DER with rating: ' + str(Sinverter_rated/1e3)+' kVA')
         
         #Fit polynomial
         if self.MPPT_ENABLE and self.USE_POLYNOMIAL_MPP:
@@ -139,11 +129,11 @@ class PV_Module(object):
                 
         if self.check_parameter_ID(self.parameter_ID,self.module_parameters):
             
-            self.Np = self.module_parameters[str(self.parameter_ID)]['Np']
-            self.Ns = self.module_parameters[str(self.parameter_ID)]['Ns']
-            self.Vdcmpp0 = self.module_parameters[str(self.parameter_ID)]['Vdcmpp0']
-            self.Vdcmpp_min = self.module_parameters[str(self.parameter_ID)]['Vdcmpp_min']
-            self.Vdcmpp_max = self.module_parameters[str(self.parameter_ID)]['Vdcmpp_max']
+            self.Np = self.module_parameters[self.parameter_ID]['Np']
+            self.Ns = self.module_parameters[self.parameter_ID]['Ns']
+            self.Vdcmpp0 = self.module_parameters[self.parameter_ID]['Vdcmpp0']
+            self.Vdcmpp_min = self.module_parameters[self.parameter_ID]['Vdcmpp_min']
+            self.Vdcmpp_max = self.module_parameters[self.parameter_ID]['Vdcmpp_max']
             
         else:
             raise ValueError('PV module parameters not available for parameter ID {} '.format(self.parameter_ID))
@@ -259,20 +249,22 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         self.Q_ref = self.get_Qref(t=0.0)   
        
         #DC link voltage
-        self.Vdc = self.Vdc_ref
+        #self.Vdc = self.Vdc_ref
         #PV module power output
-        self.Ppv = self.Ppv_calc(self.Vdc_actual)
+        #self.Ppv = self.Ppv_calc(self.Vdc_actual)
         
         self.initialize_states(ia0,xa0,ua0,xDC0,xQ0,xPLL0,wte0) #initialize_states
 
-        self.update_voltages()
-        self.update_power()        
-        self.update_RMS()
+        #self.update_voltages()
+        #self.update_power()        
+        #self.update_RMS()
             
         #Reference currents
-        self.update_iref()       
+        #self.update_iref()       
         
-        self.update_inverter_frequency(t=0.0)
+        #self.update_inverter_frequency(t=0.0)
+        
+        self.initialize_derived_quantities()
         
         self.creation_message()
     
@@ -439,7 +431,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
                                     icR + 1j*icI, xcR + 1j*xcI,ucR + 1j*ucI,\
                                     Vdc,xDC,xQ,\
                                     xPLL,wte)
-                
+               
         #self.xb = utility_functions.Ub_calc(self.xa)
         #self.xc = utility_functions.Uc_calc(self.xa)
         
