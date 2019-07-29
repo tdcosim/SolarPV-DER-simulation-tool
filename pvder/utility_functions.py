@@ -27,6 +27,13 @@ def Uabsolute_time_series(u):
     
     return np.abs(u)
 
+def Uunbalance_calc(ua,ub,uc):
+    """Calculate voltage/current unbalance."""
+        
+    uavg = (ua + ub + uc)/3
+        
+    return (max(ua,ub,uc) - min(ua,ub,uc))/uavg
+
 #@jit(nopython=True)
 def Ppv_calc(Iph,Np,Ns,Vdc_actual,Tactual,Sbase):
     """Function to calculate PV module power output."""
