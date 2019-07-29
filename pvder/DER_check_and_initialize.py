@@ -19,8 +19,42 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     def creation_message(self):
         """Message after PV-DER instance was created."""
         
-        self.logger.info('{}:Instance created; Specifications - Rating:{} kW,Steady state:{},LVRT Enable:{}, LVRT Instantaneous trip:{}'.format(self.name,self.Sinverter_rated/1e3,self.STEADY_STATE_INITIALIZATION,self.LVRT_ENABLE,self.LVRT_INSTANTANEOUS_TRIP)) 
+        self.logger.info('{}:Instance created with parameter ID: {}; Specifications - Srated:{} kVA, Vrms:{:.1f} V ,Steady state:{},LVRT Enable:{}, LVRT Instantaneous trip:{}'.format(self.name,self.parameter_ID,self.Sinverter_rated/1e3,self.Vrms_rated,self.STEADY_STATE_INITIALIZATION,self.LVRT_ENABLE,self.LVRT_INSTANTANEOUS_TRIP))    
     
+    def create_parameter_ID(self,power_rating,parameter_ID):
+        """Create a parameter ID from inverter rated power output.        
+        
+        Args:
+             power_rating (float): The inverter power rating in kVA.
+             parameter_ID (str): User specified parameter ID (can be None). 
+
+        Returns:
+             str: Parameter id
+        """
+        
+        if power_rating is not None:
+            assert isinstance(power_rating,float), 'Inverter power ratings should be a float.'
+            parameter_ID = str(int(power_rating/1e3)) 
+        else:
+            assert isinstance(parameter_ID,float), 'parameter_ID should be a string.'
+            parameter_ID = parameter_ID       
+                   
+        return parameter_ID    
+    
+    def check_parameter_ID(self,parameter_ID,parameter_list):
+        """Check whether the parameter ID is available in the parameter list.
+        
+        Args:
+             parameter_ID (str): User specified parameter ID (can be None). 
+             parameter_list (list): List of parameter IDs.
+
+        Returns:
+             bool: Whether parmeter ID is available in the list.
+        """
+        
+        return parameter_ID  in parameter_list
+        #    raise ValueError('Parameter ID {} is not available!'.format(parameter_ID))
+        
     def initialize_states(self,ia0,xa0,ua0,xDC0,xQ0,xPLL0,wte0):
         """Initialize inverter states.
 
@@ -31,8 +65,6 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             xa0 (float): Initial controller state
             ua0 (float): Initial controller state
 
-        Returns:
-            bool: Description of return value
         """
         
          #Initialize all states with steady state values at current operating point
@@ -72,7 +104,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
                 self.xc = xc0   #Shift by +120 degrees
                 self.uc = uc0
 
-    def initialize_DER(self,Sinverter_rated,pvderConfig=None):
+    def initialize_DER(self,pvderConfig=None):
         """Initialize DER ratings.
 
         Extended description of function.
@@ -84,120 +116,146 @@ class PVDER_SetupUtilities(BaseValues,Logging):
              ValueError: If specified parameters correponding to `Sinverter_rated` is not available.
         """
         
-        if str(int(Sinverter_rated/1e3)) in self.Sinverter_list:
-            self.logger.debug('Creating PV inverter instance for DER with rating:' + str(int(Sinverter_rated/1e3)) + ' kVA')
-            self.Sinverter_rated = Sinverter_rated #Inverter rating in kVA
-            self.Sinverter_nominal = (self.Sinverter_rated/BaseValues.Sbase) #Converting to p.u. value
+        #if str(int(Sinverter_rated/1e3)) in self.Sinverter_list:
+        self.logger.debug('Creating inverter instance for DER with parameter ID:{}!'.format(self.parameter_ID))
+        
+        #self.Sinverter_rated = self.inverter_ratings[self.parameter_ID]['Srated'] #Sinverter_rated #Inverter rating in kVA
+        #self.Sinverter_nominal = (self.Sinverter_rated/BaseValues.Sbase) #Converting to p.u. value
             
-            self.pvderConfig = pvderConfig #Protection and ridethrough settings from external programs (can be None)
+        self.pvderConfig = pvderConfig #Protection and ridethrough settings from external programs (can be None)
             
-            self.initialize_inverter_parameters() #Initialize inverter parameters according to DER rating
+        self.initialize_inverter_ratings() #Initialize inverter ratings according to DER rating
+        self.check_voltage() #Check if voltage is feasible
             
-            self.check_voltage() #Check if voltage is feasible
+        self.initialize_circuit_parameters()
+        self.check_circuit_parameters()  #Check PV-DER circuit parameters
             
-            self.initialize_controller_gains()  #Initialize control loop gains according to DER rating
+        self.initialize_controller_gains()  #Initialize control loop gains according to DER rating
            
-        else:
-            raise ValueError('PV inverter parameters not available for DER with rating: ' + Sinverter_rated +' kVA')
+        #else:
+        #    raise ValueError('PV inverter parameters not available for DER with rating: ' + Sinverter_rated +' kVA')    
     
-    def initialize_inverter_parameters(self):
-        """Initialize ratings and C, Lf, and Rf parameters."""
+    def initialize_inverter_ratings(self):
+        """Initialize inverter voltage and power ratings."""
         
-        _DER_rating = str(int(self.Sinverter_rated/1e3))
+        if self.check_parameter_ID(self.parameter_ID,self.inverter_ratings):
+            self.Sinverter_rated = self.inverter_ratings[self.parameter_ID]['Srated'] #Sinverter_rated #Inverter rating in kVA
+            self.Sinverter_nominal = (self.Sinverter_rated/BaseValues.Sbase) #Converting to p.u. value           
+            
+            self.Vdcrated = self.inverter_ratings[self.parameter_ID]['Vdcrated'] #Rated DC voltage
         
-        self.Vdcrated = self.inverter_ratings[_DER_rating]['Vdcrated'] #Rated DC voltage
-        if self.Vrms_rated is None:
-            self.Varated = self.inverter_ratings[_DER_rating]['Varated'] #L-G peak to peak equivalent to 300 V L-L RMS
-            self.Vrms_rated = self.Varated/math.sqrt(2)
+            if self.Vrms_rated is None:
+                self.Varated = self.inverter_ratings[self.parameter_ID]['Varated'] #L-G peak to peak equivalent to 300 V L-L RMS
+                self.Vrms_rated = self.Varated/math.sqrt(2)
+            else:
+                self.Varated = self.Vrms_rated*math.sqrt(2)
+
+            if type(self).__name__ == 'SolarPV_DER_SinglePhase':
+                self.Iarated = (self.Sinverter_rated/(self.Varated/math.sqrt(2)))*math.sqrt(2)
+            elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
+                self.Iarated = (self.Sinverter_rated/(3*(self.Varated/math.sqrt(2))))*math.sqrt(2)            
+            
+            ##Per-unit values
+            self.Vanominal = self.Varated/BaseValues.Vbase #Converting to p.u. value
+            self.Vrms_ref =  self.Vanominal/math.sqrt(2) 
+
+            self.Vdcnominal = self.Vdcrated/self.Vdcbase   #Converting to p.u. value            
+            
+            if self.MPPT_ENABLE:
+                self.Vdc_ref = self.Vdcmpp/self.Vdcbase
+                self.Vdc_ref_new = self.Vdcmpp/self.Vdcbase
+            else:
+                self.Vdc_ref = self.Vdcnominal
+                self.Vdc_ref_new = self.Vdcnominal
+
+            self.Ioverload = self.inverter_ratings[self.parameter_ID]['Ioverload']  #Inverter current overload rating (Max 10s)            
+            
+            self.iref_limit = (self.Iarated/self.Ibase)*self.Ioverload #Maximum current reference
+            
         else:
-            self.Varated = self.Vrms_rated*math.sqrt(2)
+            raise ValueError('Inverter voltage, current, power ratings not available for parameter ID {}!'.format(self.parameter_ID))       
+    
+    def initialize_circuit_parameters(self):
+        """Initialize C, Lf, and Rf parameters."""
         
-        if self.standAlone:
-            self.a = self.grid_model.Vgridrated/self.Varated  #Transformer turns ratio
+        #_DER_rating = str(int(self.Sinverter_rated/1e3))
         
-        self.Vdcnominal = self.Vdcrated/self.Vdcbase   #Converting to p.u. value
-        self.Vanominal = self.Varated/BaseValues.Vbase #Converting to p.u. value
-        self.Vrms_ref =  self.Vanominal/math.sqrt(2) 
+        if self.check_parameter_ID(self.parameter_ID,self.inverter_ratings):
         
-        if self.MPPT_ENABLE:
-            self.Vdc_ref = self.Vdcmpp/self.Vdcbase
-            self.Vdc_ref_new = self.Vdcmpp/self.Vdcbase
+            if self.standAlone:
+                self.a = self.grid_model.Vgridrated/self.Varated  #Transformer turns ratio
+
+            self.Rf_actual =  self.circuit_parameters[self.parameter_ID]['Rf_actual'] #Filter resistance
+            self.Lf_actual = self.circuit_parameters[self.parameter_ID]['Lf_actual']  #Filter inductance
+            self.C_actual =  self.circuit_parameters[self.parameter_ID]['C_actual']   #DC link capacitance
+            self.Zf_actual =  self.Rf_actual + 1j*self.Lf_actual*BaseValues.wbase
+
+            self.Rf = self.Rf_actual/BaseValues.Zbase        # VSC Filter resistance 
+            self.Lf = self.Lf_actual/BaseValues.Lbase        # VSC Filter inductance
+            self.Xf = (self.Lf_actual*BaseValues.wbase)/BaseValues.Zbase # VSC Filter reactance
+            self.C = self.C_actual/BaseValues.Cbase          #DC link capacitor capacitance
+            self.Zf = self.Zf_actual/BaseValues.Zbase
+
+            #Interconnection to PCC - HV side
+            #Actual values
+            self.Z1_actual = self.circuit_parameters[self.parameter_ID]['Z1_actual']
+            self.R1_actual = self.Z1_actual.real
+            self.L1_actual = self.Z1_actual.imag/(2*math.pi*60.0)
+
+            #Per-unit values
+            self.R1 = self.R1_actual/BaseValues.Zbase  #Line/transformer resistance
+            self.L1 = self.L1_actual/BaseValues.Lbase  #Line/transformer inductance
+            self.Z1 =self.Z1_actual/BaseValues.Zbase    #Line/transformer impedance
+
+            #Exhibit different behavior when used in standalone mode
+            if self.standAlone:
+                self.n_total_ODE = self.n_ODE + self.grid_model.n_ODE
+                self.Zload1_actual =  self.events.load_events(t=0.0)          #Load at PCC   
+
+            else:
+                self.n_total_ODE = self.n_ODE
+                self.Zload1_actual =  10e6+1j*0.0     #Using a large value of impedance to represent a no load condition
+
+            self.Rload1_actual = self.Zload1_actual.real
+            self.Lload1_actual = self.Z1_actual.imag/(2*math.pi*60.0)
+
+            #Per-unit values
+            self.Rload1 = self.Rload1_actual/BaseValues.Zbase  #resistance in per unit value
+            self.Lload1 = self.Lload1_actual/BaseValues.Lbase  #inductance in per unit value
+            self.Zload1 = self.Zload1_actual/BaseValues.Zbase
+
+            self.transformer_name = 'transformer_'+str(self.ID)            
+            
         else:
-            self.Vdc_ref = self.Vdcnominal
-            self.Vdc_ref_new = self.Vdcnominal
-        
-        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
-            self.Iarated = (self.Sinverter_rated/(self.Varated/math.sqrt(2)))*math.sqrt(2)
-        elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
-            self.Iarated = (self.Sinverter_rated/(3*(self.Varated/math.sqrt(2))))*math.sqrt(2)
-        
-        self.iref_limit = (self.Iarated/self.Ibase)*self.Ioverload #Maximum current reference
-        
-        self.Rf_actual =  self.circuit_parameters[_DER_rating]['Rf_actual'] #Filter resistance
-        self.Lf_actual = self.circuit_parameters[_DER_rating]['Lf_actual']  #Filter inductance
-        self.C_actual =  self.circuit_parameters[_DER_rating]['C_actual']   #DC link capacitance
-        self.Zf_actual =  self.Rf_actual + 1j*self.Lf_actual*BaseValues.wbase
-        
-        self.Rf = self.Rf_actual/BaseValues.Zbase        # VSC Filter resistance 
-        self.Lf = self.Lf_actual/BaseValues.Lbase        # VSC Filter inductance
-        self.Xf = (self.Lf_actual*BaseValues.wbase)/BaseValues.Zbase # VSC Filter reactance
-        self.C = self.C_actual/BaseValues.Cbase          #DC link capacitor capacitance
-        self.Zf = self.Zf_actual/BaseValues.Zbase
-        
-        #Interconnection to PCC - HV side
-        #Actual values
-        self.Z1_actual = self.circuit_parameters[_DER_rating]['Z1_actual']
-        self.R1_actual = self.Z1_actual.real
-        self.L1_actual = self.Z1_actual.imag/(2*math.pi*60.0)
-        
-        #Per-unit values
-        self.R1 = self.R1_actual/BaseValues.Zbase  #Line/transformer resistance
-        self.L1 = self.L1_actual/BaseValues.Lbase  #Line/transformer inductance
-        self.Z1 =self.Z1_actual/BaseValues.Zbase    #Line/transformer impedance
-        
-        #Exhibit different behavior when used in standalone mode
-        if self.standAlone:
-            self.n_total_ODE = self.n_ODE + self.grid_model.n_ODE
-            self.Zload1_actual =  self.events.load_events(t=0.0)          #Load at PCC   
-        
-        else:
-            self.n_total_ODE = self.n_ODE
-            self.Zload1_actual =  10e6+1j*0.0     #Using a large value of impedance to represent a no load condition
-        
-        self.Rload1_actual = self.Zload1_actual.real
-        self.Lload1_actual = self.Z1_actual.imag/(2*math.pi*60.0)
-        
-        #Per-unit values
-        self.Rload1 = self.Rload1_actual/BaseValues.Zbase  #resistance in per unit value
-        self.Lload1 = self.Lload1_actual/BaseValues.Lbase  #inductance in per unit value
-        self.Zload1 = self.Zload1_actual/BaseValues.Zbase
-        
-        self.transformer_name = 'transformer_'+str(self.ID)
-        
-        self.check_PV_DER_parameters()  #Check PV-DER parameters
+            raise ValueError('Inverter circuit_parameters not available for parameter ID: {}!'.format(self.parameter_ID))        
         
     def initialize_controller_gains(self):
         """Initialize controller settings."""
         
-        _Kp_GCC = 300
-        _Ki_GCC = 100
-        
-        _Kp_DC = -0.1
-        _Ki_DC = -0.5
-        _Kp_Q =  0.01
-        _Ki_Q = 0.5
-        #Current controller parameters
-        _DER_rating = str(int(self.Sinverter_rated/1e3))
-        self.Kp_GCC = _Kp_GCC/self.controller_parameters[_DER_rating]['scale_Kp_GCC'] #Current controller Proportional constant
-        self.Ki_GCC = _Ki_GCC/self.controller_parameters[_DER_rating]['scale_Ki_GCC']  #Current controller Integral constant
-        self.wp =  self.controller_parameters[_DER_rating]['wp']      #First order filter gain for GCC
-        
-        #Power (active and reactive) controller parameters
-        self.Kp_DC = _Kp_DC/self.controller_parameters[_DER_rating]['scale_Kp_DC']   #Active power controller Proportional constant
-        self.Ki_DC = _Ki_DC/self.controller_parameters[_DER_rating]['scale_Ki_DC'] #Active power controller Integral constant
-        self.Kp_Q = _Kp_Q/self.controller_parameters[_DER_rating]['scale_Kp_Q']  #Reactive power controller Proportional constant
-        self.Ki_Q = _Ki_Q/self.controller_parameters[_DER_rating]['scale_Ki_Q']   #Reactive power controller Integral constant    
-    
+        if self.check_parameter_ID(self.parameter_ID,self.inverter_ratings):
+            
+            _Kp_GCC = 300
+            _Ki_GCC = 100
+
+            _Kp_DC = -0.1
+            _Ki_DC = -0.5
+            _Kp_Q =  0.01
+            _Ki_Q = 0.5
+            #Current controller parameters
+            #_DER_rating = str(int(self.Sinverter_rated/1e3))
+            self.Kp_GCC = _Kp_GCC/self.controller_parameters[self.parameter_ID]['scale_Kp_GCC'] #Current controller Proportional constant
+            self.Ki_GCC = _Ki_GCC/self.controller_parameters[self.parameter_ID]['scale_Ki_GCC']  #Current controller Integral constant
+            self.wp =  self.controller_parameters[self.parameter_ID]['wp']      #First order filter gain for GCC
+
+            #Power (active and reactive) controller parameters
+            self.Kp_DC = _Kp_DC/self.controller_parameters[self.parameter_ID]['scale_Kp_DC']   #Active power controller Proportional constant
+            self.Ki_DC = _Ki_DC/self.controller_parameters[self.parameter_ID]['scale_Ki_DC'] #Active power controller Integral constant
+            self.Kp_Q = _Kp_Q/self.controller_parameters[self.parameter_ID]['scale_Kp_Q']  #Reactive power controller Proportional constant
+            self.Ki_Q = _Ki_Q/self.controller_parameters[self.parameter_ID]['scale_Ki_Q']   #Reactive power controller Integral constant   
+
+        else:
+            raise ValueError('Controller gains not available for parameter ID: {}!'.format(self.parameter_ID))    
+            
     def initialize_jacobian(self):
         """Create a Jacobian matrix with zero values."""
         
@@ -254,8 +312,8 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         if self.m_steady_state*(self.Vdcmpp_min/2) < self.Varated:
             raise ValueError('The minimum DC link voltage {:.1f} V is not sufficient for the inverter to generate the nominal voltage at PCC - LV side {:.1f} V (L-G peak). Increase minimum DC link voltage to {:.1f} V.'.format(self.Vdcmpp_min,self.Varated,math.ceil((self.Varated/self.m_steady_state)*2)))
             
-    def check_PV_DER_parameters(self):
-        """Method to check whether DER parameter's are feasible."""
+    def check_circuit_parameters(self):
+        """Method to check whether inverter circuit parameter's are feasible."""
         
         _del_I1max = 0.1*self.Iarated
         _Lf_min = self.Vdcrated/(16*self.fswitching*_del_I1max)
