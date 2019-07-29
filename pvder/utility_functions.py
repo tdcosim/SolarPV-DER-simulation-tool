@@ -310,3 +310,10 @@ def print_LFRT_events(simulation_time,frequency,timer_start=0.0,event_name='',pr
             sys.__stdout__.flush()      #Flush buffer to terminal
     else:
         pass
+
+def print_dictionary_keys(dictionary,dictionary_name):
+    """Print dictionary."""
+    
+    #print(dictionary_name,':',list(dictionary.keys()))
+    
+    print(dictionary_name,':',','.join(dictionary))

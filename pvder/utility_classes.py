@@ -6,11 +6,14 @@ import sys
 import time
 import six
 import logging
+import pprint
 
 class Logging(object):
     """ Utility class for common methods."""
     
     logging_levels = ['DEBUG','INFO','WARNING']#,'ERROR'
+    
+    pp = pprint.PrettyPrinter(indent=4)
     
     def name_instance(self,identifier):
         #Provide a name to the instance.
