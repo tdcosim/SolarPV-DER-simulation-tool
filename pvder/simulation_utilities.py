@@ -14,10 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
 from pvder.utility_classes import Logging
-
-# Changing these adjusts the size and layout of the visualization
-FIGURE_WIDTH = 8
-FIGURE_HEIGHT = 8
+from pvder import config
 
 class SimulationResults(Logging):
     """ Utility class for simulation results."""
@@ -25,13 +22,15 @@ class SimulationResults(Logging):
     count = 0
     SAVE_PLOT_JPEG = False
     SAVE_PLOT_SVG = False
-    figure_DPI = 1200
+    figure_DPI = config.FIGURE_DPI
     
-    parameters= {"figure":{"height": FIGURE_HEIGHT,
-                           "width": FIGURE_WIDTH
+    parameters= {"figure":{"height": config.FIGURE_HEIGHT,
+                           "width": config.FIGURE_WIDTH
                           }
                 }
-
+    
+    available_plot_types = ['power','active_power','active_power_Ppv_Pac_PCC','active_power_Pac_PCC','reactive_power','reactive_power_Q_PCC','reactive_power_Q_PCC_smoothed','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','voltage_Vpcclv_smoothed','current','phase_angle','frequency','duty_cycle','voltage_Vpcclv_all_phases']
+    
     def __init__(self,simulation,figure_index=1,PER_UNIT=True,font_size=18,PLOT_TITLE=True,SOLUTION_TIME=True,verbosity='INFO',identifier=None):
         """Creates an instance of `SimulationResults`.
         
@@ -91,7 +90,8 @@ class SimulationResults(Logging):
              ValueError: If `plot_type` is not available. 
         """
         
-        if plot_type not in {'power','active_power','active_power_Ppv_Pac_PCC','active_power_Pac_PCC','reactive_power','reactive_power_Q_PCC','reactive_power_Q_PCC_smoothed','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','voltage_Vpcclv_smoothed','current','phase_angle','frequency','duty_cycle','voltage_Vpcclv_all_phases'}:
+        if plot_type not in SimulationResults.available_plot_types:
+ #{'power','active_power','active_power_Ppv_Pac_PCC','active_power_Pac_PCC','reactive_power','reactive_power_Q_PCC','reactive_power_Q_PCC_smoothed','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','voltage_Vpcclv_smoothed','current','phase_angle','frequency','duty_cycle','voltage_Vpcclv_all_phases'}:
             raise ValueError('Unknown plot type: ' + str(plot_type))
         
         if self.simulation.LOOP_MODE:
@@ -277,7 +277,12 @@ class SimulationResults(Logging):
         return time,plot_values,legends,plot_title,y_labels
 
     def plot_DER_simulation(self,plot_type = 'power'):
-        """Plot desired electrical quantity from simulation."""
+        """Plot desired electrical quantity from simulation.
+                
+        Args:
+          plot_type (str): Specify type of plot (to see available plot types use SimulationResults.available_plot_types).
+          
+        """        
         
         time,plot_values,legends,plot_title,y_labels = self.group_quantities_for_plotting(plot_type)
         time_values = [time]*len(plot_values)
@@ -290,9 +295,8 @@ class SimulationResults(Logging):
         """Function to plot multiple time series on same plot."""
         
         assert len(plot_values) == len(time_values) == len(legends),  " The number of legends should be equal to the number of quantities"
-        fig = plt.figure(self.figure_index, figsize=(self.parameters["figure"]["width"], self.parameters["figure"]["height"])) #figsize=(8,8)
-        
-        #for i in range(len(plot_values)):
+        fig = plt.figure(self.figure_index, figsize=(self.parameters["figure"]["width"], self.parameters["figure"]["height"]))
+                
         for i,item in enumerate(plot_values):
             
             plt.plot(time_values[i],plot_values[i],label=legends[i])
@@ -367,9 +371,7 @@ class SimulationUtilities():
         else:
             solution,infodict =  odeint(derivatives,y,t,full_output=1,printmessg=True,\
                                        hmax = 1/120.,mxstep=self.max_steps,atol=1e-4,rtol=1e-4)
-        #return odeint(derivatives,y,t,full_output=1,printmessg=True,\
-        #hmax =1/120.,mxstep=1000)#atol=1.49012e-6    
-        
+               
         return solution,infodict    
      
     def call_ode_solver(self):
