@@ -34,13 +34,16 @@ The module can be imported as a normal python module:
 ```python
 import pvder
 ```
+
+### Features
 The following features are available currently:
 1. Single phase or three phase DER models (phase voltages may be unbalanced).
 2. Run simulation in stand alone mode with internal grid voltage source model.
-3. Run simulation in loop mode where grid voltage and frequency is supplied every time step by outside program.
-4. Visualize simulation results for voltages, current, active, and reactive power.
+3. Run simulation in loop mode where grid voltage and frequency is supplied every time step by a third party program.
+4. Visualize or retrieve simulation results for voltages, current, active, and reactive power.
 5. Introduce solar insolation events (in all modes), grid voltage, and frequency change events (in stand alone mode).
-6. Enable Low voltage ride through (LVRT) and Volt-VAR control logic.
+6. Retrive and modify model parameters from a third party program.
+7. Enable Low voltage ride through (LVRT) and Volt-VAR control logic.
 
 ### Using the stand alone single phase DER model with 10 kW power rating
 The following steps are required:
@@ -94,9 +97,15 @@ sim.run_simulation()
 results.PER_UNIT = False
 results.plot_DER_simulation(plot_type='active_power_Ppv_Pac_PCC')
 ```
-Try it out in Google Colab:
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sibyjackgrove/SolarPV-DER-simulation-utility/blob/master/examples/PV-DER_usage_example.ipynb)
+### Examples
+Try out Jupyter notebooks with usage examples in Google Colab:
+
+Basic usage:
+[![Basic usage](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sibyjackgrove/SolarPV-DER-simulation-utility/blob/master/examples/PV-DER_usage_example.ipynb)
+
+Updating model parameters:
+[![Updating model parameters](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility/blob/master/examples/PV-DER_parameter_update_example.ipynb)
 
 ## Module details
 A schematic of the relationship between differen classes in the module is shown in the figure below:
