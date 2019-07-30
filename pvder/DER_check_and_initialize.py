@@ -41,6 +41,15 @@ class PVDER_SetupUtilities(BaseValues,Logging):
                    
         return parameter_ID    
     
+    def check_parameter_exists(self,parameter_ID):
+        """Check existence of parameter ID within the parameter dictionaries."""
+        
+        return (self.check_parameter_ID(parameter_ID,self.module_parameters) and 
+                self.check_parameter_ID(parameter_ID,self.inverter_ratings)  and 
+                self.check_parameter_ID(parameter_ID,self.circuit_parameters) and
+                self.check_parameter_ID(parameter_ID,self.controller_parameters)
+               )
+    
     def check_parameter_ID(self,parameter_ID,parameter_list):
         """Check whether the parameter ID is available in the parameter list.
         

@@ -14,6 +14,7 @@ import numpy as np
 from pvder.utility_classes import Logging
 from pvder.grid_components import BaseValues
 from pvder import utility_functions
+from pvder import config
 
 class PVDER_ModelUtilities(BaseValues):
     """
@@ -440,11 +441,8 @@ class PVDER_ModelUtilities(BaseValues):
         """Create a DER mode."""
         
         assert isinstance(parameter_ID, str), 'Expected parameter_ID to be a string, but got {}!'.format(type(parameter_ID))
-        
-        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
-            default_ID = '10'
-        elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
-            default_ID = '50'            
+                
+        default_ID = self.get_default_parameter_ID()
         
         self.module_parameters[parameter_ID] = dict.fromkeys(list(self.module_parameters[default_ID].keys()), None)
         self.inverter_ratings[parameter_ID] = dict.fromkeys(list(self.inverter_ratings[default_ID].keys()), None)
@@ -452,7 +450,17 @@ class PVDER_ModelUtilities(BaseValues):
         self.controller_parameters[parameter_ID] = dict.fromkeys(list(self.controller_parameters[default_ID].keys()), None)
         self.steadystate_values[parameter_ID] = dict.fromkeys(list(self.steadystate_values[default_ID].keys()), None)
         
-        self.logger.debug('{}:Creating parameter dicitonary with ID {}!'.format(self.name,parameter_ID))        
+        self.logger.debug('{}:Creating parameter dicitonary with ID {}!'.format(self.name,parameter_ID))            
+    
+    def get_default_parameter_ID(self):
+        """Return default parameter ID."""
+        
+        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
+            default_ID = config.DEFAULT_PARAMETER_ID_1PH  
+        elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            default_ID = config.DEFAULT_PARAMETER_ID_3PH 
+        
+        return default_ID
     
     def initialize_parameter_dict(self,parameter_ID,source_parameter_ID):
         """Initialize a new parameter dictinary with values from an existing parameter dictionary."""
@@ -500,16 +508,7 @@ class PVDER_ModelUtilities(BaseValues):
             self.logger.debug('{}:Updating {} in parameter dicitonary {} with {}!'.format(self.name,parameter,parameter_ID,parameter_dict[parameter]))
         
         if self.parameter_ID == parameter_ID:
-            self.initialize_DER()    
-    
-    def check_parameter_exists(self,parameter_ID):
-        """Check existence of parameter ID within the parameter dictionaries."""
-        
-        return (self.check_parameter_ID(parameter_ID,self.module_parameters) and 
-                self.check_parameter_ID(parameter_ID,self.inverter_ratings)  and 
-                self.check_parameter_ID(parameter_ID,self.circuit_parameters) and
-                self.check_parameter_ID(parameter_ID,self.controller_parameters)
-               )   
+            self.initialize_DER()
     
     def show_parameter_dictionaries(self):
         """Show all parameter dictionary types and their ID's."""
@@ -537,11 +536,12 @@ class PVDER_ModelUtilities(BaseValues):
         utility_functions.print_dictionary_keys(self.steadystate_values[key2],'steadystate_values')
     
     def get_parameter_dictionary(self,parameter_type,parameter_ID,SHOW_DICTIONARY=True):
-        """Return parameter values.
+        """Return parameter dictionary for specified parameter type and parameter ID.
         
         Args:
           parameter_type (str): Specify type of parameter.
           parameter_ID (str): Specify parameter ID or 'all'.
+          SHOW_DICTIONARY (bool): Print the dictionary.
           
         Returns:
              dict: Parameters and their values
@@ -606,11 +606,23 @@ class PVDER_ModelUtilities(BaseValues):
         parameter_dict = pickle.load(pickle_in)
         
         if isinstance(parameter_dict,dict):
-            print('Read following parameter dictionary from {}:'.format(file_name))
+            print('Read following dictionary from {}:'.format(file_name))
             self.pp.pprint(parameter_dict)
+            dict_name = file_name.split('.')[0] 
+            
+            self.logger.debug('{}:Loading parameters into DER parameter dictionary...'.format(self.name))
+            
+            self.initialize_parameter_dict(parameter_ID = dict_name,source_parameter_ID=self.get_default_parameter_ID())
+            self.update_parameter_dict(parameter_ID = dict_name,parameter_type='module_parameters',parameter_dict = parameter_dict)
+            self.update_parameter_dict(parameter_ID = dict_name,parameter_type='inverter_ratings',parameter_dict = parameter_dict)
+            self.update_parameter_dict(parameter_ID = dict_name,parameter_type='circuit_parameters',parameter_dict = parameter_dict)
+            self.update_parameter_dict(parameter_ID = dict_name,parameter_type='controller_parameters',parameter_dict = parameter_dict)
+            self.update_parameter_dict(parameter_ID = dict_name,parameter_type='steadystate_values',parameter_dict = parameter_dict)
+            
+            self.logger.info('{}:Succesfully loaded parameters from {} into DER parameter dictionary with parameter ID {}.'.format(self.name,file_name,dict_name))
             
         else:
-            raise ValueError('Did not read dictionary!')
+            raise ValueError('Expected to read dictionary but found {}!'.format(type(parameter_dict)))
            
         return parameter_dict            
             
