@@ -208,6 +208,11 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self._t_t = np.array(0.0)
         self.Vdc_t = self._Vdc_t = np.array(self.PV_model.Vdc)
         
+        self.ia_t = self._ia_t = np.array(self.PV_model.ia)
+        self.ma_t = self._ma_t = np.array(self.PV_model.ma)
+        self.vta_t = self._vta_t = np.array(self.PV_model.vta)
+        self.va_t = self._va_t = np.array(self.PV_model.va)
+        
         self.ma_absolute_t = self._ma_absolute_t = np.array(abs(self.PV_model.ma))
         self.Varms_t  = self._Varms_t = np.array(abs(self.PV_model.va)/math.sqrt(2))
         
@@ -217,6 +222,16 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             
             self.Vbrms_t  = self._Vbrms_t = np.array(abs(self.PV_model.vb)/math.sqrt(2))
             self.Vcrms_t  = self._Vcrms_t = np.array(abs(self.PV_model.vc)/math.sqrt(2))
+            
+            self.ib_t = self._ib_t = np.array(self.PV_model.ib)
+            self.mb_t = self._mb_t = np.array(self.PV_model.mb)
+            self.vtb_t = self._vtb_t = np.array(self.PV_model.vtb)
+            self.vb_t = self._vb_t = np.array(self.PV_model.vb)
+            
+            self.ic_t = self._ic_t = np.array(self.PV_model.ic)
+            self.mc_t = self._mc_t = np.array(self.PV_model.mc)
+            self.vtc_t = self._vtc_t = np.array(self.PV_model.vtc)
+            self.vc_t = self._vc_t = np.array(self.PV_model.vc)
         
         self.Irms_t = self._Irms_t = np.array(self.PV_model.Irms)
         self.Ppv_t = self._Ppv_t = np.array(self.PV_model.Ppv)
@@ -509,7 +524,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.phi_a_t = np.angle(self.va_t)
         
         if self.PV_model.standAlone:
-            self.phi_aHV_t = np.angle(self.vaHV_t)
+            self.phi_aHV_t = np.angle(self.vaHV_t) 
             self.phi_ag_t = np.angle(self.vag_t)        
         
         if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
@@ -546,6 +561,11 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self._t_t = np.append(self._t_t,self.t[1:])
         self._Vdc_t = np.append(self._Vdc_t,self.Vdc_t[1:])
         
+        self._ia_t = np.append(self._ia_t,self.ia_t[1:])
+        self._ma_t = np.append(self._ma_t,self.ma_t[1:])
+        self._vta_t = np.append(self._vta_t,self.vta_t[1:])
+        self._va_t = np.append(self._va_t,self.va_t[1:])
+        
         self._ma_absolute_t = np.append(self._ma_absolute_t,self.ma_absolute_t[1:])
         self._Varms_t = np.append(self._Varms_t,self.Varms_t[1:])
         
@@ -555,6 +575,16 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             
             self._Vbrms_t = np.append(self._Vbrms_t,self.Vbrms_t[1:])
             self._Vcrms_t = np.append(self._Vcrms_t,self.Vcrms_t[1:])
+            
+            self._ib_t = np.append(self._ib_t,self.ib_t[1:])
+            self._mb_t = np.append(self._mb_t,self.mb_t[1:])
+            self._vtb_t = np.append(self._vtb_t,self.vtb_t[1:])
+            self._vb_t = np.append(self._vb_t,self.vb_t[1:])
+            
+            self._ic_t = np.append(self._ic_t,self.ic_t[1:])
+            self._mc_t = np.append(self._mc_t,self.mc_t[1:])
+            self._vtc_t = np.append(self._vtc_t,self.vtc_t[1:])
+            self._vc_t = np.append(self._vc_t,self.vc_t[1:])
         
         self._Irms_t = np.append(self._Irms_t,self.Irms_t[1:])        
 
@@ -673,6 +703,11 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.t_t = self._t_t
         self.Vdc_t = self._Vdc_t
         
+        self.ia_t = self._ia_t
+        self.ma_t = self._ma_t
+        self.vta_t = self._vta_t
+        self.va_t = self._va_t
+        
         self.ma_absolute_t = self._ma_absolute_t
         self.Varms_t = self._Varms_t
         
@@ -682,6 +717,16 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             
             self.Vbrms_t = self._Vbrms_t
             self.Vcrms_t = self._Vcrms_t
+            
+            self.ib_t = self._ib_t
+            self.mb_t = self._mb_t
+            self.vtb_t = self._vtb_t
+            self.vb_t = self._vb_t
+            
+            self.ic_t = self._ic_t
+            self.mc_t = self._mc_t
+            self.vtc_t = self._vtc_t
+            self.vc_t = self._vc_t
                 
         self.Vtrms_t = self._Vtrms_t
         self.Vrms_t = self._Vrms_t
@@ -751,16 +796,23 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
     def get_trajectories(self):
         """Return trajectories as a dictionary."""
         
-        trajectory_dictionary = {'ia_t':self.ia_t,
-                                 'Vdc_t':self.va_t,'vta_t':self.va_t,'va_t':self.va_t,
+        if self.LOOP_MODE:
+            self.invert_arrays()
+        
+        trajectory_dictionary = {'ia_t':self.ia_t,'ma_t':self.ma_t,
+                                 'Vdc_t':self.Vdc_t,'vta_t':self.vta_t,'va_t':self.va_t,
                                  'Irms_t':self.Irms_t,'Vtrms_t':self.Vtrms_t,'Vrms_t':self.Vrms_t,
                                  'Ppv_t':self.Ppv_t,'S_t':self.S_t,'S_PCC_t':self.S_PCC_t
                                 }
         
         if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
             
-            trajectory_dictionary.update({'ib_t':self.ib_t,'ic_t':self.ic_t,
-                                   'vtb_t':self.vtb_t,'vtc_t':self.vtc_t,
-                                   'vb_t':self.vb_t,'vc_t':self.vc_t})     
-                                     
+            trajectory_dictionary.update({'ib_t':self.ib_t,'ic_t':self.ic_t,'mb_t':self.mb_t,'mc_t':self.mc_t,
+                                          'vtb_t':self.vtb_t,'vtc_t':self.vtc_t,
+                                          'vb_t':self.vb_t,'vc_t':self.vc_t})     
+         
+        for trajectory in trajectory_dictionary.values():
+            
+            assert len(self.t_t) == len(trajectory), 'The length of each trajectory should be equal to the time_steps.'
+        
         return trajectory_dictionary

@@ -22,7 +22,7 @@ from pvder import utility_functions
 
 class PV_Module(object):
     """
-    Class for describing PV module."
+    Class for describing PV module.
     """
     
     #Select either NN or polyfit model for MPP
@@ -90,7 +90,14 @@ class PV_Module(object):
         return (self.Iscr+(self.Kv*(self.Tactual-self.T0)))*(self.Sinsol/100.0)
     
     def Ppv_calc(self,Vdc_actual):
-        """PV panel power output from  solar insolation."""
+        """PV panel power output from  solar insolation.
+                
+        Args:
+          Vdc_actual (float): DC link voltage in volts
+          
+        Returns:
+             float: Power output from PV module in p.u.
+        """
     
         self.Iph = self.Iph_calc()
         self.Ipv = (self.Np*self.Iph)-(self.Np*self.Irs*(math.exp((self.q*Vdc_actual)/(self.k*self.Tactual*self.A*self.Ns))-1))   #Faster  with Pure Python functions
@@ -271,6 +278,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
     @property                         #Decorator used for auto updating
     def y0(self):
         """List of initial states"""
+        
         return  [self.ia.real, self.ia.imag, self.xa.real, self.xa.imag, self.ua.real,self.ua.imag,\
                  self.ib.real, self.ib.imag, self.xb.real, self.xb.imag, self.ub.real,self.ub.imag,\
                  self.ic.real, self.ic.imag, self.xc.real, self.xc.imag, self.uc.real,self.uc.imag,\
@@ -286,6 +294,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
     #Apparent power output at PCC - LV side
     def S_PCC_calc(self):
         """Power output at PCC LV side"""
+        
         return (1/2)*(self.va*self.ia.conjugate() + self.vb*self.ib.conjugate() + self.vc*self.ic.conjugate())*1.0
         #return utility_functions.S_calc(self.va,self.vb,self.vc,self.ia,self.ib,self.ic)
         

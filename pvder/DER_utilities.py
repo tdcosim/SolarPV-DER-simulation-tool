@@ -85,8 +85,6 @@ class PVDER_ModelUtilities(BaseValues):
              gridVoltagePhaseC (complex): Description of gridVoltagePhaseC
              gridFrequency (float): Description of gridFrequency
 
-         Returns:
-             bool: Description of return value
          """
         
         if not self.standAlone:
