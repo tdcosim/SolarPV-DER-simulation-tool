@@ -11,6 +11,8 @@ from pvder.utility_classes import Logging
 from pvder.grid_components import BaseValues
 from pvder import utility_functions
 
+PHASE_DIFFERENCE_120 = 120.0*(math.pi/180.0)
+
 class PVDER_SetupUtilities(BaseValues,Logging):
     """
        Utility class for error checking during model initialization.
@@ -378,7 +380,6 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         ia = self.ia = iaR + 1j*iaI
         
         vta = ma*(self.Vdc/2)
-        
         va = self.va_calc()
         
         St = (vta*ia.conjugate())/2
@@ -393,6 +394,22 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             
             ib = self.ib = utility_functions.Ub_calc(ia)
             ic = self.ic = utility_functions.Uc_calc(ia)
+                        
+            #mbR = x[4]
+            #mbI = x[5]
+            #ibR = x[6]
+            #ibI = x[7]
+            
+            #mcR = x[8]
+            #mcI = x[9]
+            #icR = x[10]
+            #icI = x[11]            
+            
+            #mb = mbR + 1j*mbI
+            #mc = mcR + 1j*mcI
+            
+            #ib = self.ib = ibR + 1j*ibI
+            #ic = self.ic = icR + 1j*icI
             
             vtb = mb*(self.Vdc/2)
             vtc = mc*(self.Vdc/2)
@@ -404,29 +421,50 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             S_PCC = S_PCC + (vb*ib.conjugate() + vc*ic.conjugate())/2
             
             Ploss_filter = Ploss_filter + ((abs(ib)/math.sqrt(2))**2)*self.Rf + ((abs(ic)/math.sqrt(2))**2)*self.Rf
-            Qloss_filter = Qloss_filter + ((abs(ib)/math.sqrt(2))**2)*self.Xf + ((abs(ic)/math.sqrt(2))**2)*self.Xf    
-    
+            Qloss_filter = Qloss_filter + ((abs(ib)/math.sqrt(2))**2)*self.Xf + ((abs(ic)/math.sqrt(2))**2)*self.Xf   
+            
+            Qloss_filter_expected = 3*((self.Ppv/(3*self.Vrms_ref))**2)*self.Xf
+        
+        #print('solver:',ma,mb,mc,Qloss_filter_expected)
+        
         P_PCC_error = ((S_PCC.real + Ploss_filter)   - self.Ppv)**2 
         Q_PCC_error = (S_PCC.imag - self.Q_ref)**2   
         P_error = (St.real - self.Ppv)**2
         Q_error = (St.imag - Qloss_filter - self.Q_ref)**2
         
-        return P_PCC_error  + Q_PCC_error + P_error# + Q_error
+        Q_error_filter_expected = (St.imag - Qloss_filter_expected)**2
+                
+        del_1 = utility_functions.relative_phase_calc(ma,mb)
+        del_2 = utility_functions.relative_phase_calc(ma,mc)
+        del_3 = utility_functions.relative_phase_calc(mb,mc)
+        
+        if del_1 > math.pi:
+            del_1 = abs(del_1 - 2*math.pi)
+            
+        if del_2 > math.pi:
+            del_2 = abs(del_2 - 2*math.pi)
+        
+        if del_3> math.pi:
+            del_3 = abs(del_3 - 2*math.pi)
+        
+        #m_error =  abs(ma+mb+mc)        
+        m_error = (del_1 - PHASE_DIFFERENCE_120)**2 + (del_2 - PHASE_DIFFERENCE_120)**2 + (del_3 - PHASE_DIFFERENCE_120)**2 +\
+                  (abs(ma) - abs(mb))**2 + (abs(ma) - abs(mc))**2 + (abs(mb) - abs(mc))**2 
+        
+        return P_PCC_error  + Q_PCC_error + P_error  + m_error + Q_error #+ Q_error_filter_expected
     
     def steady_state_calc(self):
         """Find duty cycle and inverter current that minimize steady state error and return steady state values."""        
         
-        self.logger.debug('Solving for steady state at current operating point.')        
+        self.logger.debug('Solving for steady state at current operating point.') 
         
-        #x0 = np.array([0.89,0.0,124.0,3.59])
         x0 = np.array([self.steadystate_values[self.parameter_ID]['maR0'],
                        self.steadystate_values[self.parameter_ID]['maI0'],
                        self.steadystate_values[self.parameter_ID]['iaR0'],
-                       self.steadystate_values[self.parameter_ID]['iaI0']])
+                       self.steadystate_values[self.parameter_ID]['iaI0']])        
                 
         disp = bool(self.verbosity == 'DEBUG')
-        
-        result = minimize(self.power_error_calc, x0, method='nelder-mead',options={'xtol': 1e-8, 'disp': disp})
+        result = minimize(self.power_error_calc, x0, method='nelder-mead',options={'xtol': 1e-8, 'disp': disp, 'maxiter':10000})
         
         if not result.success:
             raise ValueError('Steady state solution did not converge! Change operating point or disable steady state flag and try again.')
@@ -448,11 +486,17 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             mb0 = utility_functions.Ub_calc(ma0)
             mc0 = utility_functions.Uc_calc(ma0)
             
+            #mb0 = result.x[4] + 1j*result.x[5]
+            #mc0 = result.x[8] + 1j*result.x[9]
+            
             self.xb = mb0
             self.xc = mc0
             
             self.ib = utility_functions.Ub_calc(self.ia)
             self.ic = utility_functions.Uc_calc(self.ia)
+            
+            #self.ib = result.x[6] + 1j*result.x[7]
+            #self.ic = result.x[10] + 1j*result.x[11]
             
             self.ub = 0.0+0.0j
             self.uc = 0.0+0.0j            

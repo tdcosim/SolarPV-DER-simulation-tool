@@ -74,6 +74,19 @@ def Uc_calc(Ua):
     """Convert phase A quantity to Phase C."""
     
     return Ua*pow(math.e,1j*((2/3)*math.pi))  #Shift by -120 degrees
+
+def relative_phase_calc(Uph1,Uph2,DEGREES=False):
+    """Calculate relative phase between phasors between 0 to 2pi or 0 to 360 degrees."""
+    
+    if DEGREES:
+        del_phase = math.degrees(cmath.phase(Uph1)-cmath.phase(Uph2)) % 360
+        
+    else:
+        del_phase = math.radians(math.degrees(cmath.phase(Uph1)-cmath.phase(Uph2)) % 360)
+        
+    return del_phase
+    
+
 #@jit(nopython=True)    
 def phasor_to_time(upha = 1+1j*0.0,uphb = -0.5-1j*0.867,uphc = -0.5+1j*0.867,w=2.0*math.pi*60.0,t=0.0):
     """Convert a,b,c quantities from phasor domain to time domain."""

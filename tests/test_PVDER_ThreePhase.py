@@ -6,6 +6,7 @@ import logging
 import unittest
 
 import math
+import cmath
 
 import matplotlib.pyplot as plt
 
@@ -14,12 +15,14 @@ from pvder.grid_components import Grid
 from pvder.dynamic_simulation import DynamicSimulation
 from pvder.simulation_events import SimulationEvents
 from pvder.simulation_utilities import SimulationResults
+from pvder import utility_functions
 
 from unittest_utilities import show_DER_status, plot_DER_trajectories
 
 def suite():
     """Define a test suite."""
-    all_tests = ['test_init','test_parameter_dict','test_jacobian']
+    
+    all_tests = ['test_init','test_parameter_dict','test_jacobian','test_steady_state_calc']
     
     avoid_tests = []
    
@@ -104,12 +107,43 @@ class TestPVDER(unittest.TestCase):
                                        gridVoltagePhaseB = self.Vb,
                                        gridVoltagePhaseC = self.Vc,
                                        gridFrequency = self.wgrid,
-                                       standAlone = False,STEADY_STATE_INITIALIZATION=True,verbosity = 'DEBUG')    
+                                       standAlone = False,STEADY_STATE_INITIALIZATION=True,verbosity = 'INFO')    
         
         jac_CHECK,Jn,Ja = PVDER.check_jacobian()
         self.assertTrue(jac_CHECK,'Analytical and numerical Jacobian should be same.')      
-        self.assertEqual(Jn.shape,(PVDER.n_ODE,PVDER.n_ODE))
+        self.assertEqual(Jn.shape,(PVDER.n_ODE,PVDER.n_ODE))    
     
+    def test_steady_state_calc(self):
+        """Test PV-DER three phase mode."""          
+                        
+        events = SimulationEvents()
+        
+        voltage_list = [(self.Va,self.Vb,self.Vc),
+                    (cmath.rect(206.852, math.radians(-36.9906)),cmath.rect(206.128, math.radians(-157.745)),cmath.rect(208.387, math.radians(82.7291))),(169.18+118.52j,utility_functions.Ub_calc(169.18+118.52j),utility_functions.Uc_calc(169.18+118.52j))]    
+                    
+        for voltages in voltage_list:
+            Va = voltages[0]
+            Vb = voltages[1]
+            Vc = voltages[2]
+            
+            print('Testing voltages:{}'.format(voltages))
+            
+            PVDER = SolarPV_DER_ThreePhase(events = events,
+                                       Sinverter_rated = self.power_rating,Vrms_rated = self.Vrms, #175
+                                       gridVoltagePhaseA = Va,
+                                       gridVoltagePhaseB = Vb,
+                                       gridVoltagePhaseC = Vc,
+                                       gridFrequency = self.wgrid,
+                                       standAlone = False,STEADY_STATE_INITIALIZATION=True,verbosity = 'INFO')    
+        
+            self.assertAlmostEqual(PVDER.Ppv,PVDER.S.real,delta=0.001,msg='Inverter power output must be equal to PV module power output at steady-state!')
+            self.assertAlmostEqual(PVDER.S_PCC.imag,PVDER.Q_ref,delta=0.001,msg='Inverter reactive power output must be equal to Q reference!')
+
+            self.assertAlmostEqual(PVDER.Vdc,PVDER.Vdc_ref,delta=0.001,msg='DC link voltage should be equal to reference!')
+
+            self.assertAlmostEqual(PVDER.ma+PVDER.mb+PVDER.mc,0.0+1j*0.0,delta=0.001,msg='Duty cycles should sum to zero!')
+            self.assertLess(abs(PVDER.ma),1.0,msg='Magnitude of duty cycle should be less than 1!')
+
 if __name__ == '__main__':
     #unittest.main()
     logging.debug('test')

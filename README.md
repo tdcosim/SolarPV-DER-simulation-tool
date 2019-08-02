@@ -128,7 +128,7 @@ Please feel free to raise an issue for bugs or feature requests.
 
 ## Acknowledgement
 
-This project was supported by Kemal Celik, [U.S. DOE Office of Electricity, Solar Energy Technology Office](https://www.energy.gov/eere/solar/solar-energy-technologies-office).
+This project was supported by Kemal Celik, [U.S. DOE Office of Electricity, Solar Energy Technology Office](https://www.energy.gov/eere/solar/solar-energy-technologies-office) through the [SuNLaMP](https://www.energy.gov/eere/solar/sunshot-national-laboratory-multiyear-partnership-sunlamp) program.
 
 The authors would like to acknowledge [Shrirang Abhyankar](https://github.com/abhyshr) and Puspal Hazra for their contribution.
 
