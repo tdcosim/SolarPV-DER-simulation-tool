@@ -1,4 +1,5 @@
 **Status:** Expect regular updates and bug fixes.
+
 # Utility for simulating dynamics of PV-DER
 
 [![Build Status](https://travis-ci.org/sibyjackgrove/SolarPV-DER-simulation-utility.svg?branch=master)](https://travis-ci.org/sibyjackgrove/SolarPV-DER-simulation-utility)
@@ -114,18 +115,21 @@ A schematic of the relationship between differen classes in the module is shown 
 Dependencies: SciPy, Numpy, Matlplotlib
 
 ## Issues
-Please feel free to raise an issue when bugs are encountered or if you are need further documentation.
+Please feel free to raise an issue for bugs or feature requests.
 
 ## Who is responsible?
 
 **Core developer:**
 - Siby Jose Plathottam splathottam@anl.gov
 
-**Support:**
+**Contributor:**
 
 - Karthikeyan Balasubramaniam kbalasubramaniam@anl.gov
 
 ## Acknowledgement
+
+This project was supported by Kemal Celik, [U.S. DOE Office of Electricity, Solar Energy Technology Office](https://www.energy.gov/eere/solar/solar-energy-technologies-office).
+
 The authors would like to acknowledge [Shrirang Abhyankar](https://github.com/abhyshr) and Puspal Hazra for their contribution.
 
 ## Citation
