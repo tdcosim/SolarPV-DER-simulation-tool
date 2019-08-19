@@ -248,7 +248,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         self.attach_grid_model(grid_model)
         self.initialize_DER(pvderConfig)
                 
-        self.LVRT_initialize() #LVRT settings
+        self.VRT_initialize() #LVRT and HVRT settings
         self.initialize_jacobian()
         self.reset_reference_counters()
         
