@@ -126,12 +126,12 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         self.attach_grid_model(grid_model)
         self.initialize_DER(pvderConfig)
         
-        self.LVRT_initialize() #LVRT settings
+        self.VRT_initialize() #LVRT and HVRT settings  
         self.initialize_jacobian()
         self.reset_reference_counters()
         
         #Reference
-        self.Q_ref = self.get_Qref(t=0.0)
+        self.update_Qref(t=0.0)
         
         #DC link voltage
         self.Vdc = self.Vdc_ref
@@ -307,7 +307,8 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         self.update_power()    
         self.update_RMS()          
         
-        self.update_Q_Vdc_ref(t)  
+        self.update_Qref(t)
+        self.update_Vdc_ref(t)   
         self.update_iref()
         
         self.update_inverter_frequency(t)
@@ -416,10 +417,11 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         self.update_power()
         self.update_RMS()
         
-        self.update_Q_Vdc_ref(t) 
+        self.update_Qref(t)
+        self.update_Vdc_ref(t)    
         self.update_iref()
-        #d-q transformation
         
+        #d-q transformation
         self.update_inverter_frequency(t)
         
         self.check_and_trip()
