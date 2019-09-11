@@ -423,7 +423,8 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             Ploss_filter = Ploss_filter + ((abs(ib)/math.sqrt(2))**2)*self.Rf + ((abs(ic)/math.sqrt(2))**2)*self.Rf
             Qloss_filter = Qloss_filter + ((abs(ib)/math.sqrt(2))**2)*self.Xf + ((abs(ic)/math.sqrt(2))**2)*self.Xf   
             
-            Qloss_filter_expected = 3*((self.Ppv/(3*self.Vrms_ref))**2)*self.Xf
+        
+        #Qloss_filter_expected = self.n_phases*((self.Ppv/(self.n_phases*self.Vrms_ref))**2)*self.Xf
         
         #print('solver:',ma,mb,mc,Qloss_filter_expected)
         
@@ -432,24 +433,27 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         P_error = (St.real - self.Ppv)**2
         Q_error = (St.imag - Qloss_filter - self.Q_ref)**2
         
-        Q_error_filter_expected = (St.imag - Qloss_filter_expected)**2
-                
-        del_1 = utility_functions.relative_phase_calc(ma,mb)
-        del_2 = utility_functions.relative_phase_calc(ma,mc)
-        del_3 = utility_functions.relative_phase_calc(mb,mc)
+        #Q_error_filter_expected = (St.imag - Qloss_filter_expected)**2
         
-        if del_1 > math.pi:
-            del_1 = abs(del_1 - 2*math.pi)
-            
-        if del_2 > math.pi:
-            del_2 = abs(del_2 - 2*math.pi)
-        
-        if del_3> math.pi:
-            del_3 = abs(del_3 - 2*math.pi)
-        
-        #m_error =  abs(ma+mb+mc)        
-        m_error = (del_1 - PHASE_DIFFERENCE_120)**2 + (del_2 - PHASE_DIFFERENCE_120)**2 + (del_3 - PHASE_DIFFERENCE_120)**2 +\
-                  (abs(ma) - abs(mb))**2 + (abs(ma) - abs(mc))**2 + (abs(mb) - abs(mc))**2 
+        if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            del_1 = utility_functions.relative_phase_calc(ma,mb)
+            del_2 = utility_functions.relative_phase_calc(ma,mc)
+            del_3 = utility_functions.relative_phase_calc(mb,mc)
+
+            if del_1 > math.pi:
+                del_1 = abs(del_1 - 2*math.pi)
+
+            if del_2 > math.pi:
+                del_2 = abs(del_2 - 2*math.pi)
+
+            if del_3> math.pi:
+                del_3 = abs(del_3 - 2*math.pi)
+
+            #m_error =  abs(ma+mb+mc)        
+            m_error = (del_1 - PHASE_DIFFERENCE_120)**2 + (del_2 - PHASE_DIFFERENCE_120)**2 + (del_3 - PHASE_DIFFERENCE_120)**2 +\
+                      (abs(ma) - abs(mb))**2 + (abs(ma) - abs(mc))**2 + (abs(mb) - abs(mc))**2 
+        else:
+            m_error = 0.0
         
         return P_PCC_error  + Q_PCC_error + P_error  + m_error + Q_error #+ Q_error_filter_expected
     

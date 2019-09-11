@@ -3,6 +3,8 @@
 from __future__ import division
 import six
 
+import math
+
 from pvder import utility_functions
 from pvder import config
 
@@ -175,61 +177,117 @@ class PVDER_SmartFeatures():
             print('______Flags______')
             print('LVRT_ENABLE:{}\nLVRT_INSTANTANEOUS_TRIP:{}\nLVRT_TRIP:{} '.format(self.LVRT_ENABLE,self.LVRT_INSTANTANEOUS_TRIP,self.LVRT_TRIP))    
     
+    
+    def initialize_Volt_VAR(self):
+        """Initialize the Volt-VAR controller settings."""
+        
+        self.Volt_VAR_dict = {'1':{'V':0.92,
+                                   'Q':0.44},
+                              '2':{'V':0.98,
+                                   'Q':0.0},
+                              '3':{'V':1.02,
+                                   'Q':0.0},
+                              '4':{'V':1.08,
+                                   'Q':-0.44}
+                              }  #From IEEE 1547-2018 Catergy B (Table 8 - page 39)        
+
+        self.Volt_VAR_dict['m_inject'] = (self.Volt_VAR_dict['2']['Q'] - self.Volt_VAR_dict['1']['Q'])/(self.Volt_VAR_dict['2']['V'] - self.Volt_VAR_dict['1']['V'])
+        
+        self.Volt_VAR_dict['m_absorb'] = (self.Volt_VAR_dict['4']['Q'] - self.Volt_VAR_dict['3']['Q'])/(self.Volt_VAR_dict['4']['V'] - self.Volt_VAR_dict['3']['V'])
+        
+        self.Volt_VAR_dict['c_inject'] = self.Volt_VAR_dict['2']['Q'] - self.Volt_VAR_dict['2']['V']*self.Volt_VAR_dict['m_inject']
+        self.Volt_VAR_dict['c_absorb'] = self.Volt_VAR_dict['4']['Q'] - self.Volt_VAR_dict['4']['V']*self.Volt_VAR_dict['m_absorb']
+        
+        self.VOLT_VAR_ACTIVE = False
+        
+        self.Qlimit = self.Qlimit_calc()
+        self.Volt_VAR_logic_t = 0.0
+        
     def Volt_VAR_logic(self,t):
-        """Function for volt_var control."""
-        
-        assert not (self.VOLT_VAR_ENABLE and self.VOLT_WATT_ENABLE), "Volt-VAR and Volt-Watt cannot be active at the same time"
-        
-        #Volt-VAR logic
-        V1_Volt_VAR = self.Vrms_ref - 0.04*self.Vrms_ref #From IEEE 1547-2018 Catergy B (Table 8 - page 39)
-        V2_Volt_VAR = self.Vrms_ref - 0.01*self.Vrms_ref #From IEEE 1547-2018 Catergy B (Table 8 - page 39)
-        V3_Volt_VAR = self.Vrms_ref + 0.01*self.Vrms_ref #From IEEE 1547-2018 Catergy B (Table 8 - page 39)
-        V4_Volt_VAR = self.Vrms_ref + 0.04*self.Vrms_ref #From IEEE 1547-2018 Catergy B (Table 8 - page 39)       
+        """ Volt-VAR."""
         
         #Select RMS voltage source
-        _Vrms_measured = self.Vrms
+        Vrms_measured = self.Vrms
+        self.Qlimit = self.Qlimit_calc()
         
-        _del_V = 0.02
-        if self.VOLT_VAR_ENABLE and (_Vrms_measured < V2_Volt_VAR or _Vrms_measured > V3_Volt_VAR) and t>self.t_stable:
-            if self.VOLT_VAR_FLAG:
-                if (_Vrms_measured > V1_Volt_VAR - _del_V and _Vrms_measured < V4_Volt_VAR + _del_V):
-                    
-                    Qref = self.Qsetpoint_calc(t)                    
-                    
+        deadband_V = 0.01
+        
+        if t>self.Volt_VAR_logic_t: #Update volt-var logic only if solver time is greater that current time
+            self.Volt_VAR_logic_t = t  
+       
+            if self.VOLT_VAR_ACTIVE:
+                
+                if self.Volt_VAR_inject_range(Vrms_measured,deadband_V):
+                    Qref = self.Q_Volt_VAR_inject(Vrms_measured)                    
+                elif self.Volt_VAR_absorb_range(Vrms_measured,deadband_V):
+                    Qref = self.Q_Volt_VAR_absorb(Vrms_measured)       
                 else:
-                    utility_functions.print_to_terminal("Volt-VAR control with reference voltage {:.3f} is deactivated at {:.3f} s for {:.3f} V".format(self.Vrms_ref*self.Vbase,t,_Vrms_measured*self.Vbase))
+                    utility_functions.print_to_terminal("Volt-VAR control with reference voltage {:.3f} is deactivated at {:.3f} s for {:.3f} V".format(self.Vrms_ref*self.Vbase,t,Vrms_measured*self.Vbase))
                     Qref = 0.0
-                    self.VOLT_VAR_FLAG = False
+                    self.VOLT_VAR_ACTIVE = False                    
             else:
-                if ( _Vrms_measured >= V1_Volt_VAR and  _Vrms_measured < V4_Volt_VAR):
-                    utility_functions.print_to_terminal("Volt-VAR control with reference voltage {:.3f} is activated at {:.3f} s for {:.3f} V".format(self.Vrms_ref*self.Vbase,t,_Vrms_measured*self.Vbase))
-                    self.VOLT_VAR_FLAG = True
-                    Qref = self.Qsetpoint_calc(t)
-                else:
-                    utility_functions.print_to_terminal("Volt-VAR control not activated at {:.3f} s since {:.3f} V is outside range!".format(t,_Vrms_measured*self.Vbase))
+                if self.Volt_VAR_inject_range(Vrms_measured,deadband_V):
+                    Qref = self.Q_Volt_VAR_inject(Vrms_measured)                    
+                    utility_functions.print_to_terminal("Volt-VAR control (injection) with reference voltage {:.3f} is activated at {:.3f} s for {:.3f} V".format(self.Vrms_ref*self.Vbase,t,Vrms_measured*self.Vbase))
+                    self.VOLT_VAR_ACTIVE = True
+                elif self.Volt_VAR_absorb_range(Vrms_measured,deadband_V):
+                    Qref = self.Q_Volt_VAR_absorb(Vrms_measured)
+                    utility_functions.print_to_terminal("Volt-VAR control (absorbption) with reference voltage {:.3f} is activated at {:.3f} s for {:.3f} V".format(self.Vrms_ref*self.Vbase,t,Vrms_measured*self.Vbase))            
+                    self.VOLT_VAR_ACTIVE = True
+
+                else: #Don't supply/absorb reactive power outside operating range
                     Qref = 0.0
-        else: 
-            Qref = 0.0
-        
+        else:
+            self.Volt_VAR_logic_t = self.Volt_VAR_logic_t
+            Qref = self.Q_ref            
+                    
         return Qref
     
-    def Qsetpoint_calc(self,t):
-        """Function to calculate Qsetpoint."""
+    def Qlimit_calc(self):
+        """Calculate maximum Q reference."""        
         
-        _del_V_to_Q = 200.0 #100.0
+        Qmax = math.sqrt(math.pow(self.Sinverter_nominal,2)-math.pow(max(-self.Sinverter_nominal,min(self.S.real,self.Sinverter_nominal)),2))    #Qmax = sqrt(S^2 - P^2)
         
-        _Vrms_measured = self.Vrms
+        Qlimit = Qmax - self.n_phases*self.Xf*(abs(self.ia)/math.sqrt(2))**2  #Qlimit = Qmax - Qfilter
+        Qlimit = max(0.0,Qlimit)
         
-        self.Qlimit = math.sqrt(math.pow(self.Sinverter_nominal,2)-math.pow(max(min(self.S.real,self.Sinverter_nominal),-self.Sinverter_nominal),2)) - self.Xf*(abs(self.ia)/math.sqrt(2))**2 #Find Qlimit based on current power output
+        return Qlimit
+    
+    def Volt_VAR_inject_range(self,Vrms_measured,del_V=0.0):
+        """Check if voltage in volt-VAR operating range."""
         
-        #utility_functions.print_to_terminal("Q is {:.3f} while Qlimit is {:.3f} at {:.3f} s".format(self.S_PCC.imag*self.Sbase,self.Qlimit*self.Sbase,t))
+        return Vrms_measured >= (self.Volt_VAR_dict['1']['V'] - del_V)*self.Vrms_ref and \
+               Vrms_measured <= (self.Volt_VAR_dict['2']['V'] + del_V)*self.Vrms_ref   
+    
+    def Volt_VAR_absorb_range(self,Vrms_measured,del_V=0.0):
+        """Check if voltage in volt-VAR operating range."""
         
-        if _Vrms_measured < self.Vrms_ref:
-                Qref = min(self.Qlimit,(self.Vrms_ref -self.Vrms_ref*0.01-_Vrms_measured)*_del_V_to_Q)
-                                
-        elif _Vrms_measured > self.Vrms_ref:
-                Qref = max(-self.Qlimit,(self.Vrms_ref + self.Vrms_ref*0.01-_Vrms_measured)*_del_V_to_Q)
-        return Qref
+        return Vrms_measured >= (self.Volt_VAR_dict['3']['V'] - del_V)*self.Vrms_ref and \
+               Vrms_measured <= (self.Volt_VAR_dict['4']['V'] + del_V)*self.Vrms_ref       
+    
+    def Q_Volt_VAR_inject(self,Vrms_measured):
+        """Calculate reactive power for Volt-VAR control."""
+        
+        if self.Volt_VAR_inject_range(Vrms_measured,del_V=0.0):
+            Vrms_measured = (Vrms_measured/self.Vrms_ref)
+            Q = max(0.0,((Vrms_measured)*self.Volt_VAR_dict['m_inject'] + self.Volt_VAR_dict['c_inject'])*self.Sinverter_nominal)
+            Q = min(self.Qlimit,Q)
+        else:
+            Q = self.Q_ref            
+        
+        return Q
+    
+    def Q_Volt_VAR_absorb(self,Vrms_measured):
+        """Calculate reactive power for Volt-VAR control."""
+        
+        if self.Volt_VAR_absorb_range(Vrms_measured,del_V=0.0):
+            Vrms_measured = (Vrms_measured/self.Vrms_ref)
+            Q = min(0.0,((Vrms_measured)*self.Volt_VAR_dict['m_absorb'] + self.Volt_VAR_dict['c_absorb'])*self.Sinverter_nominal)
+            Q = max(-self.Qlimit,Q)        
+        else:
+            Q = self.Q_ref            
+        
+        return Q    
     
     def LVRT(self,t):
         """Function to implement LVRT trip and reconnect logic."""

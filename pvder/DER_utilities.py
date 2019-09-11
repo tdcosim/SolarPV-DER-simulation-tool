@@ -200,10 +200,23 @@ class PVDER_ModelUtilities(BaseValues):
         
         self.Ppv = self.Ppv_calc(self.Vdc_actual)
     
-    def update_Q_Vdc_ref(self,t):
-        """Update DC link voltage reference, and reactive power reference."""
+    def update_Qref(self,t):
+        """Update reactive power set-point."""
         
-        self.Q_ref = self.get_Qref(t)
+        if self.VOLT_VAR_ENABLE:
+            Qref= self.Volt_VAR_logic(t)
+        elif self.Qref_EXTERNAL:
+            Qref = self.Q_ref
+        else:
+            Qref = 0.0/self.Sbase
+        
+        self.Q_ref = Qref
+        
+        return Qref
+    
+    def update_Vdc_ref(self,t):
+        """Update DC link voltage reference."""
+        
         self.Vdc_ref = self.get_Vdc_ref(t)
     
     def update_Zload1(self,t):
@@ -337,16 +350,7 @@ class PVDER_ModelUtilities(BaseValues):
             print('Inverter filter active power loss error:{:.4f}\nInverter filter reactive power loss error:{:.4f}'.format(abs(self.Pf_phasor-self.Pf_RMS),abs(self.Qf_phasor-self.Qf_RMS)))
     
     
-    def get_Qref(self,t):
-        """Output reactive power set-point."""
-        
-        if self.VOLT_VAR_ENABLE:
-            _Qref= self.Volt_VAR_logic(t)
-        elif self.Qref_EXTERNAL:
-            _Qref = self.Q_ref
-        else:
-            _Qref = 0.0/self.Sbase
-        return _Qref
+
     
     def MPP_table(self):
         """Method to output Vdc reference corresponding to MPP at different insolation levels values."""

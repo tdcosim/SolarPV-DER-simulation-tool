@@ -19,6 +19,7 @@ from pvder.DER_utilities import PVDER_ModelUtilities
 from pvder.grid_components import BaseValues
 
 from pvder import utility_functions
+from pvder import config
 
 class PV_Module(object):
     """
@@ -150,9 +151,10 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
        Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
        control systems.
     """
-    count = 0
-    #Number of ODE's
-    n_ODE = 23
+    count = 0 #Object count
+   
+    n_ODE = 23  #Number of ODE's
+    n_phases = 3
     
     #PLL controller parameters
     Kp_PLL = 180 #1800
@@ -161,8 +163,8 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
    
     #Ioverload = 1.5  #Inverter current overload rating (Max 10s)
     
-    inverter_ratings = {'50':{'Srated':50e3,'Varated':245.0,'Vdcrated':550.0,'Ioverload':1.5},
-                        '250':{'Srated':250e3,'Varated':360.0,'Vdcrated':750.0,'Ioverload':1.5}}
+    inverter_ratings = {'50':{'Srated':50e3,'Varated':245.0,'Vdcrated':550.0,'Ioverload':config.DEFAULT_Ioverload},
+                        '250':{'Srated':250e3,'Varated':360.0,'Vdcrated':750.0,'Ioverload':config.DEFAULT_Ioverload}}
     
     circuit_parameters = {'50':{'Rf_actual':0.002,'Lf_actual' :25.0e-6,'C_actual':300.0e-6,'Z1_actual':0.0019 + 1j*0.0561},
                           '250':{'Rf_actual':0.002,'Lf_actual':300.0e-6,'C_actual':300.0e-6,'Z1_actual':0.0019 + 1j*0.0561}}
@@ -248,30 +250,18 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         self.attach_grid_model(grid_model)
         self.initialize_DER(pvderConfig)
                 
-        self.VRT_initialize() #LVRT and HVRT settings
+        self.VRT_initialize() #LVRT and HVRT settings        
+        
         self.initialize_jacobian()
         self.reset_reference_counters()
         
         #Reference
-        self.Q_ref = self.get_Qref(t=0.0)   
-       
-        #DC link voltage
-        #self.Vdc = self.Vdc_ref
-        #PV module power output
-        #self.Ppv = self.Ppv_calc(self.Vdc_actual)
+        self.update_Qref(t=0.0)
         
         self.initialize_states(ia0,xa0,ua0,xDC0,xQ0,xPLL0,wte0) #initialize_states
-
-        #self.update_voltages()
-        #self.update_power()        
-        #self.update_RMS()
-            
-        #Reference currents
-        #self.update_iref()       
-        
-        #self.update_inverter_frequency(t=0.0)
         
         self.initialize_derived_quantities()
+        self.initialize_Volt_VAR() #Volt-VAR settings
         
         self.creation_message()
     
@@ -451,10 +441,12 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         self.update_power()
         self.update_RMS()
         
-        self.update_Q_Vdc_ref(t)               
+        self.update_Qref(t)
+        self.update_Vdc_ref(t)    
         self.update_iref()
         
         self.update_inverter_frequency(t)
+        
         self.update_ridethrough_flags(t)
         self.check_and_trip()
         
@@ -644,11 +636,11 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         self.update_power()
         self.update_RMS()
         
-        self.update_Q_Vdc_ref(t)         
+        self.update_Qref(t)
+        self.update_Vdc_ref(t)    
         self.update_iref()
         
         #d-q transformation
-        
         self.update_inverter_frequency(t)
        
         self.check_and_trip()
