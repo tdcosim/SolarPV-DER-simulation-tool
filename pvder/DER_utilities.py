@@ -48,14 +48,23 @@ class PVDER_ModelUtilities(BaseValues):
         
     @property                         #Decorator used for auto updating
     def Vdc_actual(self):
-        """Actual DC link voltage"""
+        """Actual DC link voltage.
+                
+        Returns:
+            float: DC link voltage in Volts.
+        """
         
         return min(self.Vdcmpp_max,self.Vdc*self.Vdcbase)  #Calculate actual voltage
     
     #Average duty cycle - Phase A
     @property                         #Decorator used for auto updating
     def ma(self):
-        """Phase A duty cycle"""
+        """Phase A duty cycle.
+        
+        Returns:
+            complex: Duty cycle.
+        
+        """
         
         return self.Kp_GCC*self.ua + self.xa #PI controller equation
         #return utility_functions.m_calc(self.Kp_GCC,self.ua,self.xa)
@@ -63,21 +72,29 @@ class PVDER_ModelUtilities(BaseValues):
     #Average duty cycle - Phase B
     @property                         #Decorator used for auto updating
     def mb(self):
-        """Phase B duty cycle"""
+        """Phase B duty cycle.
+        
+        Returns:
+            complex: Duty cycle.
+        
+        """        
         
         return self.Kp_GCC*self.ub + self.xb #PI controller equation
     
     #Average duty cycle - Phase C
     @property                         #Decorator used for auto updating
     def mc(self):
-        """Phase C duty cycle"""
+        """Phase C duty cycle.
+        
+        Returns:
+            complex: Duty cycle.
+        
+        """
         
         return self.Kp_GCC*self.uc + self.xc #PI controller equation
     
     def update_grid_measurements(self,gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency):
         """Update grid voltage and frequency in non-standalone mode.
-
-         Extended description of function.
 
          Args:
              gridVoltagePhaseA (complex): Description of gridVoltagePhaseA

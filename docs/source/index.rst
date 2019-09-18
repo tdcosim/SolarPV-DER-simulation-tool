@@ -1,11 +1,12 @@
-Welcome to PV-DER Simulation Utility's documentation!
-=====================================================
+API documentation for PV-DER Simulation Utility
+***********************************************
+
+This is a reference for all the classes and methods available in PV-DER Simulation Utility.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Contents:
    
-   notebook_links
    pvder_modules
    license_link
 

@@ -9,7 +9,6 @@ pvder.DER_components_three_phase
 
 .. automodule:: pvder.DER_components_three_phase
     :members:
-    :undoc-members:
     :show-inheritance:
 
 pvder.DER_components_single_phase
@@ -17,7 +16,6 @@ pvder.DER_components_single_phase
 
 .. automodule:: pvder.DER_components_single_phase
     :members:
-    :undoc-members:
     :show-inheritance:
 
 pvder.DER_check_and_initialize
@@ -43,7 +41,7 @@ pvder.DER_features
     :members:
     :undoc-members:
     :show-inheritance:
-	
+
 DER Simulation
 --------------
 

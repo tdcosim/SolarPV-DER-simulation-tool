@@ -24,6 +24,11 @@ from pvder import config
 class PV_Module(object):
     """
     Class for describing PV module.
+    
+    Attributes:
+        Iph (float):Photocurrent from a single cell.
+        Ipv (float): PV module current.
+    
     """
     
     #Select either NN or polyfit model for MPP
@@ -52,11 +57,12 @@ class PV_Module(object):
         """Creates an instance of `PV_Module`.
         
         Args:
-          events: An instance of `SimulationEvents`.
-          Sinverter_rated: A scalar specifying the rated power of the DER.
+           events (SimulationEvents): An instance of `SimulationEvents`.
+           Sinverter_rated (float): A scalar specifying the rated power of the DER in Watts.
         
         Raises:
           ValueError: If parameters corresponding to `Sinverter_rated` are not available.
+        
         """
         
         self.events = events
@@ -86,7 +92,7 @@ class PV_Module(object):
                        +(self.Np*self.Iph),self.Vdcmpp0)[0] #This is a time consuming operation 
     
     def Iph_calc(self):
-        """Panel current for given insolation and temperature."""
+        """Photocurrent from a single cell for given insolation and temperature."""
         
         return (self.Iscr+(self.Kv*(self.Tactual-self.T0)))*(self.Sinsol/100.0)
     
@@ -150,6 +156,11 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
     """
        Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
        control systems.
+       
+       Attributes:
+          count (int): Number of instances of `SolarPV_DER_ThreePhase`.
+          n_ODE (int): Number of ODE's.
+       
     """
     count = 0 #Object count
    
@@ -212,20 +223,21 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         """Creates an instance of `SolarPV_DER_ThreePhase`.
         
         Args:
-          events: An instance of `SimulationEvents`.
-          grid_model: An instance of `GridModel`(only need to be suppled for stand alone simulation).
-          Sinverter_rated: A scalar specifying the rated power (VA) of the DER.
-          ia0,xa0,ua0: Complex scalars (p.u.) specifying the initial value of inverter states in the DER instance.
-          xDC0,xQ0,xPLL0,wte0: Real scalars specifying the initial value of inverter states in the DER instance.
-          gridVoltatePhaseA,gridVoltatePhaseA,gridVoltatePhaseA = Complex scalar specifying initial voltage phasor (V) at PCC - LV side from external program (only need to be suppled if model is not stand alone).
-          standAlone: A boolean specifying if the DER instance is a stand alone simulation or part of a larger simulation.
-          STEADY_STATE_INITIALIZATION: A boolean specifying whether states in the DER instance will be initialized to steady state values.
-          pvderConfig: A dictionary containing configuration parameters that may be supplied from an external program.
-          identifier: An identifier that can be used to name the instance (can be None).
+          events (SimulationEvents): An instance of `SimulationEvents`.
+          grid_model (Grid): An instance of `Gridl`(only need to be suppled for stand alone simulation).
+          Sinverter_rated (float): A scalar specifying the rated power (VA) of the DER.
+          ia0,xa0,ua0 (complex): Initial value of inverter states in p.u. of the DER instance.
+          xDC0,xQ0,xPLL0,wte0 (float): Initial value of inverter states in the DER instance.
+          gridVoltatePhaseA,gridVoltatePhaseA,gridVoltatePhaseA (float): Initial voltage phasor (V) at PCC - LV side from external program (only need to be suppled if model is not stand alone).
+          standAlone (bool): Specify if the DER instance is a stand alone simulation or part of a larger simulation.
+          STEADY_STATE_INITIALIZATION (bool): Specify whether states in the DER instance will be initialized to steady state values.
+          pvderConfig (dict): Configuration parameters that may be supplied from an external program.
+          identifier (str): An identifier that can be used to name the instance (can be None).
           
         Raises:
           ValueError: If parameters corresponding to `Sinverter_rated` are not available.
           ValueError: If rated DC link voltage is not sufficient.
+        
         """
         
         #Increment count to keep track of number of PV-DER model instances

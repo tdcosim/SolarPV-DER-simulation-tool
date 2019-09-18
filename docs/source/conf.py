@@ -64,3 +64,5 @@ html_static_path = ['_static']
 
 #Allow errors in notebooks when document is being built.
 nbsphinx_allow_errors = True
+
+autoclass_content = 'both'

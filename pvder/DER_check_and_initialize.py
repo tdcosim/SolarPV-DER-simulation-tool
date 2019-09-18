@@ -86,8 +86,6 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     def initialize_states(self,ia0,xa0,ua0,xDC0,xQ0,xPLL0,wte0):
         """Initialize inverter states.
 
-        Extended description of function.
-
         Args:
             ia0 (float): Initial current
             xa0 (float): Initial controller state

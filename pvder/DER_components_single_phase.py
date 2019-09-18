@@ -28,8 +28,9 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
     control systems.
     
     Attributes:
-         count (int): Number of `SolarPV_DER_SinglePhase` instances.
-         Ioverload (float): Overload current rating of inverter.
+          count (int): Number of instances of `SolarPV_DER_SinglePhase`.
+          n_ODE (int): Number of ODE's.
+    
     """
     
     count = 0
@@ -41,7 +42,6 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
     Ki_PLL = 320 #32000
     
     #Inverter current overload rating (Max 10s)
-    Ioverload = 1.5
     inverter_ratings = {'10':{'Srated':10e3,'Varated':250.0,'Vdcrated':550.0,'Ioverload':1.5},
                         }
     
@@ -88,20 +88,21 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         """Creates an instance of `SolarPV_DER`.
         
         Args:
-          events: An instance of `SimulationEvents`.
-          grid_model: An instance of `GridModel`(only need to be suppled for stand alone simulation).
-          Sinverter_rated: A scalar specifying the rated power (VA) of the DER.
-          ia0,xa0,ua0: Complex scalars specifying the initial value of inverter states in the DER instance.
-          xDC0,xQ0,xPLL0,wte0: Real scalars specifying the initial value of inverter states in the DER instance.
-          gridVoltatePhaseA,gridVoltatePhaseA,gridVoltatePhaseA = Complex scalar specifying initial voltage phasor (V) at PCC - LV side from external program (only need to be suppled if model is not stand alone).
-          standAlone: A boolean specifying if the DER instance is a stand alone simulation or part of a larger simulation.
-          STEADY_STATE_INITIALIZATION: A boolean specifying whether states in the DER instance will be initialized to steady state values.
-          pvderConfig: A dictionary containing configuration parameters that may be supplied from an external program.
-          identifier: An identifier that can be used to name the instance (can be None).
+          events (SimulationEvents): An instance of `SimulationEvents`.
+          grid_model (Grid): An instance of `Grid`(only need to be suppled for stand alone simulation).
+          Sinverter_rated (float): A scalar specifying the rated power (VA) of the DER.
+          ia0,xa0,ua0 (complex): Initial value of inverter states in p.u. of the DER instance.
+          xDC0,xQ0,xPLL0,wte0 (float): Initial value of inverter states in the DER instance.
+          gridVoltatePhaseA,gridVoltatePhaseA,gridVoltatePhaseA (float): Initial voltage phasor (V) at PCC - LV side from external program (only need to be suppled if model is not stand alone).
+          standAlone (bool): Specify if the DER instance is a stand alone simulation or part of a larger simulation.
+          STEADY_STATE_INITIALIZATION (bool): Specify whether states in the DER instance will be initialized to steady state values.
+          pvderConfig (dict): Configuration parameters that may be supplied from an external program.
+          identifier (str): An identifier that can be used to name the instance (can be None).
           
         Raises:
           ValueError: If parameters corresponding to `Sinverter_rated` are not available.
           ValueError: If rated DC link voltage is not sufficient.
+        
         """
         
         #Increment count to keep track of number of PV-DER model instances
