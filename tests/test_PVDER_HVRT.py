@@ -215,7 +215,8 @@ class TestPVDER(unittest.TestCase):
                  
         if pvder_object.Vrms >= pvder_object.HVRT_dict['1']['V_HV']:
                 #Check if HVRT trip flag is True
-                self.assertTrue(pvder_object.HVRT_TRIP, msg='{}: Inverter trip flag  not set despite low voltage!'.format(pvder_object.name))
+                print(pvder_object.Vrms)
+                self.assertTrue(pvder_object.HVRT_TRIP, msg='{}: Inverter trip flag  not set despite high voltage!'.format(pvder_object.name))
                 #Check if Inverter stopped supplying power
                 self.assertAlmostEqual(abs(pvder_object.S_PCC), 0.0, places=4, msg='{}:Inverter power output is {:.2f} VA despite trip status!'.format(pvder_object.name,pvder_object.S_PCC*pvder_object.Sbase))
                 #Check if DC link voltage limits are breached

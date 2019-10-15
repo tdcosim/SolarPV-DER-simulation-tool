@@ -9,7 +9,8 @@ def show_DER_status(pvder_object):
         pvder_object.show_PV_DER_states(quantity='current')
         pvder_object.show_PV_DER_states(quantity='voltage')                
         pvder_object.show_PV_DER_states(quantity='duty cycle')
-        pvder_object.show_RT_settings(settings_type='LVRT')    
+        pvder_object.show_RT_settings(settings_type='LVRT')
+        pvder_object.show_RT_settings(settings_type='HVRT')   
     
 def plot_DER_trajectories(results_object):
         """PLot DER trajectory."""

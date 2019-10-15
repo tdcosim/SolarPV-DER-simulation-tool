@@ -46,10 +46,10 @@ class TestPVDER(unittest.TestCase):
                      'case1':{'SinglePhase':True},
                      'case2':{'SteadyState':False}}
     
-    test_scenarios = {'default':{'LVRT_ENABLE':True,'LVRT_INSTANTANEOUS_TRIP':False,'LVRT_MOMENTARY_CESSATION':False,'tEnd':5.0,'Vnominal':1.0,'Vfault':0.8},
-                      'LVRT1':{'LVRT_ENABLE':True,'LVRT_INSTANTANEOUS_TRIP':False,'LVRT_MOMENTARY_CESSATION':False,'tEnd':10.0,'tfault_start':4.0,'tfault_duration':0.5,'Vfault':0.7},
-                      'LVRT2':{'LVRT_ENABLE':True,'LVRT_INSTANTANEOUS_TRIP':False,'LVRT_MOMENTARY_CESSATION':True,'tEnd':10.0,'tfault_start':4.0,'tfault_duration':2.0,'Vfault':0.7},
-                      'LVRT3':{'LVRT_ENABLE':True,'LVRT_INSTANTANEOUS_TRIP':True,'LVRT_MOMENTARY_CESSATION':False,'tEnd':10.0,'tfault_start':4.0,'tfault_duration':2.0,'Vfault':0.7}}
+    test_scenarios = {'default':{'LVRT_ENABLE':True,'VRT_INSTANTANEOUS_TRIP':False,'VRT_MOMENTARY_CESSATION':False,'tEnd':5.0,'Vnominal':1.0,'Vfault':0.8},
+                      'LVRT1':{'LVRT_ENABLE':True,'VRT_INSTANTANEOUS_TRIP':False,'VRT_MOMENTARY_CESSATION':False,'tEnd':10.0,'tfault_start':4.0,'tfault_duration':0.5,'Vfault':0.7},
+                      'LVRT2':{'LVRT_ENABLE':True,'VRT_INSTANTANEOUS_TRIP':False,'VRT_MOMENTARY_CESSATION':True,'tEnd':10.0,'tfault_start':4.0,'tfault_duration':2.0,'Vfault':0.7},
+                      'LVRT3':{'LVRT_ENABLE':True,'VRT_INSTANTANEOUS_TRIP':True,'VRT_MOMENTARY_CESSATION':False,'tEnd':10.0,'tfault_start':4.0,'tfault_duration':2.0,'Vfault':0.7}}
         
     
     def test_PVDER_default(self):
@@ -147,8 +147,8 @@ class TestPVDER(unittest.TestCase):
         _tfault_duration = self.return_settings(scenario=scenario,parameter='tfault_duration',settings_type='test')
         
         DER_model.LVRT_ENABLE = self.return_settings(scenario=scenario,parameter='LVRT_ENABLE',settings_type='test')
-        DER_model.LVRT_INSTANTANEOUS_TRIP = self.return_settings(scenario=scenario,parameter='LVRT_INSTANTANEOUS_TRIP',settings_type='test')
-        DER_model.LVRT_MOMENTARY_CESSATION = self.return_settings(scenario=scenario,parameter='LVRT_MOMENTARY_CESSATION',settings_type='test')
+        DER_model.VRT_INSTANTANEOUS_TRIP = self.return_settings(scenario=scenario,parameter='VRT_INSTANTANEOUS_TRIP',settings_type='test')
+        DER_model.VRT_MOMENTARY_CESSATION = self.return_settings(scenario=scenario,parameter='VRT_MOMENTARY_CESSATION',settings_type='test')
         
         sim.tStop  = self.return_settings(scenario=scenario,parameter='tEnd',settings_type='test')       
         
@@ -221,7 +221,7 @@ class TestPVDER(unittest.TestCase):
                 #Check if DC link voltage limits are breached
                 self.assertTrue(pvder_object.Vdc*pvder_object.Vdcbase >= pvder_object.Vdcmpp_min or pvder_object.Vdc*pvder.PV_model.Vdcbase <= pvder_object.Vdcmpp_max, msg='{}:DC link voltage exceeded limits!'.format(pvder_object.name))
                 
-        elif pvder_object.Vrms > pvder_object.V_LV2 and pvder_object.LVRT_MOMENTARY_CESSATION:
+        elif pvder_object.Vrms > pvder_object.V_LV2 and pvder_object.VRT_MOMENTARY_CESSATION:
                 #Check if LVRT trip flag is False
                 self.assertFalse(pvder_object.LVRT_TRIP, msg='{}: Inverter trip flag set despite nominal voltage!'.format(pvder_object.name))    
         
