@@ -275,7 +275,11 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         self.initialize_derived_quantities()
         self.initialize_Volt_VAR() #Volt-VAR settings
         
-        self.creation_message()
+        if self.standAlone:
+            self._vag_previous = self.grid_model.vag
+        self._va_previous = self.va
+        
+        self.creation_message()        
     
     @property                         #Decorator used for auto updating
     def y0(self):
@@ -417,7 +421,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
     def update_inverter_frequency(self,t):
         """Update d-q quantities."""
         
-        self.wgrid_measured = self.wgrid_calc() #Update grid frequency
+        self.wgrid_measured = self.wgrid_calc(t) #Update grid frequency
         
         #d-q transformation        
         #Convert PCC LV side voltage from phasor to time domain

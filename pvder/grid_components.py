@@ -24,12 +24,13 @@ class BaseValues():
 class Grid(BaseValues,SimulationUtilities):
     """ Class for grid"""
     
-    grid_count = 0
-    #Number of ODE's
-    n_ODE = 0
+    grid_count = 0 #Count for grid objects
     
-    #Grid voltage time constant
+    n_ODE = 0 #Number of ODE's
+    
     Vgridrated =  20415.0 # L-G peak to peak equivalent to 25000 V L-L RMS
+    _t_voltage_previous = 0.0
+    _t_frequency_previous = 0.0
     
     def __init__(self,events,unbalance_ratio_b=1.0,unbalance_ratio_c=1.0,Z2_actual = 1.61 + 1j*5.54):
         """Creates an instance of `GridSimulation`.
@@ -73,7 +74,7 @@ class Grid(BaseValues,SimulationUtilities):
         self.vag = self.Vagrid
         self.vbg = utility_functions.Ub_calc(self.vag*self.unbalance_ratio_b)
         self.vcg = utility_functions.Uc_calc(self.vag*self.unbalance_ratio_c)
-        self.Vgrms = self.Vgrms_calc()
+        self.Vgrms = self.Vgrms_calc()       
     
     @property
     def y0(self):        
@@ -94,20 +95,22 @@ class Grid(BaseValues,SimulationUtilities):
         Vagrid_new,wgrid_new = self.events.grid_events(t)
         Vagrid_new = Vagrid_new*(self.Vgridrated/self.Vbase)
         
-        if abs(self.Vagrid- Vagrid_new) > 0.0:
+        if abs(self.Vagrid- Vagrid_new) > 0.0 and t >= self._t_voltage_previous:
             utility_functions.print_to_terminal("{}:Grid voltage changed from {:.3f} V to {:.3f} V at {:.3f} s".format(self.name,self.Vagrid,Vagrid_new,t))
             
             self.Vagrid = Vagrid_new
             self.Vbgrid = utility_functions.Ub_calc(self.Vagrid*self.unbalance_ratio_b)
-            self.Vcgrid = utility_functions.Uc_calc(self.Vagrid*self.unbalance_ratio_c)  
+            self.Vcgrid = utility_functions.Uc_calc(self.Vagrid*self.unbalance_ratio_c)
             
-        if abs(self.wgrid- wgrid_new) > 0.0:
+            self._t_voltage_previous = t
+            
+        if abs(self.wgrid- wgrid_new) > 0.0 and t >= self._t_frequency_previous:
             utility_functions.print_to_terminal("{}:Grid frequency changed from {:.3f} Hz to {:.3f} Hz at {:.3f} s".format(self.name,self.wgrid/(2.0*math.pi),wgrid_new/(2.0*math.pi),t))
                       
             self.wgrid = wgrid_new
-            #Conversion of grid voltage setpoint
-            
+            self._t_frequency_previous = t            
         
         self.vag = self.Vagrid
         self.vbg = self.Vbgrid
-        self.vcg = self.Vcgrid
+        self.vcg = self.Vcgrid                    
+   

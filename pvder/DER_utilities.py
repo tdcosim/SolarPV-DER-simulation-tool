@@ -45,6 +45,12 @@ class PVDER_ModelUtilities(BaseValues):
     Vdc_ref_total = len(Vdc_ref_list) #Get total events
     Vdc_ref_counter = 0
     del_Vdc_ref = 1.0
+    
+    #Grid frequency estimate variables
+    use_frequency_estimate = config.DEFAULT_USE_FREQUENCY_ESTIMATE
+    _del_t_frequency_estimate =  config.DEFAULT_DELTA_T
+    _t_estimate_frequency_previous = 0.0  
+    _westimate = 2*math.pi*60.0
         
     @property                         #Decorator used for auto updating
     def Vdc_actual(self):
@@ -189,14 +195,50 @@ class PVDER_ModelUtilities(BaseValues):
         
         return val
     
-    def wgrid_calc(self):
+    def wgrid_calc(self,t):
         """Frequency of grid voltage source."""
         
-        if self.standAlone:
+        if self.use_frequency_estimate:
+            val = self.wgrid_estimate(t)
+        elif self.standAlone:
             val = self.grid_model.wgrid
         else:
             val = self.gridFrequency
         return val
+    
+    def wgrid_estimate(self,t):
+        """Estimate frequency from phasor angle."""
+                
+        if t > self._t_estimate_frequency_previous: #Prevent going back in time 
+            if self.standAlone:
+                #if abs(self._vag_previous - self.grid_model.vag) > 0.0:
+                if abs(cmath.phase(self._vag_previous) - cmath.phase(self.grid_model.vag))>0:
+                    _,phia_new = cmath.polar(self.va)
+                    _,phia_previous = cmath.polar(self._va_previous)
+                    self._vag_previous = self.grid_model.vag
+                    self._va_previous = self.va
+                    self._t_estimate_frequency_previous = t
+                    self._westimate = self.wgrid_estimate_calc(t,phia_new,phia_previous)                   
+        
+            else:
+                #if abs(self._va_previous - self.va) > 0.0:
+                if abs(cmath.phase(self._va_previous) - cmath.phase(self.va))>0:
+                    _,phia_new = cmath.polar(self.va)
+                    _,phia_previous = cmath.polar(self._va_previous)                    
+                    self._va_previous = self.va
+                    self._t_estimate_frequency_previous = t
+                    self._westimate = self.wgrid_estimate_calc(t,phia_new,phia_previous)
+                    
+        return self._westimate   
+    
+    def wgrid_estimate_calc(self,t,phi_new,phi_previous):
+        """Estimate frequency."""
+        
+        del_f = (phi_new-phi_previous)/((2*math.pi)*self._del_t_frequency_estimate) #(theta_N - theta_N-1)/(2*pi*dt)\
+        festimate = 60.0 + del_f
+        self.logger.debug('t:{}:{}:Estimated frequency from phase angle change:{:.3f} Hz'.format(t,self.name,festimate))
+        
+        return 2*math.pi*(festimate)
     
     #PLL equation (inverter frequency)
     def we_calc(self):
@@ -366,8 +408,6 @@ class PVDER_ModelUtilities(BaseValues):
             print('Active power output error:{:.4f}\nReactive power output error:{:.4f}'.format(abs(self.Pt_phasor-self.Pt_RMS),abs(self.Qt_phasor-self.Qt_RMS)))    
             print('Inverter filter active power loss error:{:.4f}\nInverter filter reactive power loss error:{:.4f}'.format(abs(self.Pf_phasor-self.Pf_RMS),abs(self.Qf_phasor-self.Qf_RMS)))
     
-    
-
     
     def MPP_table(self):
         """Method to output Vdc reference corresponding to MPP at different insolation levels values."""

@@ -15,6 +15,7 @@ from pvder.utility_classes import Logging
 from pvder.grid_components import Grid
 from pvder.simulation_utilities import SimulationUtilities
 from pvder import utility_functions
+from pvder import config
 
 class ModelUtilities():
     """Class for model wide utilities."""
@@ -66,6 +67,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
     
     count = 0
     tStart = 0.0
+    tInc = config.DEFAULT_DELTA_T
     #jacFlag = False
     DEBUG_SOLVER = False
     DEBUG_SIMULATION = False
@@ -75,7 +77,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
     DEBUG_POWER = False
     DEBUG_PLL = False
         
-    def __init__(self,PV_model,events,grid_model = None,tStop = 0.5,tInc = 0.001,
+    def __init__(self,PV_model,events,grid_model = None,tStop = 0.5,
                  LOOP_MODE = False,COLLECT_SOLUTION = True,jacFlag = False,
                  verbosity ='INFO',solver_type ='odeint',identifier = None):
         """Creates an instance of `GridSimulation`.
@@ -97,8 +99,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         self.initialize_logger(logging_level=verbosity) #Set logging level - {DEBUG,INFO,WARNING,ERROR}  
        
-        self.tStop = tStop
-        self.tInc = tInc
+        self.tStop = tStop       
         self.t = self.t_calc()
         self.PV_model = PV_model
         self.simulation_events = events

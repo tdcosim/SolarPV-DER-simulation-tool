@@ -149,6 +149,10 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         
         self.update_inverter_frequency(t=0.0)
         
+        if self.standAlone:
+            self._vag_previous = self.grid_model.vag
+        self._va_previous = self.va
+        
         self.creation_message()
         
     @property                         #Decorator used for auto updating
@@ -271,7 +275,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
              t (float): Simulation time in seconds.
         """
         #Update grid frequency
-        self.wgrid_measured = self.wgrid_calc()
+        self.wgrid_measured = self.wgrid_calc(t)
         
         #Convert PCC LV side voltage from phasor to alpha-beta domain
         self.valpha = utility_functions.phasor_to_time_1phase(self.va,w=self.wgrid_measured,t=t)

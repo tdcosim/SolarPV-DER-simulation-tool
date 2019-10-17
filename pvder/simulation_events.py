@@ -20,7 +20,8 @@ class SimulationEvents(Logging):
     Zload1_actual_default = 10e6+0j
     
     _events_spec = {'insolation':{'default':100.0,'min':25.0,'max':100.0},
-                    'voltage':{'default':1.0,'min':0.1,'max':1.1},  #This is a fraction and not per unit value
+                    'voltage':{'default':1.0,'min':0.1,'max':1.1},  #Voltage magnitude is a fraction and not per unit value
+                    'voltage_angle':{'default':0.0,'min':0.0,'max':2*math.pi},  #Voltage angle in radians
                     'frequency':{'default':60.0,'min':58.5,'max':61.5}}  #Time delay between events
     
     def __init__(self,events_spec = None,SOLAR_EVENT_ENABLE = True,GRID_EVENT_ENABLE = True, LOAD_EVENT_ENABLE = True,verbosity='INFO',identifier=None):
@@ -106,20 +107,23 @@ class SimulationEvents(Logging):
             
             if t<self.grid_events_list[self.grid_event_counter]['T'] and self.grid_event_counter ==0:
                 Vgrid = self._events_spec['voltage']['default']
+                Vgrid_angle = self._events_spec['voltage_angle']['default']
                 fgrid = self._events_spec['frequency']['default']
             elif t<self.grid_events_list[self.grid_event_counter]['T']  and self.grid_event_counter >=1:
                 Vgrid = self.grid_events_list[self.grid_event_counter-1]['Vgrid']
+                Vgrid_angle = self.grid_events_list[self.grid_event_counter-1]['Vgrid_angle']
                 fgrid = self.grid_events_list[self.grid_event_counter-1]['fgrid']
             elif t>=self.grid_events_list[self.grid_event_counter]['T']:
                 Vgrid = self.grid_events_list[self.grid_event_counter]['Vgrid']
+                Vgrid_angle = self.grid_events_list[self.grid_event_counter]['Vgrid_angle']
                 fgrid = self.grid_events_list[self.grid_event_counter]['fgrid']
                 self.grid_event_counter = min(self.grid_events_total-1,self.grid_event_counter+1)
         else:
             Vgrid =self._events_spec['voltage']['default']
+            Vgrid_angle =self._events_spec['voltage_angle']['default']
             fgrid =self._events_spec['frequency']['default']
         
-        Vphase_angle_a = 0.0
-        return Vgrid*pow(math.e,(1j*math.radians(Vphase_angle_a))),2.0*math.pi*fgrid
+        return Vgrid*pow(math.e,(1j*math.radians(Vgrid_angle))),2.0*math.pi*fgrid
     
     def load_events(self,t):
         """Generate load event at PCC LV side during simulation.
@@ -173,12 +177,13 @@ class SimulationEvents(Logging):
         self.solar_events_list.sort(key=operator.itemgetter('T'))  #Sort new events list
         self.update_event_totals()
     
-    def add_grid_event(self,T,Vgrid=1.0,fgrid=60.0):
+    def add_grid_event(self,T,Vgrid=1.0,Vgrid_angle = 0.0, fgrid=60.0):
         """Add new grid event.
         
         Args:
            T (float): A scalar specifying start time of grid event in seconds.
-           Vgrid (float): A scalar specifying grid voltage in fraction.
+           Vgrid (float): A scalar specifying grid voltage magnitude in fraction.
+           Vgrid_angle (float): A scalar specifying grid voltage angle in radians.
            fgrid (float): A scalar specifying grid frequency in Hz.
         """
         
@@ -192,6 +197,7 @@ class SimulationEvents(Logging):
         
         T = float(T)
         Vgrid = float(Vgrid)
+        Vgrid_angle = float(Vgrid_angle)
         fgrid = float(fgrid)
         
         for event in self.grid_events_list:
@@ -200,7 +206,7 @@ class SimulationEvents(Logging):
                 self.grid_events_list.remove(event)   #Remove existing event at same time stamp
         
         self.logger.debug('{}:Adding new grid event at {:.2f} s'.format(self.name,T))
-        self.grid_events_list.append({'T':T,'Vgrid':Vgrid,'fgrid':fgrid})  #Append new event to existing event list
+        self.grid_events_list.append({'T':T,'Vgrid':Vgrid,'Vgrid_angle':Vgrid_angle,'fgrid':fgrid})  #Append new event to existing event list
         self.grid_events_list.sort(key=operator.itemgetter('T'))  #Sort new events list
         self.update_event_totals()
     
@@ -329,8 +335,8 @@ class SimulationEvents(Logging):
            for event in self.simulation_events_list:
                 if 'S' and 'Tactual' in event.keys():
                     six.print_('t:{:.3f},Solar event, Solar insolation is {:.2f} W/cm2, Temperature is {:.2f}'.format(event['T'],event['Sinsol'],event['Tactual']))
-                if 'Vgrid' and 'fgrid' in event.keys():
-                    six.print_('t:{:.3f},Grid event, Grid voltage is {:.2f} V, Frequency is {:.2f}'.format(event['T'],event['Vgrid'],event['fgrid']))
+                if 'Vgrid' and 'Vgrid_angle' and 'fgrid' in event.keys():
+                    six.print_('t:{:.3f}, Grid event, Grid voltage: Magnitude:{:.2f}, Angle:{:.3f} V, Frequency is {:.2f}'.format(event['T'],event['Vgrid'],event['Vgrid_angle'],event['fgrid']))
                 if 'Zload1_actual' in event.keys():
                     six.print_('t:{:.3f},Load event, Impedance is {:.2f} ohm'.format(event['T'],event['Zload1_actual']))
         else:
