@@ -30,6 +30,15 @@ class PVDER_SmartFeatures():
     LFRT_TRIP = False
     LFRT_RECONNECT = False    
     
+    config_default = {'V_LV0':0.50,'V_LV1':0.70,'V_LV2':0.88,
+                   't_LV0_limit':0.1,'t_LV1_limit':1.0,'t_LV2_limit':2.0,
+                   'V_HV1':1.06,'V_HV2':1.12,
+                   't_HV1_limit':2.0,'t_HV2_limit':1/60.0,
+                   'OUTPUT_RESTORE_DELAY':0.5,
+                   'VRT_INSTANTANEOUS_TRIP':False,'VRT_MOMENTARY_CESSATION':True}
+    
+   
+    
     def initialize_Volt_VAR(self):
         """Initialize the Volt-VAR controller settings."""
         
@@ -196,13 +205,8 @@ class PVDER_SmartFeatures():
         
         if self.pvderConfig is None:
             self.pvderConfig = {}
-            
-            self.pvderConfig['VRT_INSTANTANEOUS_TRIP'] = False
-            self.pvderConfig['VRT_MOMENTARY_CESSATION'] = True
-            self.pvderConfig['OUTPUT_RESTORE_DELAY'] = 0.5 #Delay before DER power output resumes after voltage anomaly (only valid if momentary cessation flage is true)
-            
-            self.LVRT_default()
-            self.HVRT_default()
+        
+        self.update_config() #Checks and updates pvderConfig if any entries are missing
         
         #IEEE 1547-2018 standards        
         #V1 to V2 - zone 2,V1 < - zone 1 
@@ -239,24 +243,14 @@ class PVDER_SmartFeatures():
         self.VRT_MOMENTARY_CESSATION = self.pvderConfig['VRT_MOMENTARY_CESSATION'] #Reconnect PV-DER after voltage anomaly
         self.check_LVRT_settings()
         
-    def LVRT_default(self):
-        """LVRT default settings."""
-        
-        self.pvderConfig['V_LV0']=0.50
-        self.pvderConfig['V_LV1']=0.70
-        self.pvderConfig['V_LV2']=0.88
-        self.pvderConfig['t_LV0_limit']=0.1            
-        self.pvderConfig['t_LV1_limit']=1.0
-        self.pvderConfig['t_LV2_limit']=2.0                
-    
-    def HVRT_default(self):
-        """HVRT default settings."""
-        
-        self.pvderConfig['V_HV1']=1.06
-        self.pvderConfig['V_HV2']=1.12
-        self.pvderConfig['t_HV1_limit']=2.0
-        self.pvderConfig['t_HV2_limit']=1/60.0                        
-    
+    def update_config(self):
+        """Check whether the config file is good."""        
+                          
+        for item in self.config_default.keys():
+            if item not in self.pvderConfig:
+                self.logger.info('{}:{} was not in pvderconfig, updating with default value {}.'.format(self.name,item,self.config_default[item]))    
+                self.pvderConfig[item] = self.config_default[item]
+
     def check_LVRT_settings(self):
         """Sanity check for LVRT settings."""
         
@@ -659,7 +653,7 @@ class PVDER_SmartFeatures():
         self.__VRT_MOMENTARY_CESSATION = VRT_MOMENTARY_CESSATION
         
         if VRT_MOMENTARY_CESSATION:
-            self.t_reconnect_delay = self.pvderConfig['OUTPUT_RESTORE_DELAY'] 
+            self.t_reconnect_delay = self.pvderConfig['OUTPUT_RESTORE_DELAY']  #Delay before DER power output resumes after voltage anomaly (only valid if momentary cessation flage is true)
         else:
             self.t_reconnect_delay = 1000.0 # A large number to prevent DER from restoring power output after end of voltage anomaly      
                     
