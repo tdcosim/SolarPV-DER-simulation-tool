@@ -20,7 +20,7 @@ class SimulationEvents(Logging):
     Zload1_actual_default = 10e6+0j
     
     _events_spec = {'insolation':{'default':100.0,'min':25.0,'max':100.0},
-                    'voltage':{'default':1.0,'min':0.1,'max':1.1},  #Voltage magnitude is a fraction and not per unit value
+                    'voltage':{'default':1.0,'min':0.1,'max':1.15},  #Voltage magnitude is a fraction and not per unit value
                     'voltage_angle':{'default':0.0,'min':0.0,'max':2*math.pi},  #Voltage angle in radians
                     'frequency':{'default':60.0,'min':58.5,'max':61.5}}  #Time delay between events
     

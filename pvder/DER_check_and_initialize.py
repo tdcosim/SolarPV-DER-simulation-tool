@@ -4,6 +4,7 @@ from __future__ import division
 import logging
 
 import math
+import cmath
 import numpy as np
 from scipy.optimize import fsolve, minimize
 
@@ -17,6 +18,8 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     """
        Utility class for error checking during model initialization.
     """
+    
+    allow_unbalanced_m = True
     
     def creation_message(self):
         """Message after PV-DER instance was created."""
@@ -365,15 +368,16 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             self.logger.debug('{}:Warning:DC link capacitance of {:.4f} F results in DC link voltage ripple of {:.2}% (> 1%)!Please use at least {} F.'.format(self.name,self.C_actual,_V_ripple_percentage,_C))
             #warnings.warn('Warning:DC link capacitance of {} F results in DC link voltage ripple of {:.3}% (> 1%)!Please use at least {} F.'.format(self.C_actual,_V_ripple_percentage,_C))               
      
-    def power_error_calc(self,x):
+    def power_error_calc_old(self,x):
         """Function for power."""
         
         maR = x[0]
-        maI = x[1]
-        iaR = x[2]
-        iaI = x[3]
+        #maI = x[1]
+        iaR = x[1]
+        iaI = x[2]
         
-        ma = maR + 1j*maI
+        #ma = maR + 1j*maI
+        ma = cmath.rect(maR,-0.03977)
         
         ia = self.ia = iaR + 1j*iaI
         
@@ -387,27 +391,32 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         Qloss_filter = ((abs(ia)/math.sqrt(2))**2)*self.Xf
     
         if type(self).__name__ == 'SolarPV_DER_ThreePhase':
-            mb = utility_functions.Ub_calc(ma)
-            mc = utility_functions.Uc_calc(ma)
             
-            ib = self.ib = utility_functions.Ub_calc(ia)
-            ic = self.ic = utility_functions.Uc_calc(ia)
-                        
-            #mbR = x[4]
-            #mbI = x[5]
-            #ibR = x[6]
-            #ibI = x[7]
+            if not self.allow_unbalanced_m:
+                mb = utility_functions.Ub_calc(ma)
+                mc = utility_functions.Uc_calc(ma)
+                
+                ib = self.ib = utility_functions.Ub_calc(ia)
+                ic = self.ic = utility_functions.Uc_calc(ia)
             
-            #mcR = x[8]
-            #mcI = x[9]
-            #icR = x[10]
-            #icI = x[11]            
-            
-            #mb = mbR + 1j*mbI
-            #mc = mcR + 1j*mcI
-            
-            #ib = self.ib = ibR + 1j*ibI
-            #ic = self.ic = icR + 1j*icI
+            elif self.allow_unbalanced_m:
+                mbR = x[3]
+                #mbI = x[5]
+                ibR = x[4]
+                ibI = x[5]
+
+                mcR = x[6]
+                #mcI = x[9]
+                icR = x[7]
+                icI = x[8]
+
+                #mb = mbR + 1j*mbI
+                #mc = mcR + 1j*mcI
+                mb = cmath.rect(mbR,-2.1092)
+                mc = cmath.rect(mcR,2.07588)
+
+                ib = self.ib = ibR + 1j*ibI
+                ic = self.ic = icR + 1j*icI
             
             vtb = mb*(self.Vdc/2)
             vtc = mc*(self.Vdc/2)
@@ -420,24 +429,23 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             
             Ploss_filter = Ploss_filter + ((abs(ib)/math.sqrt(2))**2)*self.Rf + ((abs(ic)/math.sqrt(2))**2)*self.Rf
             Qloss_filter = Qloss_filter + ((abs(ib)/math.sqrt(2))**2)*self.Xf + ((abs(ic)/math.sqrt(2))**2)*self.Xf   
-            
         
-        #Qloss_filter_expected = self.n_phases*((self.Ppv/(self.n_phases*self.Vrms_ref))**2)*self.Xf
-        
-        #print('solver:',ma,mb,mc,Qloss_filter_expected)
-        
+        Qloss_filter_expected = self.n_phases*((self.Ppv/(self.n_phases*self.Vrms_ref))**2)*self.Xf
+        Ploss_filter_expected = self.n_phases*((self.Ppv/(self.n_phases*self.Vrms_ref))**2)*self.Rf
+                
         P_PCC_error = ((S_PCC.real + Ploss_filter)   - self.Ppv)**2 
         Q_PCC_error = (S_PCC.imag - self.Q_ref)**2   
         P_error = (St.real - self.Ppv)**2
         Q_error = (St.imag - Qloss_filter - self.Q_ref)**2
         
-        #Q_error_filter_expected = (St.imag - Qloss_filter_expected)**2
+        Q_error_filter_expected =  (St.imag - Qloss_filter_expected)**2 #(St.real - Ploss_filter_expected)**2
+        #print('solver:',self.Vrms_ref*self.Vbase,St.imag,Qloss_filter_expected,Q_error_filter_expected)#ma,mb,mc,
         
         if type(self).__name__ == 'SolarPV_DER_ThreePhase':
             del_1 = utility_functions.relative_phase_calc(ma,mb)
             del_2 = utility_functions.relative_phase_calc(ma,mc)
             del_3 = utility_functions.relative_phase_calc(mb,mc)
-
+            
             if del_1 > math.pi:
                 del_1 = abs(del_1 - 2*math.pi)
 
@@ -446,32 +454,162 @@ class PVDER_SetupUtilities(BaseValues,Logging):
 
             if del_3> math.pi:
                 del_3 = abs(del_3 - 2*math.pi)
-
-            #m_error =  abs(ma+mb+mc)        
-            m_error = (del_1 - PHASE_DIFFERENCE_120)**2 + (del_2 - PHASE_DIFFERENCE_120)**2 + (del_3 - PHASE_DIFFERENCE_120)**2 +\
-                      (abs(ma) - abs(mb))**2 + (abs(ma) - abs(mc))**2 + (abs(mb) - abs(mc))**2 
+            
+            if self.allow_unbalanced_m:
+                #m_error = ( -0.0397-cmath.phase(ma))**2 + (-2.11-cmath.phase(mb))**2 +(2.07-cmath.phase(mc))**2
+                m_error = ((va+vb+vc).real - (vta+vtb+vtc).real)**2 + ((va+vb+vc).imag - (vta+vtb+vtc).imag)**2
+            else:
+                m_error = 0
+            
+            m_error = m_error + (del_1 - PHASE_DIFFERENCE_120)**2 + (del_2 - PHASE_DIFFERENCE_120)**2 + (del_3 - PHASE_DIFFERENCE_120)**2#+\
+                                #(abs(ma) - abs(mb))**2 + (abs(ma) - abs(mc))**2 + (abs(mb) - abs(mc))**2 
+            i_error = abs(ia + ib+ic) #+ abs(ma + mb+mc)
         else:
             m_error = 0.0
         
-        return P_PCC_error  + Q_PCC_error + P_error  + m_error + Q_error #+ Q_error_filter_expected
+        return P_PCC_error  + Q_PCC_error + P_error  + m_error + Q_error + i_error+ Q_error_filter_expected +i_error
     
+    def power_error_calc(self,x):
+        """Function for power."""
+        
+        maR = x[0]
+        maI = x[1]
+        iaR = x[2]
+        iaI = x[3]
+        
+        ma = maR + 1j*maI
+        #ma = cmath.rect(maR,-0.03977)
+        
+        ia = self.ia = iaR + 1j*iaI
+        
+        vta = ma*(self.Vdc/2)
+        va = self.va_calc()
+        
+        St = (vta*ia.conjugate())/2
+        S_PCC = (va*ia.conjugate())/2
+
+        Ploss_filter = ((abs(ia)/math.sqrt(2))**2)*self.Rf 
+        Qloss_filter = ((abs(ia)/math.sqrt(2))**2)*self.Xf
+    
+        if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            
+            if not self.allow_unbalanced_m:
+                mb = utility_functions.Ub_calc(ma)
+                mc = utility_functions.Uc_calc(ma)
+                
+                ib = self.ib = utility_functions.Ub_calc(ia)
+                ic = self.ic = utility_functions.Uc_calc(ia)
+            
+            elif self.allow_unbalanced_m:
+                mbR = x[4]
+                mbI = x[5]
+                ibR = x[6]
+                ibI = x[7]
+
+                mcR = x[8]
+                mcI = x[9]
+                icR = x[10]
+                icI = x[11]
+
+                mb = mbR + 1j*mbI
+                mc = mcR + 1j*mcI
+                #mb = cmath.rect(mbR,-2.1092)
+                #mc = cmath.rect(mcR,2.07588)
+
+                ib = self.ib = ibR + 1j*ibI
+                ic = self.ic = icR + 1j*icI
+            
+            vtb = mb*(self.Vdc/2)
+            vtc = mc*(self.Vdc/2)
+            
+            vb = self.vb_calc()
+            vc = self.vc_calc()
+            
+            St = St + (vtb*ib.conjugate() + vtc*ic.conjugate())/2
+            S_PCC = S_PCC + (vb*ib.conjugate() + vc*ic.conjugate())/2
+            
+            Ploss_filter = Ploss_filter + ((abs(ib)/math.sqrt(2))**2)*self.Rf + ((abs(ic)/math.sqrt(2))**2)*self.Rf
+            Qloss_filter = Qloss_filter + ((abs(ib)/math.sqrt(2))**2)*self.Xf + ((abs(ic)/math.sqrt(2))**2)*self.Xf   
+        
+        Qloss_filter_expected = self.n_phases*((self.Ppv/(self.n_phases*self.Vrms_ref))**2)*self.Xf
+        Ploss_filter_expected = self.n_phases*((self.Ppv/(self.n_phases*self.Vrms_ref))**2)*self.Rf
+                
+        P_PCC_error = ((S_PCC.real + Ploss_filter)   - self.Ppv)**2 
+        Q_PCC_error = (S_PCC.imag - self.Q_ref)**2   
+        P_error = (St.real - self.Ppv)**2
+        Q_error = (S_PCC.imag - self.Q_ref)**2#(St.imag - Qloss_filter - self.Q_ref)**2
+        
+        Q_error_filter_expected =  (St.imag - Qloss_filter_expected)**2 
+        #print('solver:',self.Vrms_ref*self.Vbase,St.imag,Qloss_filter_expected,Q_error_filter_expected)#ma,mb,mc,
+        
+        if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            del_1 = utility_functions.relative_phase_calc(ma,mb)
+            del_2 = utility_functions.relative_phase_calc(ma,mc)
+            del_3 = utility_functions.relative_phase_calc(mb,mc)
+            
+            if del_1 > math.pi:
+                del_1 = abs(del_1 - 2*math.pi)
+
+            if del_2 > math.pi:
+                del_2 = abs(del_2 - 2*math.pi)
+
+            if del_3> math.pi:
+                del_3 = abs(del_3 - 2*math.pi)
+            
+            if self.allow_unbalanced_m:
+                #m_error = ( -0.0397-cmath.phase(ma))**2 + (-2.11-cmath.phase(mb))**2 +(2.07-cmath.phase(mc))**2
+                #m_error = ((va+vb+vc).real - (vta+vtb+vtc).real)**2 + ((va+vb+vc).imag - (vta+vtb+vtc).imag)**2
+                m_error = abs((va+vb+vc)- (vta+vtb+vtc))
+            else:
+                m_error = 0
+            
+            m_error = m_error #+ (del_1 - PHASE_DIFFERENCE_120)**2 + (del_2 - PHASE_DIFFERENCE_120)**2 + (del_3 - PHASE_DIFFERENCE_120)**2#+\
+                                #(abs(ma) - abs(mb))**2 + (abs(ma) - abs(mc))**2 + (abs(mb) - abs(mc))**2 
+            i_error = abs(ia + ib+ic) +  abs(vta-va - ia*self.Zf)++  abs(vtb-vb - ib*self.Zf)+abs(vtc-vc - ic*self.Zf)#+ abs(ma + mb+mc)
+        else:
+            m_error = 0.0
+        
+        #return P_PCC_error  + Q_PCC_error + P_error + Q_error + m_error  + i_error+ Q_error_filter_expected #+i_error    
+        return  P_error + m_error + i_error+Q_error#+Q_error_filter_expected     
+
     def steady_state_calc(self):
         """Find duty cycle and inverter current that minimize steady state error and return steady state values."""        
         
         self.logger.debug('Solving for steady state at current operating point.') 
+        #x0 = [self.steadystate_values[self.parameter_ID]['maR0'],self.steadystate_values[self.parameter_ID]['maI0'],
+        #      self.steadystate_values[self.parameter_ID]['iaR0'],self.steadystate_values[self.parameter_ID]['iaI0']]        
+        #x0 = [self.steadystate_values[self.parameter_ID]['maR0'],
+        #      self.steadystate_values[self.parameter_ID]['iaR0'],self.steadystate_values[self.parameter_ID]['iaI0']]        
         
-        x0 = np.array([self.steadystate_values[self.parameter_ID]['maR0'],
-                       self.steadystate_values[self.parameter_ID]['maI0'],
-                       self.steadystate_values[self.parameter_ID]['iaR0'],
-                       self.steadystate_values[self.parameter_ID]['iaI0']])        
-                
+        va = self.va_calc()
+               
+        x0 = [va.real,va.imag,
+              self.steadystate_values[self.parameter_ID]['iaR0'],self.steadystate_values[self.parameter_ID]['iaI0']]    
+        
+        if self.allow_unbalanced_m:
+            vb = self.vb_calc()
+            vc = self.vc_calc()
+            x0.extend([vb.real,vb.imag,
+                       self.steadystate_values[self.parameter_ID]['ibR0'],self.steadystate_values[self.parameter_ID]['ibI0'],
+                       vc.real,vc.imag,
+                       self.steadystate_values[self.parameter_ID]['icR0'],self.steadystate_values[self.parameter_ID]['icI0']])      
+            #x0.extend([vb.real,
+            #           self.steadystate_values[self.parameter_ID]['ibR0'],self.steadystate_values[self.parameter_ID]['ibI0'],
+            #           vc.real,
+            #           self.steadystate_values[self.parameter_ID]['icR0'],self.steadystate_values[self.parameter_ID]['icI0']])      
+            
+        x0 = np.array(x0)
+        
         disp = bool(self.verbosity == 'DEBUG')
-        result = minimize(self.power_error_calc, x0, method='nelder-mead',options={'xtol': 1e-8, 'disp': disp, 'maxiter':10000})
+        result = minimize(self.power_error_calc, x0, method='SLSQP',options={'xtol': 1e-8, 'disp': disp, 'maxiter':10000})#nelder-mead
         
         if not result.success:
             raise ValueError('Steady state solution did not converge! Change operating point or disable steady state flag and try again.')
         
         ma0 = result.x[0] + 1j*result.x[1]
+        #ma0 = cmath.rect(result.x[0],-0.03977)
+        
+        #self.ia = result.x[1] + 1j*result.x[2]
         self.ia = result.x[2] + 1j*result.x[3]
         self.ua = 0.0+0.0j
         self.xa = ma0
@@ -485,20 +623,27 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.wte = 2*math.pi
         
         if type(self).__name__ == 'SolarPV_DER_ThreePhase':
-            mb0 = utility_functions.Ub_calc(ma0)
-            mc0 = utility_functions.Uc_calc(ma0)
             
-            #mb0 = result.x[4] + 1j*result.x[5]
-            #mc0 = result.x[8] + 1j*result.x[9]
+            if not self.allow_unbalanced_m:
+                mb0 = utility_functions.Ub_calc(ma0)
+                mc0 = utility_functions.Uc_calc(ma0)
+                
+                self.ib = utility_functions.Ub_calc(self.ia)
+                self.ic = utility_functions.Uc_calc(self.ia)            
+            
+            else:
+                mb0 = result.x[4] + 1j*result.x[5]
+                mc0 = result.x[8] + 1j*result.x[9]
+                self.ib = result.x[6] + 1j*result.x[7]
+                self.ic = result.x[10] + 1j*result.x[11]
+                #self.ib = result.x[4] + 1j*result.x[5]
+                #self.ic = result.x[7] + 1j*result.x[8]
+                #mb0 = cmath.rect(result.x[3],-2.1092)
+                #mc0 = cmath.rect(result.x[6],2.07588)
+
             
             self.xb = mb0
             self.xc = mc0
-            
-            self.ib = utility_functions.Ub_calc(self.ia)
-            self.ic = utility_functions.Uc_calc(self.ia)
-            
-            #self.ib = result.x[6] + 1j*result.x[7]
-            #self.ic = result.x[10] + 1j*result.x[11]
             
             self.ub = 0.0+0.0j
             self.uc = 0.0+0.0j            
