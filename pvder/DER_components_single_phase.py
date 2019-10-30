@@ -96,8 +96,9 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
           gridVoltatePhaseA,gridVoltatePhaseA,gridVoltatePhaseA (float): Initial voltage phasor (V) at PCC - LV side from external program (only need to be suppled if model is not stand alone).
           standAlone (bool): Specify if the DER instance is a stand alone simulation or part of a larger simulation.
           STEADY_STATE_INITIALIZATION (bool): Specify whether states in the DER instance will be initialized to steady state values.
+          allow_unbalanced_m (bool): Allow duty cycles to take on unbalanced values during initialization (default: False).
           pvderConfig (dict): Configuration parameters that may be supplied from an external program.
-          identifier (str): An identifier that can be used to name the instance (can be None).
+          identifier (str): An identifier that can be used to name the instance (default: None).
           
         Raises:
           ValueError: If parameters corresponding to `Sinverter_rated` are not available.
@@ -123,6 +124,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
             super(SolarPV_DER_SinglePhase,self).__init__(events,Sinverter_rated)
         
         self.STEADY_STATE_INITIALIZATION = STEADY_STATE_INITIALIZATION
+        self.allow_unbalanced_m = allow_unbalanced_m
         
         self.attach_grid_model(grid_model)
         self.initialize_DER(pvderConfig)

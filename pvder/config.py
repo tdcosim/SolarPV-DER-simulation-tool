@@ -25,3 +25,6 @@ DEFAULT_USE_FREQUENCY_ESTIMATE = False
 
 #Solver options
 DEFAULT_DELTA_T = 0.001 #Simulation time step
+
+#Steady state solver options
+DEFAULT_STEADYSTATE_SOLVER = 'SLSQP'
