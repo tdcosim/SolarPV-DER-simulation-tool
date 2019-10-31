@@ -380,8 +380,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         iaR = x[2]
         iaI = x[3]
         
-        ma = maR + 1j*maI
-        #ma = cmath.rect(maR,-0.03977)
+        ma = maR + 1j*maI        
         
         ia = self.ia = iaR + 1j*iaI
         
@@ -391,8 +390,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         St = (vta*ia.conjugate())/2
         S_PCC = (va*ia.conjugate())/2
 
-        Ploss_filter = ((abs(ia)/math.sqrt(2))**2)*self.Rf 
-        Qloss_filter = ((abs(ia)/math.sqrt(2))**2)*self.Xf
+        #Sloss_filter = ((abs(ia)/math.sqrt(2))**2)*self.Zf 
     
         if type(self).__name__ == 'SolarPV_DER_ThreePhase':
             
@@ -415,9 +413,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
                 icI = x[11]
 
                 mb = mbR + 1j*mbI
-                mc = mcR + 1j*mcI
-                #mb = cmath.rect(mbR,-2.1092)
-                #mc = cmath.rect(mcR,2.07588)
+                mc = mcR + 1j*mcI                
 
                 ib = self.ib = ibR + 1j*ibI
                 ic = self.ic = icR + 1j*icI
@@ -431,20 +427,18 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             St = St + (vtb*ib.conjugate() + vtc*ic.conjugate())/2
             S_PCC = S_PCC + (vb*ib.conjugate() + vc*ic.conjugate())/2
             
-            Ploss_filter = Ploss_filter + ((abs(ib)/math.sqrt(2))**2)*self.Rf + ((abs(ic)/math.sqrt(2))**2)*self.Rf
-            Qloss_filter = Qloss_filter + ((abs(ib)/math.sqrt(2))**2)*self.Xf + ((abs(ic)/math.sqrt(2))**2)*self.Xf   
+            #Sloss_filter = Sloss_filter + ((abs(ib)/math.sqrt(2))**2 + (abs(ic)/math.sqrt(2))**2)*self.Zf         
         
-        Qloss_filter_expected = self.n_phases*((self.Ppv/(self.n_phases*self.Vrms_ref))**2)*self.Xf
-        Ploss_filter_expected = self.n_phases*((self.Ppv/(self.n_phases*self.Vrms_ref))**2)*self.Rf
-                
-        P_PCC_error = ((S_PCC.real + Ploss_filter)   - self.Ppv)**2 
-        Q_PCC_error = (S_PCC.imag - self.Q_ref)**2   
         P_error = (St.real - self.Ppv)**2
-        Q_error = (S_PCC.imag - self.Q_ref)**2#(St.imag - Qloss_filter - self.Q_ref)**2
+        Q_error = (S_PCC.imag - self.Q_ref)**2
         
-        Q_error_filter_expected =  (St.imag - Qloss_filter_expected)**2 
-        #print('solver:',St.imag,Qloss_filter_expected)#ma,mb,mc,
-        #print('solver:',P_PCC_error)#ma,mb,mc,
+        #Qloss_filter_expected = self.n_phases*((self.Ppv/(self.n_phases*self.Vrms_ref))**2)*self.Xf
+        #Ploss_filter_expected = self.n_phases*((self.Ppv/(self.n_phases*self.Vrms_ref))**2)*self.Rf
+                
+        #P_PCC_error = ((S_PCC.real + Sloss_filter.real)   - self.Ppv)**2         
+        #S_error = (abs(St -(S_PCC+Sloss_filter)))**2
+        #Q_error_filter_expected =  (St.imag - Qloss_filter_expected)**2 
+        #print('solver:',St.imag,Qloss_filter_expected)
         
         if type(self).__name__ == 'SolarPV_DER_ThreePhase':
             del_1 = utility_functions.relative_phase_calc(ma,mb)
@@ -461,19 +455,19 @@ class PVDER_SetupUtilities(BaseValues,Logging):
                 del_3 = abs(del_3 - 2*math.pi)
             
             if self.allow_unbalanced_m:
-                m_error = ((va+vb+vc).real - (vta+vtb+vtc).real)**2 + ((va+vb+vc).imag - (vta+vtb+vtc).imag)**2  
-                m_error = abs((va+vb+vc)- (vta+vtb+vtc)) #+m_error
+                m_error = (abs((va+vb+vc)- (vta+vtb+vtc)))**2 
             else:
-                m_error = 0
+                m_error = (del_1 - PHASE_DIFFERENCE_120)**2 + (del_2 - PHASE_DIFFERENCE_120)**2 + (del_3 - PHASE_DIFFERENCE_120)**2 +\
+                          (abs(ma) - abs(mb))**2 + (abs(ma) - abs(mc))**2 + (abs(mb) - abs(mc))**2 
             
-            m_error = m_error #+ (del_1 - PHASE_DIFFERENCE_120)**2 + (del_2 - PHASE_DIFFERENCE_120)**2 + (del_3 - PHASE_DIFFERENCE_120)**2#+\
-                                #(abs(ma) - abs(mb))**2 + (abs(ma) - abs(mc))**2 + (abs(mb) - abs(mc))**2 
-            i_error = abs(ia + ib+ic) +  abs(vta-va - ia*self.Zf)++  abs(vtb-vb - ib*self.Zf)+abs(vtc-vc - ic*self.Zf)#+ abs(ma + mb+mc)
+            m_error = m_error
+                              
+            i_error = (abs(ia + ib+ic) +  abs(vta-va - ia*self.Zf)+  abs(vtb-vb - ib*self.Zf)+abs(vtc-vc - ic*self.Zf))**2
         else:
             m_error = 0.0
+            i_error = (abs(vta-va - ia*self.Zf))**2
         
-        #return P_PCC_error  + Q_PCC_error + P_error + Q_error + m_error  + i_error+ Q_error_filter_expected #+i_error    
-        return  P_error + m_error + i_error+Q_error +P_PCC_error#+Q_error_filter_expected     
+        return  P_error + Q_error + m_error + i_error #+S_error + P_PCC_error
 
     def steady_state_calc(self):
         """Find duty cycle and inverter current that minimize steady state error and return steady state values."""        
