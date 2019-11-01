@@ -49,7 +49,7 @@ class PV_Module(object):
     
     module_parameters = {'10':{'Np':2,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 650.0,'Vdcmpp_max': 800.0},
                          '50':{'Np':11,'Ns':735,'Vdcmpp0':550.0,'Vdcmpp_min': 520.0,'Vdcmpp_max': 650.0},
-                         '250':{'Np':45,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 650.0,'Vdcmpp_max': 1000.0}}
+                         '250':{'Np':45,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 750.0,'Vdcmpp_max': 1000.0}}
     
     module_parameters_list = module_parameters.keys()
     
@@ -175,7 +175,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
     #Ioverload = 1.5  #Inverter current overload rating (Max 10s)
     
     inverter_ratings = {'50':{'Srated':50e3,'Varated':245.0,'Vdcrated':550.0,'Ioverload':config.DEFAULT_Ioverload},
-                        '250':{'Srated':250e3,'Varated':360.0,'Vdcrated':750.0,'Ioverload':config.DEFAULT_Ioverload}}
+                        '250':{'Srated':250e3,'Varated':320.0,'Vdcrated':750.0,'Ioverload':config.DEFAULT_Ioverload}}
     
     circuit_parameters = {'50':{'Rf_actual':0.002,'Lf_actual' :25.0e-6,'C_actual':300.0e-6,'Z1_actual':0.0019 + 1j*0.0561},
                           '250':{'Rf_actual':0.002,'Lf_actual':300.0e-6,'C_actual':300.0e-6,'Z1_actual':0.0019 + 1j*0.0561}}
@@ -190,7 +190,10 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
                                     'scale_Kp_DC':0.01,'scale_Ki_DC' : 0.01,\
                                     'scale_Kp_Q' : 0.01,'scale_Ki_Q' : 0.01,'wp' : 20e4}}
     
-    steadystate_values = {'50':{'maR0':0.89,'maI0':0.0,'iaR0':1.0,'iaI0':0.001},
+    ma0 = 0.89+1j*0.0
+    ia0 = 1.0+1j*0.001
+    steadystate_values = {'50':{'maR0':ma0.real,'maI0':ma0.imag,'iaR0':ia0.real,'iaI0':ia0.imag,
+                                'mbR0':utility_functions.Ub_calc(ma0).real,'mbI0':utility_functions.Ub_calc(ma0).imag,'ibR0':utility_functions.Ub_calc(ia0).real,'ibI0':utility_functions.Ub_calc(ia0).imag,                              'mcR0':utility_functions.Uc_calc(ma0).real,'mcI0':utility_functions.Uc_calc(ma0).imag,'icR0':utility_functions.Uc_calc(ia0).real,'icI0':utility_functions.Uc_calc(ia0).imag},
                           '250':{'maR0':0.7,'maI0':0.01,'iaR0':6.0,'iaI0':0.001}}
     
     inverter_ratings_list = inverter_ratings.keys()
@@ -216,7 +219,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
                              gridVoltagePhaseB = None,\
                              gridVoltagePhaseC = None,\
                              gridFrequency = None,\
-                             standAlone = True, STEADY_STATE_INITIALIZATION = False,\
+                             standAlone = True, STEADY_STATE_INITIALIZATION = False, allow_unbalanced_m = False,\
                              pvderConfig = None, identifier = None, verbosity = 'INFO',
                              parameter_ID = None):
         
@@ -231,8 +234,9 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
           gridVoltatePhaseA,gridVoltatePhaseA,gridVoltatePhaseA (float): Initial voltage phasor (V) at PCC - LV side from external program (only need to be suppled if model is not stand alone).
           standAlone (bool): Specify if the DER instance is a stand alone simulation or part of a larger simulation.
           STEADY_STATE_INITIALIZATION (bool): Specify whether states in the DER instance will be initialized to steady state values.
+          allow_unbalanced_m (bool): Allow duty cycles to take on unbalanced values during initialization (default: False).
           pvderConfig (dict): Configuration parameters that may be supplied from an external program.
-          identifier (str): An identifier that can be used to name the instance (can be None).
+          identifier (str): An identifier that can be used to name the instance (default: None).
           
         Raises:
           ValueError: If parameters corresponding to `Sinverter_rated` are not available.
@@ -258,6 +262,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
             super(SolarPV_DER_ThreePhase,self).__init__(events,Sinverter_rated)
         
         self.STEADY_STATE_INITIALIZATION = STEADY_STATE_INITIALIZATION
+        self.allow_unbalanced_m = allow_unbalanced_m
         
         self.attach_grid_model(grid_model)
         self.initialize_DER(pvderConfig)

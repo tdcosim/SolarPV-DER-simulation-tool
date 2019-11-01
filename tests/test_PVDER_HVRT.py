@@ -25,7 +25,7 @@ from unittest_utilities import show_DER_status, plot_DER_trajectories
 
 def suite():
     """Define a test suite."""
-    avoid_tests = ['HVRT3']
+    avoid_tests = ['HVRT2','HVRT3']
     tests = test_options.options 
     tests = list(set(tests) - set(avoid_tests))
     print('Following unittest scenarios will be run:{}'.format(tests))
@@ -151,7 +151,7 @@ class TestPVDER(unittest.TestCase):
         DER_model.LVRT_MOMENTARY_CESSATION = self.return_settings(scenario=scenario,parameter='LVRT_MOMENTARY_CESSATION',settings_type='test')
         
         sim.tStop  = self.return_settings(scenario=scenario,parameter='tEnd',settings_type='test')       
-        
+        sim.name = scenario+'-'+sim.name
         if tspike_start is not None:
             events.add_grid_event(tspike_start,Vspike)
         

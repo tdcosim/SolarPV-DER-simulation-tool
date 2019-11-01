@@ -277,13 +277,15 @@ class PVDER_SmartFeatures():
         assert (self.V_LV1 >= V_LV1_low_limit*self.Vrms_ref and self.V_LV1 <= V_LV1_high_limit*self.Vrms_ref), 'V_LV1 should be between {} and {}'.format(V_LV1_low_limit,V_LV1_high_limit)
         assert (self.V_LV2 >= V_LV2_low_limit*self.Vrms_ref and self.V_LV2 <= V_LV2_high_limit*self.Vrms_ref), 'V_LV2 should be between {} and {}'.format(V_LV2_low_limit,V_LV2_high_limit)        
         
-        if (self.t_LV0_limit > self.t_LV1_limit or self.t_LV1_limit > self.t_LV2_limit) and  not self.VRT_INSTANTANEOUS_TRIP:
-            raise ValueError('LVRT ridethrough times - t_LV0:{:.2f},t_LV1:{:.2f},t_LV2:{:.2f} are infeasible!'.format(self.t_LV0_limit,self.t_LV1_limit,self.t_LV2_limit))
         
-        assert self.t_LV0_limit >= t_LV0_low_limit and self.t_LV0_limit <= t_LV0_high_limit, 't_LV0 should be between {} and {}'.format(t_LV0_low_limit,t_LV0_high_limit)
-        assert self.t_LV1_limit >= t_LV1_low_limit and self.t_LV1_limit <= t_LV1_high_limit, 't_LV1 should be between {} and {}'.format(t_LV1_low_limit,t_LV1_high_limit)
-        assert self.t_LV2_limit >= t_LV2_low_limit and self.t_LV2_limit <= t_LV2_high_limit, 't_LV2 should be between {} and {}'.format(t_LV2_low_limit,t_LV2_high_limit)
-        
+        if not self.VRT_INSTANTANEOUS_TRIP:
+            if (self.t_LV0_limit > self.t_LV1_limit or self.t_LV1_limit > self.t_LV2_limit):
+                raise ValueError('LVRT ridethrough times - t_LV0:{:.2f},t_LV1:{:.2f},t_LV2:{:.2f} are infeasible!'.format(self.t_LV0_limit,self.t_LV1_limit,self.t_LV2_limit))
+            
+            assert self.t_LV0_limit >= t_LV0_low_limit and self.t_LV0_limit <= t_LV0_high_limit, 't_LV0 should be between {} and {}'.format(t_LV0_low_limit,t_LV0_high_limit)
+            assert self.t_LV1_limit >= t_LV1_low_limit and self.t_LV1_limit <= t_LV1_high_limit, 't_LV1 should be between {} and {}'.format(t_LV1_low_limit,t_LV1_high_limit)
+            assert self.t_LV2_limit >= t_LV2_low_limit and self.t_LV2_limit <= t_LV2_high_limit, 't_LV2 should be between {} and {}'.format(t_LV2_low_limit,t_LV2_high_limit)
+            
         if self.t_reconnect_delay < 0.4:
             raise ValueError('Reconnect time delay after momentary cessation {} is infeasible!'.format(self.t_reconnect_delay))
             
