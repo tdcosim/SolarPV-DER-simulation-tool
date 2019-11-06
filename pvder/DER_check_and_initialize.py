@@ -191,7 +191,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
 
             if type(self).__name__ == 'SolarPV_DER_SinglePhase':
                 self.Iarated = (self.Sinverter_rated/(self.Varated/math.sqrt(2)))*math.sqrt(2)
-            elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            elif type(self).__name__ == 'SolarPV_DER_ThreePhase' or type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
                 self.Iarated = (self.Sinverter_rated/(3*(self.Varated/math.sqrt(2))))*math.sqrt(2)            
             
             ##Per-unit values
@@ -309,7 +309,11 @@ class PVDER_SetupUtilities(BaseValues,Logging):
                           'ibR','ibI','xbR','xbI','ubR','ubI',
                           'icR','icI','xcR','xcI','ucR','ucI',
                           'Vdc','xDC','xQ','xPLL','wte']            
-            
+        
+        elif type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
+            state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
+                          'Vdc','xDC','xQ','xPLL','wte']            
+        
         for entry in state_list:
             self.varInd[entry]=n
             n+=1
@@ -392,7 +396,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
 
         #Sloss_filter = ((abs(ia)/math.sqrt(2))**2)*self.Zf 
     
-        if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        if type(self).__name__ == 'SolarPV_DER_ThreePhase' or type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
             
             if not self.allow_unbalanced_m:
                 mb = utility_functions.Ub_calc(ma)
@@ -440,7 +444,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         #Q_error_filter_expected =  (St.imag - Qloss_filter_expected)**2 
         #print('solver:',St.imag,Qloss_filter_expected)
         
-        if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        if type(self).__name__ == 'SolarPV_DER_ThreePhase' or type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
             del_1 = utility_functions.relative_phase_calc(ma,mb)
             del_2 = utility_functions.relative_phase_calc(ma,mc)
             del_3 = utility_functions.relative_phase_calc(mb,mc)
@@ -523,7 +527,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.xPLL = 0.0
         self.wte = 2*math.pi
         
-        if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        if type(self).__name__ == 'SolarPV_DER_ThreePhase' or type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
             
             if not self.allow_unbalanced_m:
                 mb0 = utility_functions.Ub_calc(ma0)

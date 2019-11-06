@@ -367,13 +367,13 @@ class PVDER_ModelUtilities(BaseValues):
         self.Qf_phasor = self.S_calc().imag-self.S_PCC_calc().imag  #Reactive power consumed by filter inductor 
         
         #Caculation with RMS quantities        
-        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
-            _phases = 1
-        elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
-            _phases = 3
+        #if type(self).__name__ == 'SolarPV_DER_SinglePhase':
+        #    _phases = 1
+        #elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        #    _phases = 3
         
-        self.Pf_RMS = _phases*((self.Irms)**2)*self.Rf   #Active power consumed by filter resistor
-        self.Qf_RMS = _phases*((self.Irms)**2)*self.Xf   #Reactive power consumed by filter inductor 
+        self.Pf_RMS = self.n_phases*((self.Irms)**2)*self.Rf   #Active power consumed by filter resistor
+        self.Qf_RMS = self.n_phases*((self.Irms)**2)*self.Xf   #Reactive power consumed by filter inductor 
         
         #Calculation with phasor quantities
         self.Pt_phasor = self.S_calc().real   #Active power output at inverter terminal

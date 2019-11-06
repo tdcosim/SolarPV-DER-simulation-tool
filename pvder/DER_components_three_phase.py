@@ -67,7 +67,7 @@ class PV_Module(object):
         
         self.events = events
         if (type(self).__name__ == 'SolarPV_DER_SinglePhase' and Sinverter_rated in {10e3}) or\
-           (type(self).__name__ == 'SolarPV_DER_ThreePhase' and Sinverter_rated in {50e3,100e3,250e3}):
+           (type(self).__name__ == 'SolarPV_DER_ThreePhase' or type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced' and Sinverter_rated in {50e3,100e3,250e3}):
             
             self.logger.debug('Creating PV module instance for {} DER with rating:{} kVA'.format(type(self).__name__.replace('SolarPV_DER_',''),str(int(Sinverter_rated/1e3))))
             self.initialize_module_parameters()
@@ -431,6 +431,8 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         #d-q transformation        
         #Convert PCC LV side voltage from phasor to time domain
         self.vat,self.vbt,self.vct = utility_functions.phasor_to_time(upha = self.va,uphb = self.vb,uphc = self.vc,w=self.wgrid_measured,t=t)
+        
+        #self.vat,self.vbt,self.vct = utility_functions.phasor_to_time(upha = self.va,uphb = utility_functions.Ub_calc(self.va),uphc = utility_functions.Uc_calc(self.va),w=self.wgrid_measured,t=t)
         
         #Convert from 3ph time domain to d-q using Parks transformation
         self.vd,self.vq,self.v0 = utility_functions.abc_to_dq0(self.vat,self.vbt,self.vct,self.wte) #PCC LV side voltage

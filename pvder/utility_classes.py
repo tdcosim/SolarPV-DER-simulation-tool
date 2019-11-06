@@ -24,6 +24,8 @@ class Logging(object):
             self.name = 'PVDER-1ph_'+str(self.ID)  #Object name
         elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
             self.name = 'PVDER-3ph_'+str(self.ID)  #Object name
+        elif type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
+            self.name = 'PVDER-3phBalanced_'+str(self.ID)  #Object name
         elif type(self).__name__ == 'DynamicSimulation':
             self.name = 'sim_'+str(self.ID)  #Object name
         elif type(self).__name__ == 'SimulationEvents':
