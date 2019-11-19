@@ -254,21 +254,20 @@ class PVDER_SmartFeatures():
     def check_LVRT_settings(self):
         """Sanity check for LVRT settings."""
         
-        V_LV0_low_limit = 0.45
-        V_LV0_high_limit = 0.6
-        V_LV1_low_limit = 0.65
-        V_LV1_high_limit = 0.75
-        V_LV2_low_limit = 0.8
-        V_LV2_high_limit = 0.92      
+        V_LV0_low_limit = 0.1
+        V_LV0_high_limit = 1.0
+        V_LV1_low_limit = 0.1
+        V_LV1_high_limit = 1.0
+        V_LV2_low_limit = 0.1
+        V_LV2_high_limit = 1.0      
         
-        t_LV0_low_limit = 1/120.0
-        t_LV0_high_limit = 1.0
-        t_LV1_low_limit = 1.0
-        t_LV1_high_limit = 10.0
-        t_LV2_low_limit = 2.0
-        t_LV2_high_limit = 20.0      
+        t_LV0_low_limit = 0.0
+        t_LV0_high_limit = 30.0
+        t_LV1_low_limit = 0.0
+        t_LV1_high_limit = 30.0
+        t_LV2_low_limit = 0.0
+        t_LV2_high_limit = 30.0      
         
-        #if (self.V_LV0 > self.V_LV1 or self.V_LV1 > self.V_LV2) :
         if not self.V_LV2 > self.V_LV1 > self.V_LV0:
             
             raise ValueError('LVRT voltage limits - V_LV0:{:.2f},V_LV1:{:.2f},V_LV2:{:.2f} are infeasible!'.format(self.V_LV0,self.V_LV1,self.V_LV2))
@@ -292,15 +291,15 @@ class PVDER_SmartFeatures():
     def check_HVRT_settings(self):
         """Sanity check for HVRT settings."""
         
-        V_HV1_low_limit = 1.06
-        V_HV1_high_limit = 1.1
-        V_HV2_low_limit = 1.12
+        V_HV1_low_limit = 1.01
+        V_HV1_high_limit = 1.2
+        V_HV2_low_limit = 1.01
         V_HV2_high_limit = 1.2      
         
-        t_HV1_low_limit = 2.0
-        t_HV1_high_limit = 12.0
-        t_HV2_low_limit = 1/120.0
-        t_HV2_high_limit = 1/60.0     
+        t_HV1_low_limit = 0.0
+        t_HV1_high_limit = 20.0
+        t_HV2_low_limit = 0.0
+        t_HV2_high_limit = 20.0     
         
         if self.HVRT_dict['1']['V_HV'] > self.HVRT_dict['2']['V_HV']:
             
