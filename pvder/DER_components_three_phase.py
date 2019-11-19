@@ -219,7 +219,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
                              gridVoltagePhaseB = None,\
                              gridVoltagePhaseC = None,\
                              gridFrequency = None,\
-                             standAlone = True, STEADY_STATE_INITIALIZATION = False, allow_unbalanced_m = False,\
+                             standAlone = True, STEADY_STATE_INITIALIZATION = False, allow_unbalanced_m = True,\
                              pvderConfig = None, identifier = None, verbosity = 'INFO',
                              parameter_ID = None):
         
