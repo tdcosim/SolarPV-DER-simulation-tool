@@ -243,12 +243,11 @@ class SolarPV_DER_ThreePhaseBalanced(PV_Module,PVDER_SetupUtilities,PVDER_SmartF
                 
         #Update PCC LV side voltage
         self.va = self.va_calc()
-        self.vb = self.vb_calc()
-        self.vc = self.vc_calc()
+        self.vb = utility_functions.Ub_calc(self.va)
+        self.vc = utility_functions.Uc_calc(self.va)
+        #self.vb = self.vb_calc()
+        #self.vc = self.vc_calc()        
         
-        #self.vtunbalance = utility_functions.Uunbalance_calc(self.vta,self.vtb,self.vtc)
-        #self.vunbalance = utility_functions.Uunbalance_calc(self.va,self.vb,self.vc)
-   
     def update_RMS(self):
         """Update RMS voltages."""
         
