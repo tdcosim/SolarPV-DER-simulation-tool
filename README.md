@@ -15,6 +15,7 @@ The dynamics of the DER are modelled using dynamic phasors. Detailed description
 ## Links
 * Source code repository: https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility
 * API Documentation: https://solarpv-der-simulation-utility.readthedocs.io/en/latest/
+* Additional documentation: [Description of attributes and methods](docs/PVDER_flags_variables_methods.md)
 
 ## Installation
 You can install the module directly from GitHub with following commands:
@@ -38,16 +39,16 @@ import pvder
 
 ### Features
 The following features are available currently:
-1. Single phase or three phase DER models (phase voltages may be unbalanced).
+1. Single phase, three phase balanced, and three phase unbalanced (phase voltages may be unbalanced) DER models.
 2. Run simulation in stand alone mode with internal grid voltage source model.
 3. Run simulation in loop mode where grid voltage and frequency is supplied every time step by a third party program.
 4. Visualize or retrieve simulation results for voltages, current, active, and reactive power.
 5. Introduce solar insolation events (in all modes), grid voltage, and frequency change events (in stand alone mode).
-6. Retrive and modify model parameters from a third party program.
+6. Retrieve and modify model parameters from a third party program.
 7. Enable Low voltage ride through (LVRT) and Volt-VAR control logic.
 
 ### Using the stand alone single phase DER model with 10 kW power rating
-The following steps are required:
+The following steps are required. Additional documentation on attributes and methods are available [here](docs/PVDER_flags_variables_methods.md).
 1. First import the following classes:
 ```
 from pvder.DER_components_single_phase import SolarPV_DER_SinglePhase
