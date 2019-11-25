@@ -320,16 +320,21 @@ class PVDER_SmartFeatures():
         if settings_type not in {'LVRT','HVRT'}:#,'LFRT'
             raise ValueError('Unknown quantity: ' + str(settings_type))
         
+        if PER_UNIT:
+            V_multiplier = (1/self.Vrms_ref)
+        else:
+            V_multiplier = self.Vbase
+        
         print('\n______{} - {}_____'.format(self.name,settings_type))
         
         if settings_type ==  'LVRT':
-            print('Vrms_ref:{:.2f} V\nV_LV0:{:.2f} V\nV_LV1:{:.2f} V\nV_LV2:{:.2f} V'.format(self.Vrms_ref,self.V_LV0,self.V_LV1,self.V_LV2))
+            print('Vrms_ref:{:.2f} V\nV_LV0:{:.2f} V\nV_LV1:{:.2f} V\nV_LV2:{:.2f} V'.format(self.Vrms_ref*self.Vbase,self.V_LV0*V_multiplier,self.V_LV1*V_multiplier,self.V_LV2*V_multiplier))
             print('t_LV0:{:.2f} s\nt_LV1:{:.2f} s\nt_LV2:{:.2f} s'.format(self.t_LV0_limit,self.t_LV1_limit,self.t_LV2_limit))
             print('______Flags______')
             print('LVRT_ENABLE:{}\nLVRT_TRIP:{} '.format(self.LVRT_ENABLE,self.LVRT_TRIP))    
             
         if settings_type ==  'HVRT':
-            print('Vrms_ref:{:.2f} V\nV_HV1:{:.2f} V\nV_HV2:{:.2f} V'.format(self.Vrms_ref,self.HVRT_dict['1']['V_HV'],self.HVRT_dict['2']['V_HV']))
+            print('Vrms_ref:{:.2f} V\nV_HV1:{:.2f} V\nV_HV2:{:.2f} V'.format(self.Vrms_ref*self.Vbase,self.HVRT_dict['1']['V_HV']*V_multiplier,self.HVRT_dict['2']['V_HV']*V_multiplier))
             print('t_HV1:{:.2f} s\nt_HV2:{:.2f} s'.format(self.HVRT_dict['1']['t_HV_limit'],self.HVRT_dict['2']['t_HV_limit']))
             print('______Flags______')
             print('HVRT_ENABLE:{}\nHVRT_TRIP:{} '.format(self.HVRT_ENABLE,self.HVRT_TRIP))
