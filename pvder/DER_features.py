@@ -546,11 +546,11 @@ class PVDER_SmartFeatures():
         """Initialize LFRT and HFRT settings."""
         
         #LVRT flags    
-        self.LFRT_ENABLE = True
+        self.LFRT_ENABLE = False
         self.LFRT_TRIP = False        
         
         #HVRT flags
-        self.HFRT_ENABLE = True
+        self.HFRT_ENABLE = False
         self.HFRT_TRIP = False
         
         self.del_f =0.02
