@@ -20,6 +20,9 @@ DEFAULT_Ioverload = 1.3
 DEFAULT_Vreconnect_LV =  0.95  #Lower limit of voltage required for reconnection after momentary cessation
 DEFAULT_Vreconnect_HV =  1.02  #Uppder limit of voltage required for reconnection after momentary cessation
 
+DEFAULT_freconnect_LF = 58.8
+DEFAULT_freconnect_HF = 61.2
+
 #Frequency estimation
 DEFAULT_USE_FREQUENCY_ESTIMATE = False
 
