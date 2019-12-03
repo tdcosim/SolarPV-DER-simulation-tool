@@ -211,32 +211,29 @@ class PVDER_ModelUtilities(BaseValues):
                 
         if t > self._t_estimate_frequency_previous: #Prevent going back in time 
             if self.standAlone:
-                #if abs(self._vag_previous - self.grid_model.vag) > 0.0:
-                if abs(cmath.phase(self._vag_previous) - cmath.phase(self.grid_model.vag))>0:
-                    _,phia_new = cmath.polar(self.va)
-                    _,phia_previous = cmath.polar(self._va_previous)
-                    self._vag_previous = self.grid_model.vag
-                    self._va_previous = self.va
+                _,phia_new = cmath.polar(self.grid_model.vag)
+                _,phia_previous = cmath.polar(self._vag_previous)
+                if abs(phia_previous - phia_new)>0:
+                    self._vag_previous = self.grid_model.vag                   
                     self._t_estimate_frequency_previous = t
                     self._westimate = self.wgrid_estimate_calc(t,phia_new,phia_previous)                   
         
             else:
-                #if abs(self._va_previous - self.va) > 0.0:
-                if abs(cmath.phase(self._va_previous) - cmath.phase(self.va))>0:
-                    _,phia_new = cmath.polar(self.va)
-                    _,phia_previous = cmath.polar(self._va_previous)                    
+                _,phia_new = cmath.polar(self.va)
+                _,phia_previous = cmath.polar(self._va_previous)                    
+                if abs(phia_previous - phia_new)>0:
                     self._va_previous = self.va
                     self._t_estimate_frequency_previous = t
                     self._westimate = self.wgrid_estimate_calc(t,phia_new,phia_previous)
-                    
+        
         return self._westimate   
     
     def wgrid_estimate_calc(self,t,phi_new,phi_previous):
         """Estimate frequency."""
         
         del_f = (phi_new-phi_previous)/((2*math.pi)*self._del_t_frequency_estimate) #(theta_N - theta_N-1)/(2*pi*dt)\
-        festimate = 60.0 + del_f
-        self.logger.debug('t:{}:{}:Estimated frequency from phase angle change:{:.3f} Hz'.format(t,self.name,festimate))
+        festimate = self.wgrid_measured/(2*math.pi) + del_f
+        self.logger.debug('t:{}:{}:Phase angle changed from {:.4f} rad to {:.4f} rad -> Estimated frequency from phase angle change:{:.3f} Hz'.format(t,self.name,phi_previous,phi_new,festimate))
         
         return 2*math.pi*(festimate)
     

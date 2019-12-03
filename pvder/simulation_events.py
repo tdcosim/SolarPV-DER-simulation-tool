@@ -8,6 +8,7 @@ import logging
 import random
 import math
 import numpy as np
+import cmath
 
 from pvder.utility_classes import Logging
 from pvder import utility_functions
@@ -122,7 +123,7 @@ class SimulationEvents(Logging):
                 Vgrid_angle = self.grid_events_list[self.grid_event_counter]['Vgrid_angle']
                 fgrid = self.grid_events_list[self.grid_event_counter]['fgrid']
                 
-                if self.override_angle and t < self.grid_events_list[-1]['T']+self.del_t_event:
+                if self.override_angle and t < self.grid_events_list[-1]['T']+0.003: #Prevent logic going back in time due to solver
                     
                     if self.grid_event_counter == 0:
                         fgrid_old =  self._events_spec['frequency']['default']   #store previous freq
@@ -131,15 +132,16 @@ class SimulationEvents(Logging):
                         fgrid_old = self.grid_events_list[self.grid_event_counter-1]['fgrid']  #store previous freq
                         Vgrid_angle_old = self.grid_events_list[self.grid_event_counter-1]['Vgrid_angle']
                         
-                    Vgrid_angle = Vgrid_angle_old + 2.0*math.pi*(fgrid-fgrid_old)*self.del_t_event
+                    Vgrid_angle = Vgrid_angle_old + 2.0*math.pi*(fgrid-fgrid_old)*self.del_t_event #
+                    
                     self.add_grid_event(self.grid_events_list[self.grid_event_counter]['T'],Vgrid,Vgrid_angle,fgrid)
-                elif not self.override_angle and t < self.grid_events_list[-1]['T']+self.del_t_event:
+                elif not self.override_angle and t < self.grid_events_list[-1]['T']+0.003: #Prevent logic going back in time due to solver
                     if self.grid_event_counter == 0:
                         Vgrid_angle_old = self._events_spec['voltage_angle']['default']
                     else:
                         Vgrid_angle_old = self.grid_events_list[self.grid_event_counter-1]['Vgrid_angle']
                     
-                    del_f = (Vgrid_angle-Vgrid_angle_old)/((2*math.pi)*self.del_t_event)
+                    del_f = (Vgrid_angle-Vgrid_angle_old)/((2.0*math.pi)*self.del_t_event)
                     fgrid = 60.0 + del_f        
                     self.add_grid_event(self.grid_events_list[self.grid_event_counter]['T'],Vgrid,Vgrid_angle,fgrid)
                     
@@ -149,9 +151,9 @@ class SimulationEvents(Logging):
             Vgrid =self._events_spec['voltage']['default']
             Vgrid_angle =self._events_spec['voltage_angle']['default']
             fgrid =self._events_spec['frequency']['default']                    
-           
         
-        return Vgrid*pow(math.e,(1j*math.radians(Vgrid_angle))),2.0*math.pi*fgrid
+        return cmath.rect(Vgrid,Vgrid_angle),2.0*math.pi*fgrid
+        #return Vgrid*pow(math.e,(1j*math.radians(Vgrid_angle))),2.0*math.pi*fgrid
     
     def load_events(self,t):
         """Generate load event at PCC LV side during simulation.
