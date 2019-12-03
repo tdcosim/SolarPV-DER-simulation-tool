@@ -17,14 +17,15 @@ Object type name: *SolarPV_DER_ThreePhase*,*SolarPV_DER_ThreePhaseBalanced*,*Sol
 #### Essential variables and flags
 1. **LVRT_ENABLE (Boolean):** If this flag is **True**, the low voltage ride through and protection logic will be enabled. If **False** the DER instance will neither trip nor enter momentary cessation when abnormal low voltage conditions are encountered  (default: **True**).
 2. **HVRT_ENABLE (Boolean):** If this flag is **True**, the high voltage ride through and protection logic will be enabled. If **False** the DER instance will neither trip nor enter momentary cessation when abnormal high voltage conditions are encountered (default: **True**).
+2. **LFRT_ENABLE (Boolean):** If this flag is **True**, the low frequency ride through and protection logic will be enabled. If **False** the DER instance will never trip when abnormal low frequency conditions are encountered (default: **False**).
 3. **VOLT_VAR_ENABLE (Boolean):** If this flag is **True**, Volt-VAR control is enabled during voltage sags within a specified voltage range. If **False** the DER will neither supply or absorb reactive power when voltage sags are encountered (default: **False**).
 4. **use_frequency_estimate (Boolean):** If this flag is **True**, grid frequency is estimated using the difference between phase angles at two consecutive time steps (default: **False**).
 
 #### Essential methods
-1. **show_PV_DER_states(quantity) : ** Show the values for the specified DER variable (default: 'voltage'). 
-1. **show_PV_DER_parameters(parameter_type) : ** Show the values for the specified DER parameter (default: 'inverter_ratings'). 
-2. **initialize_parameter_dict(parameter_ID,source_parameter_ID): ** Initialize a new parameter dictionary. 
-2. **update_parameter_dict(parameter_ID,parameter_type,parameter_dict): ** Update an existing parameter dictionary with new values.
+1. **show_PV_DER_states(quantity):** Show the values for the specified DER variable (default: 'voltage'). 
+1. **show_PV_DER_parameters(parameter_type):** Show the values for the specified DER parameter (default: 'inverter_ratings'). 
+2. **initialize_parameter_dict(parameter_ID,source_parameter_ID):** Initialize a new parameter dictionary. 
+2. **update_parameter_dict(parameter_ID,parameter_type,parameter_dict):** Update an existing parameter dictionary with new values.
 
 ### Dynamic simulation model objects
 Object types: *DynamicSimulation*
@@ -42,8 +43,8 @@ Object types: *DynamicSimulation*
 2. **DEBUG_SOLVER (Boolean):** If this flag is **True**, solution status from ODE solver is printed during each call to solver. If  **False**, solution status will only be printed if there is an exception (default: False).
 2. **PER_UNIT (Boolean):** If this flag is **True**, all the displayed electrical quantities will be in per unit values. If **False**, all the displayed quantities will be in actual values (default: True).
 #### Essential methods
-1a. **run_simulation() : **If LOOP_MODE is True the simulation is run from **tStart** to **tEnd** with time step of **tInc**. 
-1b. **run_simulation(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC, y0, t) : ** If LOOP_MODE is True the voltages, states, and time steps need to to be provided at every iteration.
+1a. **run_simulation():** If LOOP_MODE is True the simulation is run from **tStart** to **tEnd** with time step of **tInc**. 
+1b. **run_simulation(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC, y0, t):** If LOOP_MODE is True the voltages, states, and time steps need to to be provided at every iteration.
 
 
 ### Simulation events object
@@ -56,11 +57,11 @@ Object type name: *SimulationEvents*
 
 #### Essential methods
 
-1. **add_grid_event(T, Vgrid, Vgrid_angle, fgrid) : ** Add grid event at T (default: Vgrid=1.0, Vgrid_angle = 0.0, fgrid = 60). 
-2. **add_solar_event(T, Sinsol) : ** Add solar event at T (default: Sinsol=100). 
-3. **remove_grid_event(T) : ** Remove all grid events (voltage, phase angle, or frequency) at T.
-4. **remove_solar_event(T) : ** Remove solar event at T.
-5. **show_events() : ** Show list of all simulation events in chronological order.
+1. **add_grid_event(T, Vgrid, Vgrid_angle, fgrid):** Add grid event at T (default: Vgrid=1.0, Vgrid_angle = 0.0, fgrid = 60). 
+2. **add_solar_event(T, Sinsol):** Add solar event at T (default: Sinsol=100). 
+3. **remove_grid_event(T):** Remove all grid events (voltage, phase angle, or frequency) at T.
+4. **remove_solar_event(T):** Remove solar event at T.
+5. **show_events():** Show list of all simulation events in chronological order.
 
 ### Results object
 Object type name: *SimulationResults*
@@ -72,4 +73,4 @@ Object type name: *SimulationResults*
 1. **font_size (int):** Font size of text within the plots (default: 18).
 
 #### Essential methods
-1. **plot_DER_simulation(plot_type) : ** Time series plot for specified electrical quantity (Available: 'power','active_power','active_power_Ppv_Pac_PCC','reactive_power','reactive_power_Q_PCC','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','current','duty_cycle','voltage_Vpcclv_all_phases'; default:'power', )
+1. **plot_DER_simulation(plot_type):** Time series plot for specified electrical quantity (Available: 'power','active_power','active_power_Ppv_Pac_PCC','reactive_power','reactive_power_Q_PCC','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','current','duty_cycle','voltage_Vpcclv_all_phases'; default:'power', )
