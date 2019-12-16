@@ -446,15 +446,21 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         for i,t in enumerate(self.t):     #Loop through time steps and calculate d-q values at each time step
             
-            self.PV_model.vat = utility_functions.phasor_to_time_1phase(self.va_t[i],self.wgrid_t[i],t)
-            self.PV_model.vbt = utility_functions.phasor_to_time_1phase(self.vb_t[i],self.wgrid_t[i],t)
-            self.PV_model.vct = utility_functions.phasor_to_time_1phase(self.vc_t[i],self.wgrid_t[i],t)
-            
             self.PV_model.wte = self.wte_t[i]
             self.PV_model.xPLL = self.xPLL_t[i]
-          
-            self.PV_model.vd,self.PV_model.vq,self.PV_model.v0 = utility_functions.abc_to_dq0(self.PV_model.vat,self.PV_model.vbt,self.PV_model.vct,self.PV_model.wte)
             
+            if type(self.PV_model).__name__ == 'SolarPV_DER_SinglePhase':
+                self.PV_model.valpha = utility_functions.phasor_to_time_1phase(self.va_t[i],self.wgrid_t[i],t)
+                self.PV_model.vbeta =utility_functions.phasor_to_time_1phase(self.va_t[i]*pow(math.e,-1j*(math.pi/2)),self.wgrid_t[i],t)
+                self.PV_model.vd,self.PV_model.vq = utility_functions.alpha_beta_to_d_q(self.PV_model.valpha,self.PV_model.vbeta,self.PV_model.wte)
+            
+            elif type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+                self.PV_model.vat = utility_functions.phasor_to_time_1phase(self.va_t[i],self.wgrid_t[i],t)
+                self.PV_model.vbt = utility_functions.phasor_to_time_1phase(self.vb_t[i],self.wgrid_t[i],t)
+                self.PV_model.vct = utility_functions.phasor_to_time_1phase(self.vc_t[i],self.wgrid_t[i],t)
+                
+                self.PV_model.vd,self.PV_model.vq,self.PV_model.v0 = utility_functions.abc_to_dq0(self.PV_model.vat,self.PV_model.vbt,self.PV_model.vct,self.PV_model.wte)
+                
             self.PV_model.we = self.PV_model.we_calc() #Calculate inverter frequency from PLL equation
             
             self.vd_t.append(self.PV_model.vd)

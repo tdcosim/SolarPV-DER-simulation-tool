@@ -21,6 +21,7 @@ from pvder.DER_utilities import PVDER_ModelUtilities
 from pvder.grid_components import Grid
 
 from pvder import utility_functions
+from pvder import config
 
 class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,Grid,Logging):
     """
@@ -34,15 +35,16 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
     """
     
     count = 0
-    #Number of ODE's
-    n_ODE = 11
+    
+    n_ODE = 11 #Number of ODE's    
+    n_phases = 1 #Number of phases
     
     #PLL controller parameters
     Kp_PLL = 180 #1800
     Ki_PLL = 320 #32000
     
     #Inverter current overload rating (Max 10s)
-    inverter_ratings = {'10':{'Srated':10e3,'Varated':250.0,'Vdcrated':550.0,'Ioverload':1.5},
+    inverter_ratings = {'10':{'Srated':10e3,'Varated':250.0,'Vdcrated':550.0,'Ioverload':config.DEFAULT_Ioverload},
                         }
     
     circuit_parameters = {'10':{'Rf_actual':0.002,'Lf_actual' :25.0e-6,'C_actual':300.0e-6,'Z1_actual':0.0019 + 1j*0.0561},
@@ -130,26 +132,18 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         self.initialize_DER(pvderConfig)
         
         self.VRT_initialize() #LVRT and HVRT settings  
+        self.FRT_initialize() #LFRT and HFRT settings
+        
         self.initialize_jacobian()
         self.reset_reference_counters()
         
         #Reference
         self.update_Qref(t=0.0)
         
-        #DC link voltage
-        self.Vdc = self.Vdc_ref
-        #PV module power output
-        self.Ppv = self.Ppv_calc(self.Vdc_actual)
-        
         self.initialize_states(ia0,xa0,ua0,xDC0,xQ0,xPLL0,wte0) #initialize_states
-
-        self.update_voltages()
-        self.update_power()        
-        self.update_RMS()
         
-        self.update_iref() #Reference currents
-        
-        self.update_inverter_frequency(t=0.0)
+        self.initialize_derived_quantities()
+        self.initialize_Volt_VAR() #Volt-VAR settings
         
         if self.standAlone:
             self._vag_previous = self.grid_model.vag
@@ -281,7 +275,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         
         #Convert PCC LV side voltage from phasor to alpha-beta domain
         self.valpha = utility_functions.phasor_to_time_1phase(self.va,w=self.wgrid_measured,t=t)
-        self.vbeta =utility_functions. phasor_to_time_1phase(self.va*pow(math.e,-1j*(math.pi/2)),w=self.wgrid_measured,t=t)
+        self.vbeta =utility_functions.phasor_to_time_1phase(self.va*pow(math.e,-1j*(math.pi/2)),w=self.wgrid_measured,t=t)
         
         #Convert from alpha-beta domain to d-q domain using Parks transformation
         self.vd,self.vq = utility_functions.alpha_beta_to_d_q(self.valpha,self.vbeta,self.wte)
