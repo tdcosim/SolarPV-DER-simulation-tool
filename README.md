@@ -12,9 +12,20 @@ Solar photovoltaic distributed energy resources (PV-DER) are power electronic in
 ## Basics
 The dynamics of the DER are modelled using dynamic phasors. Detailed description of the concepts behind this utility can be found in the IEEE publication [Dynamic Modeling of Solar PV Systems for Distribution System Stability Analysis](https://www.researchgate.net/publication/333985171_Dynamic_Modeling_of_Solar_PV_Systems_for_Distribution_System_Stability_Analysis) and detailed list of equations can be found in the [Model specification document.](docs/PV_DER_model_specification_rev3.docx)
 
+### Features
+The following features are available currently:
+1. Single phase, three phase balanced, and three phase unbalanced (phase voltages may be unbalanced) DER models.
+2. Run simulation in stand alone mode with internal grid voltage source (stiff) model.
+3. Run simulation in loop mode where grid voltage and frequency is supplied every time step by a third party program.
+4. Visualize or retrieve simulation results for voltages, current, active, and reactive power.
+5. Introduce solar insolation events (in all modes), grid voltage, and frequency change events (in stand alone mode).
+6. Retrieve and modify model parameters from a third party program.
+7. Following smart inverter features are available: Low/High voltage ride through (LVRT/HVRT), Low frequency ride through (LFRT), and Volt-VAR control logic.
+
 ## Links
 * Source code repository: https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility
 * API Documentation: https://solarpv-der-simulation-utility.readthedocs.io/en/latest/
+* Additional documentation: [Description of attributes and methods](docs/PVDER_flags_variables_methods.md)
 
 ## Installation
 You can install the module directly from GitHub with following commands:
@@ -23,6 +34,7 @@ git clone https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility.git
 cd SolarPV-DER-simulation-utility
 pip install -e .
 ```
+Dependencies: SciPy >= 1.2.1, Numpy >= 1.16.2, Matlplotlib >= 3.0.3
 
 ## Use cases
 Following projects are using Solar PV-DER simulation utility:
@@ -36,18 +48,8 @@ The module can be imported as a normal python module:
 import pvder
 ```
 
-### Features
-The following features are available currently:
-1. Single phase or three phase DER models (phase voltages may be unbalanced).
-2. Run simulation in stand alone mode with internal grid voltage source model.
-3. Run simulation in loop mode where grid voltage and frequency is supplied every time step by a third party program.
-4. Visualize or retrieve simulation results for voltages, current, active, and reactive power.
-5. Introduce solar insolation events (in all modes), grid voltage, and frequency change events (in stand alone mode).
-6. Retrive and modify model parameters from a third party program.
-7. Enable Low voltage ride through (LVRT) and Volt-VAR control logic.
-
 ### Using the stand alone single phase DER model with 10 kW power rating
-The following steps are required:
+The following steps are required. Additional documentation on attributes and methods are available [here](docs/PVDER_flags_variables_methods.md).
 1. First import the following classes:
 ```
 from pvder.DER_components_single_phase import SolarPV_DER_SinglePhase
@@ -108,11 +110,15 @@ Basic usage:
 Updating model parameters:
 [![Updating model parameters](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility/blob/master/examples/PV-DER_parameter_update_example.ipynb)
 
+Voltage anomaly, ride through, and momentary cessation:
+[![Voltage anomaly](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility/blob/master/examples/PV-DER_usage_example_LVRT_momentary_cessation_with_recovery.ipynb)
+
+Frequency anomaly, ride through, and trip:
+[![Frequency anomaly](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility/blob/master/examples/PV-DER_usage_example_LFRT_with_trip.ipynb)
+
 ## Module details
 A schematic of the relationship between differen classes in the module is shown in the figure below:
 ![schematic of software architecture](docs/software_architecture.png)
-
-Dependencies: SciPy, Numpy, Matlplotlib
 
 ## Issues
 Please feel free to raise an issue for bugs or feature requests.

@@ -16,28 +16,22 @@ class PVDER_SmartFeatures():
     VOLT_VAR_FLAG = False
     
     VOLT_WATT_ENABLE = False
-    VOLT_WATT_FLAG = False
+    VOLT_WATT_FLAG = False    
     
-    #LVRT_ENABLE = False
-    LFRT_ENABLE = False
+    config_default =  {'V_LV0':0.50,'V_LV1':0.70,'V_LV2':0.88,
+                       't_LV0_limit':0.1,'t_LV1_limit':1.0,'t_LV2_limit':2.0,
+                       'V_HV1':1.06,'V_HV2':1.12,
+                       't_HV1_limit':2.0,'t_HV2_limit':1/60.0,
+                       'VRT_INSTANTANEOUS_TRIP':False,'VRT_MOMENTARY_CESSATION':True,
+                       'F_LF1':57.0,'F_LF2':58.8,
+                       't_LF1_limit':1/60,'t_LF2_limit':299.0,
+                       'F_HF1':61.2,'F_HF2':62.0,
+                       't_HF1_limit':299.0,'t_HF2_limit':1/60,
+                       'FRT_INSTANTANEOUS_TRIP':False,
+                        'OUTPUT_RESTORE_DELAY':0.5}
+     #Voltage and frequency ride through settings from IEEE 1557-2018 Category III    
     
-    #LFRT variables
-    LFRT_DEBUG = False
-    t_LF1start = 0.0
-    t_LF2start = 0.0
-    t_LF3start = 0.0
-    t_LF_reconnect = 0.0
-    LFRT_TRIP = False
-    LFRT_RECONNECT = False    
-    
-    config_default = {'V_LV0':0.50,'V_LV1':0.70,'V_LV2':0.88,
-                   't_LV0_limit':0.1,'t_LV1_limit':1.0,'t_LV2_limit':2.0,
-                   'V_HV1':1.06,'V_HV2':1.12,
-                   't_HV1_limit':2.0,'t_HV2_limit':1/60.0,
-                   'OUTPUT_RESTORE_DELAY':0.5,
-                   'VRT_INSTANTANEOUS_TRIP':False,'VRT_MOMENTARY_CESSATION':True}
-    
-   
+    f_ref = 60.0
     
     def initialize_Volt_VAR(self):
         """Initialize the Volt-VAR controller settings."""
@@ -177,11 +171,11 @@ class PVDER_SmartFeatures():
             self.PV_DER_disconnect()        
         
         #LFRT trip logic
-        if self.LFRT_TRIP and not self.LFRT_RECONNECT:
+        if self.LFRT_TRIP:
             self.PV_DER_disconnect()         
     
     def VRT_initialize(self):
-        """Initialize LVRT settings."""
+        """Initialize LVRT and HVRT settings."""
         
         #LVRT variables
         self.t_LV0start = 0.0
@@ -201,7 +195,7 @@ class PVDER_SmartFeatures():
         #Common ride through variables
         self.t_reconnect = 0.0
         self.Vreconnect_LV = config.DEFAULT_Vreconnect_LV*self.Vrms_ref
-        self.Vreconnect_HV = config.DEFAULT_Vreconnect_HV*self.Vrms_ref 
+        self.Vreconnect_HV = config.DEFAULT_Vreconnect_HV*self.Vrms_ref
         
         if self.pvderConfig is None:
             self.pvderConfig = {}
@@ -242,33 +236,33 @@ class PVDER_SmartFeatures():
         self.VRT_INSTANTANEOUS_TRIP = self.pvderConfig['VRT_INSTANTANEOUS_TRIP'] #Disconnects PV-DER within one cycle for voltage anomaly
         self.VRT_MOMENTARY_CESSATION = self.pvderConfig['VRT_MOMENTARY_CESSATION'] #Reconnect PV-DER after voltage anomaly
         self.check_LVRT_settings()
+        self.check_HVRT_settings()
         
     def update_config(self):
         """Check whether the config file is good."""        
                           
         for item in self.config_default.keys():
             if item not in self.pvderConfig:
-                self.logger.info('{}:{} was not in pvderconfig, updating with default value {}.'.format(self.name,item,self.config_default[item]))    
+                self.logger.debug('{}:{} was not in pvderconfig, updating with default value {}.'.format(self.name,item,self.config_default[item]))    
                 self.pvderConfig[item] = self.config_default[item]
 
     def check_LVRT_settings(self):
         """Sanity check for LVRT settings."""
         
-        V_LV0_low_limit = 0.45
-        V_LV0_high_limit = 0.6
-        V_LV1_low_limit = 0.65
-        V_LV1_high_limit = 0.75
-        V_LV2_low_limit = 0.8
-        V_LV2_high_limit = 0.92      
+        V_LV0_low_limit = 0.1
+        V_LV0_high_limit = 1.0
+        V_LV1_low_limit = 0.1
+        V_LV1_high_limit = 1.0
+        V_LV2_low_limit = 0.1
+        V_LV2_high_limit = 1.0      
         
-        t_LV0_low_limit = 1/120.0
-        t_LV0_high_limit = 1.0
-        t_LV1_low_limit = 1.0
-        t_LV1_high_limit = 10.0
-        t_LV2_low_limit = 2.0
-        t_LV2_high_limit = 20.0      
+        t_LV0_low_limit = 0.0
+        t_LV0_high_limit = 30.0
+        t_LV1_low_limit = 0.0
+        t_LV1_high_limit = 30.0
+        t_LV2_low_limit = 0.0
+        t_LV2_high_limit = 30.0      
         
-        #if (self.V_LV0 > self.V_LV1 or self.V_LV1 > self.V_LV2) :
         if not self.V_LV2 > self.V_LV1 > self.V_LV0:
             
             raise ValueError('LVRT voltage limits - V_LV0:{:.2f},V_LV1:{:.2f},V_LV2:{:.2f} are infeasible!'.format(self.V_LV0,self.V_LV1,self.V_LV2))
@@ -292,15 +286,15 @@ class PVDER_SmartFeatures():
     def check_HVRT_settings(self):
         """Sanity check for HVRT settings."""
         
-        V_HV1_low_limit = 1.06
-        V_HV1_high_limit = 1.1
-        V_HV2_low_limit = 1.12
+        V_HV1_low_limit = 1.01
+        V_HV1_high_limit = 1.2
+        V_HV2_low_limit = 1.01
         V_HV2_high_limit = 1.2      
         
-        t_HV1_low_limit = 2.0
-        t_HV1_high_limit = 12.0
-        t_HV2_low_limit = 1/120.0
-        t_HV2_high_limit = 1/60.0     
+        t_HV1_low_limit = 0.0
+        t_HV1_high_limit = 20.0
+        t_HV2_low_limit = 0.0
+        t_HV2_high_limit = 20.0     
         
         if self.HVRT_dict['1']['V_HV'] > self.HVRT_dict['2']['V_HV']:
             
@@ -318,24 +312,39 @@ class PVDER_SmartFeatures():
     def show_RT_settings(self,settings_type='LVRT',PER_UNIT=True):
         """Method to show LVRT settings."""
         
-        if settings_type not in {'LVRT','HVRT'}:#,'LFRT'
+        if settings_type not in {'LVRT','HVRT','LFRT'}:#
             raise ValueError('Unknown quantity: ' + str(settings_type))
+        
+        if PER_UNIT:
+            V_multiplier = (1/self.Vrms_ref)
+        else:
+            V_multiplier = self.Vbase
         
         print('\n______{} - {}_____'.format(self.name,settings_type))
         
         if settings_type ==  'LVRT':
-            print('Vrms_ref:{:.2f} V\nV_LV0:{:.2f} V\nV_LV1:{:.2f} V\nV_LV2:{:.2f} V'.format(self.Vrms_ref,self.V_LV0,self.V_LV1,self.V_LV2))
+            print('Vrms_ref:{:.2f} V\nV_LV0:{:.2f} V\nV_LV1:{:.2f} V\nV_LV2:{:.2f} V'.format(self.Vrms_ref*self.Vbase,self.V_LV0*V_multiplier,self.V_LV1*V_multiplier,self.V_LV2*V_multiplier))
             print('t_LV0:{:.2f} s\nt_LV1:{:.2f} s\nt_LV2:{:.2f} s'.format(self.t_LV0_limit,self.t_LV1_limit,self.t_LV2_limit))
             print('______Flags______')
             print('LVRT_ENABLE:{}\nLVRT_TRIP:{} '.format(self.LVRT_ENABLE,self.LVRT_TRIP))    
             
         if settings_type ==  'HVRT':
-            print('Vrms_ref:{:.2f} V\nV_HV1:{:.2f} V\nV_HV2:{:.2f} V'.format(self.Vrms_ref,self.HVRT_dict['1']['V_HV'],self.HVRT_dict['2']['V_HV']))
+            print('Vrms_ref:{:.2f} V\nV_HV1:{:.2f} V\nV_HV2:{:.2f} V'.format(self.Vrms_ref*self.Vbase,self.HVRT_dict['1']['V_HV']*V_multiplier,self.HVRT_dict['2']['V_HV']*V_multiplier))
             print('t_HV1:{:.2f} s\nt_HV2:{:.2f} s'.format(self.HVRT_dict['1']['t_HV_limit'],self.HVRT_dict['2']['t_HV_limit']))
             print('______Flags______')
             print('HVRT_ENABLE:{}\nHVRT_TRIP:{} '.format(self.HVRT_ENABLE,self.HVRT_TRIP))
+       
+        if settings_type ==  'LVRT' or settings_type ==  'HVRT':
+            print('VRT_INSTANTANEOUS_TRIP:{},VRT_MOMENTARY_CESSATION:{},OUTPUT_RESTORE_DELAY:{}'.format(self.VRT_INSTANTANEOUS_TRIP,self.VRT_MOMENTARY_CESSATION,self.t_reconnect_delay))
         
-        print('VRT_INSTANTANEOUS_TRIP:{},VRT_MOMENTARY_CESSATION:{},OUTPUT_RESTORE_DELAY:{}'.format(self.VRT_INSTANTANEOUS_TRIP,self.VRT_MOMENTARY_CESSATION,self.t_reconnect_delay))
+        if settings_type ==  'LFRT':
+            print('f_ref:{:.2f} Hz\nF_LF1:{:.2f} Hz\nF_LF2:{:.2f} Hz'.format(self.f_ref,self.LFRT_dict['1']['F_LF'],self.LFRT_dict['2']['F_LF']))
+            print('t_LF1:{:.2f} s\nt_LF2:{:.2f} s'.format(self.LFRT_dict['1']['t_LF_limit'],self.LFRT_dict['2']['t_LF_limit']))
+            print('______Flags______')
+            print('LFRT_ENABLE:{}\nLFRT_TRIP:{} '.format(self.LFRT_ENABLE,self.LFRT_TRIP))        
+        
+        if settings_type ==  'LFRT' or settings_type ==  'HFRT':
+            print('FRT_INSTANTANEOUS_TRIP:{}'.format(self.FRT_INSTANTANEOUS_TRIP))        
     
     def LVRT(self,t):
         """Function to implement LVRT trip and reconnect logic."""
@@ -492,137 +501,146 @@ class PVDER_SmartFeatures():
         """Logic used to decide reconnection."""
         
         #Select RMS voltage source
-        Vrms_measured = self.Vrms   #Select PCC - LV side voltage        
+        Vrms_measured = self.Vrms   #Select PCC - LV side voltage   
+        fgrid = self.we/(2.0*math.pi)  #Use grid frequency as estimated by PLL
 
-        if self.t_reconnect > 0.0:
+        if self.t_reconnect > 0.0 and self.HVRT_TRIP:
             if  Vrms_measured < self.Vreconnect_LV or Vrms_measured > self.Vreconnect_HV: #Reset reconnect timer
-                self.print_reconnect_events(t, Vrms_measured,self.t_reconnect,event_name='reconnect_reset')
+                self.print_reconnect_events(t, Vrms_measured,fgrid,self.t_reconnect,event_name='reconnect_reset')
                 self.t_reconnect = 0.0
             elif Vrms_measured >= self.Vreconnect_LV and Vrms_measured <= self.Vreconnect_HV and t-self.t_reconnect >= self.t_reconnect_delay:  #Reset HVRT_TRIP flag and set LVRT_Reconnect flag
-                self.print_reconnect_events(t, Vrms_measured,self.t_reconnect,event_name='inverter_reconnection')
+                self.print_reconnect_events(t, Vrms_measured,fgrid,self.t_reconnect,event_name='inverter_reconnection')
                 self.HVRT_TRIP = False             #Reset trip flag
                 self.HVRT_RECONNECT = True        #Set reconnect flag
                 self.t_reconnect = 0.0    #Reset timer
             elif Vrms_measured >= self.Vreconnect_LV and Vrms_measured <= self.Vreconnect_HV and t-self.t_reconnect < self.t_reconnect_delay:
-                self.print_reconnect_events(t, Vrms_measured,self.t_reconnect,event_name='reconnect_zone')
+                self.print_reconnect_events(t, Vrms_measured,fgrid,self.t_reconnect,event_name='reconnect_zone')
 
-        elif self.t_reconnect == 0.0:
+        elif self.t_reconnect == 0.0 and self.HVRT_TRIP:
             if  Vrms_measured >= self.Vreconnect_LV and Vrms_measured <= self.Vreconnect_HV: #Start reconnect timer if voltage is nominal
                 self.t_reconnect = t
-                self.print_reconnect_events(t, Vrms_measured,self.t_reconnect,event_name='reconnect_start')
+                self.print_reconnect_events(t, Vrms_measured,fgrid,self.t_reconnect,event_name='reconnect_start')
             else:
-                self.print_reconnect_events(t, Vrms_measured,event_name='inverter_tripped')    
+                self.print_reconnect_events(t, Vrms_measured,fgrid,event_name='inverter_tripped')    
+        """
+        if self.t_LF_reconnect > 0.0 and self.LFRT_TRIP:
+            if  fgrid < self.freconnect_LF or fgrid > self.freconnect_HF: #Reset reconnect timer
+                self.print_LFRT_events(t,fgrid,self.t_LF_reconnect,event_name='reconnect_reset')
+                self.self.t_LF_reconnect = 0.0
+            elif fgrid >= self.freconnect_LF and fgrid <= self.freconnect_HF and t-self.t_LF_reconnect>= self.t_reconnect_delay_f :  #Reset LFRT_TRIP flag and set LFRT_Reconnect flag
+                self.print_LFRT_events(t,fgrid,self.t_LF_reconnect,event_name='inverter_reconnection')
+                self.LFRT_TRIP = False             #Reset trip flag
+                self.LFRT_RECONNECT = True        #Set reconnect flag
+                self.t_LF_reconnect = 0.0    #Reset timer
+            elif fgrid >= self.freconnect_LF and fgrid <= self.freconnect_HF and t-self.t_LF_reconnect < self.t_reconnect_delay_f:
+                self.print_LFRT_events(t,fgrid,self.t_LF_reconnect,event_name='reconnect_zone')
+
+        elif self.t_LF_reconnect == 0.0 and self.LFRT_TRIP:
+            if  fgrid >= self.freconnect_LF and fgrid <= self.freconnect_HF: #Start reconnect timer if voltage is nominal
+                self.t_LF_reconnect = t
+                self.print_LFRT_events(t,fgrid,self.t_LF_reconnect,event_name='reconnect_start')
+            else:
+                self.print_LFRT_events(t,fgrid,event_name='inverter_tripped')
+        """
+    def FRT_initialize(self):
+        """Initialize LFRT and HFRT settings."""
+        
+        #LVRT flags    
+        self.LFRT_ENABLE = False
+        self.LFRT_TRIP = False        
+        
+        #HVRT flags
+        self.HFRT_ENABLE = False
+        self.HFRT_TRIP = False
+        
+        self.del_f =0.02
+        
+        if self.pvderConfig is None:
+            self.pvderConfig = {}
+        
+        self.update_config() #Checks and updates pvderConfig if any entries are missing
+        
+        self.LFRT_dict = {'1':{'F_LF':self.pvderConfig['F_LF1'],
+                               't_LF_limit':self.pvderConfig['t_LF1_limit'],
+                               't_LFstart':0.0
+                              },
+                          '2':{'F_LF':self.pvderConfig['F_LF2'],
+                               't_LF_limit':self.pvderConfig['t_LF2_limit'],
+                               't_LFstart':0.0
+                              }
+                         }        
+        
+        self.HFRT_dict = {'1':{'F_HF':self.pvderConfig['F_HF1'],
+                               't_HF_limit':self.pvderConfig['t_HF1_limit'],
+                               't_HFstart':0.0
+                              },
+                          '2':{'F_HF':self.pvderConfig['F_HF2'],
+                               't_HF_limit':self.pvderConfig['t_HF2_limit'],
+                               't_HFstart':0.0
+                              }
+                         }        
+    
+        self.FRT_INSTANTANEOUS_TRIP = self.pvderConfig['FRT_INSTANTANEOUS_TRIP'] #Disconnects PV-DER within one cycle for frequency anomaly
+    
+        self.check_LFRT_settings()    
+        self.check_HFRT_settings()
+    
+    def check_LFRT_settings(self):
+        """Sanity check for LFRT settings."""
+        
+        if not self.LFRT_dict['2']['F_LF'] > self.LFRT_dict['1']['F_LF']:
+            
+            raise ValueError('LFRT frequency settings - F_LF1:{:.2f},F_LF2:{:.2f} are infeasible!'.format(self.LFRT_dict['1']['F_LF'],self.LFRT_dict['2']['F_LF']))
+            
+    def check_HFRT_settings(self):
+        """Sanity check for HFRT settings."""
+        
+        if not self.HFRT_dict['2']['F_HF'] > self.HFRT_dict['1']['F_HF']:
+            
+            raise ValueError('HFRT frequency settings - F_HF1:{:.2f},F_HF2:{:.2f} are infeasible!'.format(self.HFRT_dict['1']['F_HF'],self.HFRT_dict['2']['F_HF']))
     
     def FRT(self,t):
         """Frequency ride through and trip logic. """
         
-        t_reconnect_limit = 3.0   #Time lag before reconnecting
-
-        #IEEE 1547-2018 standards
-        F_LF1 = 57.0  #From IEEE 1557-2018 Category III    
-        F_LF2 = 58.8  #From IEEE 1557-2018 Category III    
-        t_LF1_limit = 0.16      #Time limit for LF1 zone From IEEE 1557-2018 Category III (Table 19 and figure H10)   
-        t_LF2_limit = 299.0      #Time limit for LF2 zone From IEEE 1557-2018 Category III (Table 19 and figure H10)
+        #Select frequency source
+        fgrid = self.we/(2.0*math.pi)  #Use grid frequency as estimated by PLL
         
-        #Dummy variables to preserve logic
-        F_LF3 = 0.0
-        t_LF3_limit = 0.0
-               
-        del_f =0.02
-        assert (F_LF1 < F_LF2) and (t_LF1_limit < t_LF2_limit), "Frequency level 2 should be greater than frequency level 1"
-
-        #Use grid frequency as estimated by PLL
-        fgrid = self.we/(2.0*math.pi)
-        
-        if self.LFRT_ENABLE and t >  self.t_stable and not self.LFRT_TRIP:
+        if t > self.t_stable: #Go through logic only after a short time delay
             
-            if self.LFRT_DEBUG:
-                text_string = '{time_stamp:.4f} -- fgrid:{f1:.3f} Hz, t_LF1start:{t1:.3f} s, t_LF2start:{t2:.3f} s, t_LF3start:{t3:.3f} s'\
-                               .format(time_stamp=t,f1 = fgrid,t1=self.t_LF1start,t2=self.t_LF2start,t3=self.t_LF3start)
-                utility_functions.print_to_terminal(text_string)
-            
-            if self.t_LF1start == 0.0 or self.t_LF2start == 0.0 or self.t_LF3start == 0.0:
-            
-                if self.t_LF1start == 0.0 and fgrid < F_LF1:
-                    self.t_LF1start = t
-                    utility_functions.print_LFRT_events(t,fgrid,self.t_LF1start,event_name='LF1_start')
+            if not self.LFRT_TRIP: #Logic before tripping/momentary cessation
                 
-                if self.t_LF2start == 0.0 and fgrid < F_LF2:
-                    self.t_LF2start = t
-                    utility_functions.print_LFRT_events(t,fgrid,self.t_LF2start,event_name='LF2_start')
-                
-                if self.t_LF3start == 0.0 and fgrid < F_LF3:
-                    self.t_LF3start = t
-                    utility_functions.print_LFRT_events(t,fgrid,self.t_LF3start,event_name='LF3_start')
-                
-            if self.t_LF1start > 0.0 or self.t_LF2start > 0.0 or self.t_LF3start > 0.0:
-                
-                if fgrid >= F_LF1+del_f  or fgrid >= F_LF2+del_f or fgrid >= F_LF3+del_f:
-                    if fgrid >= F_LF1+del_f and self.t_LF1start > 0.0:
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF1start,event_name='LF1_reset')
-                        self.t_LF1start = 0.0
-                    if fgrid >= F_LF2+del_f and self.t_LF2start > 0.0:
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF2start,event_name='LF2_reset')   
-                        self.t_LF2start = 0.0
-                    if fgrid >= F_LF3+del_f and self.t_LF3start > 0.0:
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF3start,event_name='LF3_reset')   
-                        self.t_LF3start = 0.0
-                
-                if t-self.t_LF1start >= t_LF1_limit and self.t_LF1start > 0.0:   #Trip inverter if any limit breached
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF1start,event_name='inverter_trip_LF1')
-                        #six.print_(t-self.t_LF1start)
-                        self.LFRT_trip_signals()
-                        
-                elif t-self.t_LF2start >= t_LF2_limit and self.t_LF2start > 0.0:
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF2start,event_name='inverter_trip_LF2')
-                        self.LFRT_trip_signals()
-                        
-                elif t-self.t_LF3start >= t_LF3_limit and self.t_LF3start > 0.0:
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF3start,event_name='inverter_trip_LF3')
-                        self.LFRT_trip_signals()
-                        
-                if fgrid < F_LF1 and self.t_LF1start > 0.0:
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF1start,event_name='LF1_zone') #,verbose = False
-                if fgrid < F_LF2 and self.t_LF2start > 0.0:
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF2start,event_name='LF2_zone')
-                if fgrid < F_LF3 and self.t_LF3start > 0.0:
-                        utility_functions.print_LFRT_events(t,fgrid,self.t_LF3start,event_name='LF3_zone')
-                        #six.print_(self.t_LF2start)
+                if any(self.LFRT_dict[key]['t_LFstart']==0.0 for key in self.LFRT_dict.keys()):
+                    
+                    for LFRT_key,LFRT_values in self.LFRT_dict.items():
+                        if LFRT_values['t_LFstart'] == 0.0 and fgrid < LFRT_values['F_LF']:
+                            LFRT_values['t_LFstart']  = t
+                            self.print_LFRT_events(t,fgrid,LFRT_values['t_LFstart'],event_name='LF'+LFRT_key+'_start')
+                            #print(fgrid, LFRT_values['F_LF'],LFRT_values['t_LFstart'])
 
-        elif self.LFRT_ENABLE and t > self.t_stable and self.LFRT_TRIP:
+                if any(self.LFRT_dict[key]['t_LFstart'] > 0.0 for key in self.LFRT_dict.keys()):    
+  
+                    for LFRT_key,LFRT_values in self.LFRT_dict.items():
+                        if fgrid > LFRT_values['F_LF']  + self.del_f and LFRT_values['t_LFstart'] > 0.0: #Reset timer if freqency goes above
+                           self.print_LFRT_events(t,fgrid,LFRT_values['t_LFstart'],event_name='LF'+LFRT_key+'_reset')
+                           LFRT_values['t_LFstart']  = 0.0
 
-            if self.t_LF_reconnect > 0.0:
-                if fgrid < F_LF3:
-                    utility_functions.print_LFRT_events(t,fgrid,self.t_LF_reconnect,event_name='reconnect_reset')
-                    self.t_LF_reconnect = 0.0
-                elif fgrid >= F_LF3 and t-self.t_LF_reconnect >= t_reconnect_limit:
-                    utility_functions.print_LFRT_events(t,fgrid,self.t_LF_reconnect,event_name='inverter_reconnection')
-                    self.LFRT_TRIP = False             #Reset trip flag
-                    self.LFRT_RECONNECT = True        #Set reconnect flag
-                    self.t_LF_reconnect = 0.0    #Reset timer
-                elif fgrid >= F_LF3 and t-self.t_LF_reconnect < t_reconnect_limit:
-                     utility_functions.print_LFRT_events(t,fgrid,self.t_LF_reconnect,event_name='reconnect_zone')
-            elif self.t_LF_reconnect == 0.0:
-                if fgrid >= F_LF3:
-                    self.t_LF_reconnect = t
-                    utility_functions.print_LFRT_events(t,fgrid,self.t_LF_reconnect,event_name='reconnect_start')
-                else:
-                    utility_functions.print_LFRT_events(t,fgrid,event_name='inverter_tripped')
+                    for LFRT_key,LFRT_values in self.LFRT_dict.items():
+                        if fgrid <= LFRT_values['F_LF'] and t-LFRT_values['t_LFstart'] >= LFRT_values['t_LF_limit'] and  LFRT_values['t_LFstart'] > 0.0: #Set HVRT_TRIP flag if timer exeeds limit
+                            self.print_LFRT_events(t,fgrid,LFRT_values['t_LFstart'],event_name='inverter_trip_LF'+LFRT_key)
+                            self.LFRT_TRIP = True
+                            LFRT_values['t_LFstart'] = 0.0
+                            self.t_LF_reconnect = 0.0
 
+                        elif fgrid <= LFRT_values['F_LF'] and t-LFRT_values['t_LFstart'] < LFRT_values['t_LF_limit'] and  LFRT_values['t_LFstart'] > 0.0: #Remain in LF zone and monitor
+                            self.print_LFRT_events(t,fgrid,LFRT_values['t_LFstart'],event_name='LF'+LFRT_key+'_zone')
+
+            elif self.LFRT_TRIP: #Logic after tripping/momentary cessation
+                self.DER_reconnect_logic(t)
+ 
         else:
-            self.t_LF1start = 0.0
-            self.t_LF2start = 0.0
-            self.t_LF3start = 0.0
             self.LFRT_TRIP = False
-    
-    def LFRT_trip_signals(self):
-        """ Trip Signals. """
-        
-        self.LFRT_TRIP = True
-        self.t_LF1start = 0.0
-        self.t_LF2start = 0.0
-        self.t_LF3start = 0.0
-        self.t_LF_reconnect = 0.0
+            for LFRT_key,LFRT_values in self.LFRT_dict.items():
+                 LFRT_values['t_LFstart'] = 0.0
         
     @property
     def VRT_INSTANTANEOUS_TRIP(self):
@@ -660,6 +678,27 @@ class PVDER_SmartFeatures():
             self.t_reconnect_delay = 1000.0 # A large number to prevent DER from restoring power output after end of voltage anomaly      
                     
         return self.__VRT_MOMENTARY_CESSATION
+    
+    @property
+    def FRT_INSTANTANEOUS_TRIP(self):
+        return self.__FRT_INSTANTANEOUS_TRIP
+    
+    @FRT_INSTANTANEOUS_TRIP.setter
+    def FRT_INSTANTANEOUS_TRIP(self,FRT_INSTANTANEOUS_TRIP):
+        
+        self.__FRT_INSTANTANEOUS_TRIP = FRT_INSTANTANEOUS_TRIP
+        
+        if FRT_INSTANTANEOUS_TRIP:            
+            self.LFRT_dict['1']['t_LF_limit'] = self.LFRT_dict['2']['t_LF_limit']  = 30*(1/60) #Disconnect within n cycles                     
+            self.HFRT_dict['1']['t_LF_limit'] = self.HFRT_dict['2']['t_LF_limit']  = 30*(1/60) #Disconnect within n cycles  
+            
+        else:
+            self.LFRT_dict['1']['t_LF_limit'] = self.pvderConfig['t_LF1_limit']
+            self.LFRT_dict['2']['t_LF_limit'] = self.pvderConfig['t_LF2_limit']
+            self.HFRT_dict['1']['t_HF_limit']  = self.pvderConfig['t_HF1_limit']
+            self.HFRT_dict['2']['t_HF_limit']  = self.pvderConfig['t_HF2_limit']
+                    
+        return self.__FRT_INSTANTANEOUS_TRIP   
     
     def print_LVRT_events(self,simulation_time,voltage,timer_start=0.0,event_name='',print_inline = False,verbose = False):
         """Print logs for LVRT events."""
@@ -786,7 +825,88 @@ class PVDER_SmartFeatures():
         
         self.print_event(text_string,print_inline)
         
-    def print_reconnect_events(self,simulation_time,voltage,timer_start=0.0,event_name='',print_inline = False,verbose = False):
+    
+    def print_LFRT_events(self,simulation_time,frequency,timer_start=0.0,event_name='',print_inline = False,verbose = False):
+        """Print LFRT events."""    
+        #print(event_name)
+        if event_name == 'LF1_start':
+            text_string = '{time_stamp:.4f}:LF1 zone entered at {timer_start:.4f}s for {frequency:.3f} Hz'\
+                            .format(time_stamp=simulation_time,timer_start=timer_start,frequency=frequency)
+
+        elif event_name == 'LF2_start':
+            text_string = '{time_stamp:.4f}:LF2 zone entered at {timer_start:.4f}s for {frequency:.3f} Hz'\
+                            .format(time_stamp=simulation_time,timer_start=timer_start,frequency=frequency)
+
+        elif event_name == 'LF3_start':
+            text_string = '{time_stamp:.4f}:LF3 zone entered at {timer_start:.4f}s for {frequency:.3f} Hz'\
+                            .format(time_stamp=simulation_time,timer_start=timer_start,frequency=frequency)
+
+        elif event_name == 'LF1_reset':
+            text_string = '{time_stamp:.4f}:LF1 flag reset at {time_stamp:.4f}s after {time_elasped:.4f} s in LF1 zone for {frequency:.3f} Hz'\
+                            .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,frequency=frequency)
+
+        elif event_name == 'LF2_reset':
+            text_string = '{time_stamp:.4f}:LF2 flag reset at {time_stamp:.4f}s after {time_elasped:.4f} s in LF2 zone for {frequency:.3f} Hz'\
+                            .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,frequency=frequency)
+
+        elif event_name == 'LF3_reset':
+            text_string = '{time_stamp:.4f}:LF3 flag reset at {time_stamp:.4f}s after {time_elasped:.4f} s in LF3 zone for {frequency:.3f} Hz'\
+                            .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,frequency=frequency)
+
+        elif event_name == 'LF1_zone' and verbose:
+            text_string = '{time_stamp:.4f}:LF1 zone entered at:{timer_start:.4f}s and continuing for {time_elasped:.4f}s'\
+                            .format(time_stamp=simulation_time,timer_start=timer_start,time_elasped=simulation_time-timer_start)
+
+        elif event_name == 'LF2_zone' and verbose:
+            text_string = '{time_stamp:.4f}:LF2 zone entered at:{timer_start:.4f}s and continuing for {time_elasped:.4f}s'\
+                            .format(time_stamp=simulation_time,timer_start=timer_start,time_elasped=simulation_time-timer_start)
+
+        elif event_name == 'LF3_zone' and verbose:
+            text_string = '{time_stamp:.4f}:LF3 zone entered at:{timer_start:.4f}s and continuing for {time_elasped:.4f}s'\
+                            .format(time_stamp=simulation_time,timer_start=timer_start,time_elasped=simulation_time-timer_start)
+
+
+        elif event_name == 'inverter_trip_LF1':
+            text_string = '{time_stamp:.4f}:LF1 violation at {time_stamp:.4f}s after {time_elasped:.4f} s for {frequency:.3f} Hz - Inverter will be tripped'\
+                            .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,frequency=frequency)
+            six.print_(text_string)
+
+        elif event_name == 'inverter_trip_LF2':
+            text_string = '{time_stamp:.4f}:LF2 violation at {time_stamp:.4f}s after {time_elasped:.4f} s for {frequency:.3f} Hz - Inverter will be tripped'\
+                            .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,frequency=frequency)    
+            six.print_(text_string)
+
+        elif event_name == 'inverter_trip_LF3':
+            text_string = '{time_stamp:.4f}:LF3 violation at {time_stamp:.4f}s after {time_elasped:.4f} s for {frequency:.3f} Hz - Inverter will be tripped'\
+                            .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,frequency=frequency)    
+            six.print_(text_string)
+
+        elif event_name == 'reconnect_start':
+            text_string = '{time_stamp:.4f}:Reconnect timer started at {timer_start:.4f} s for {frequency:.3f} Hz'\
+                            .format(time_stamp=simulation_time,timer_start=timer_start,frequency=frequency)
+
+        elif event_name == 'reconnect_reset':
+            text_string = '{time_stamp:.4f}:Reconnect timer reset after {time_elasped:.4f} s for {frequency:.3f} Hz'\
+                           .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,frequency=frequency)
+
+        elif event_name == 'reconnect_zone' and verbose:
+            text_string = '{time_stamp:.4f}:Reconnect timer started at {timer_start:.4f} s and continuing for {time_elasped:.4f} s'\
+                           .format(time_stamp=simulation_time,timer_start=timer_start,time_elasped=simulation_time-timer_start)
+
+        elif event_name == 'inverter_reconnection':
+            text_string = '{time_stamp:.4f}:Inverter reconnecting after LF trip at {time_stamp:.4f}s after {time_elasped:.4f}s for {frequency:.3f} Hz'\
+                            .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,frequency=frequency)
+            six.print_(text_string)
+
+        elif event_name == 'inverter_tripped' and verbose: 
+            text_string = '{time_stamp:.4f}:Inverter in tripped condition for {frequency:.3f} Hz'.format(time_stamp=simulation_time,frequency=frequency)
+
+        else:
+            text_string =''    
+
+        self.print_event(text_string,print_inline)    
+
+    def print_reconnect_events(self,simulation_time,voltage,frequency,timer_start=0.0,event_name='',print_inline = False,verbose = False):
         """Print logs for VRT events."""
         
         voltage = (voltage*self.Vbase)/(self.Vrms_ref*self.Vbase)#175
