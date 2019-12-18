@@ -48,7 +48,7 @@ class PV_Module(object):
     A = 1.92      #p-n junction ideality factor
     
     module_parameters = {'10':{'Np':2,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 650.0,'Vdcmpp_max': 800.0},
-                         '50':{'Np':11,'Ns':735,'Vdcmpp0':550.0,'Vdcmpp_min': 520.0,'Vdcmpp_max': 650.0},
+                         '50':{'Np':11,'Ns':735,'Vdcmpp0':550.0,'Vdcmpp_min': 525.0,'Vdcmpp_max': 650.0},
                          '250':{'Np':45,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 750.0,'Vdcmpp_max': 1000.0}}
     
     module_parameters_list = module_parameters.keys()
@@ -251,7 +251,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         self.initialize_logger(logging_level=verbosity)  #Set logging level - {DEBUG,INFO,WARNING,ERROR} 
                
         self.standAlone = standAlone
-        self.update_grid_measurements(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
+        self.initialize_grid_measurements(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
         self.Vrms_rated = Vrms_rated        
         
         self.parameter_ID = self.create_parameter_ID(Sinverter_rated,parameter_ID)

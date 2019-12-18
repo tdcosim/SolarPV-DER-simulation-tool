@@ -115,7 +115,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         self.initialize_logger(logging_level=verbosity)  #Set logging level - {DEBUG,INFO,WARNING,ERROR}       
         
         self.standAlone = standAlone
-        self.update_grid_measurements(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
+        self.initialize_grid_measurements(gridVoltagePhaseA = gridVoltagePhaseA,gridFrequency =gridFrequency)
         self.Vrms_rated = Vrms_rated
         
         self.parameter_ID = self.create_parameter_ID(Sinverter_rated,parameter_ID)
@@ -230,9 +230,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         self.vta = self.vta_calc()
                 
         #Update PCC LV side voltage
-        self.va = self.va_calc()
-        self.vb = self.vb_calc()
-        self.vc = self.vc_calc()
+        self.va = self.va_calc()        
         
     def update_RMS(self):
         """Update RMS voltages."""
@@ -243,7 +241,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         
         #Update RMS values
         if self.DO_EXTRA_CALCULATIONS:
-            self.Vabrms = self.Vabrms_calc()        
+            pass
     
     def update_power(self):
         """Update RMS voltages."""

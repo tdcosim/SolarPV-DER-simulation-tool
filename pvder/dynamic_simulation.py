@@ -13,6 +13,8 @@ import logging
 ####from graphviz import Digraph
 from pvder.utility_classes import Logging
 from pvder.grid_components import Grid
+from pvder.DER_components_three_phase  import SolarPV_DER_ThreePhase
+from pvder.DER_components_three_phase_balanced import SolarPV_DER_ThreePhaseBalanced
 from pvder.simulation_utilities import SimulationUtilities
 from pvder import utility_functions
 from pvder import config
@@ -780,21 +782,30 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.S_t =  self._S_t 
         self.S_PCC_t = self._S_PCC_t        
         
-    def run_simulation(self,gridVoltagePhaseA=None,gridVoltagePhaseB=None,gridVoltagePhaseC=None,y0=None,t=None):
+    def run_simulation(self,gridVoltagePhaseA=None,gridVoltagePhaseB=None,gridVoltagePhaseC=None,gridFrequency=None,y0=None,t=None):
         """Call the ODE solver and collect states."""
         
         #solution  = self.solve_ODE(t)
         self.solution_time = None #Always reset simulation time to None
         
         if self.LOOP_MODE:
-            if isinstance(gridVoltagePhaseA,complex) and y0 != None and t != None:
-            #if type(gridVoltagePhaseA) == complex and y0 != None and t != None:
-                self.PV_model.gridVoltagePhaseA = gridVoltagePhaseA
-                self.PV_model.gridVoltagePhaseB = gridVoltagePhaseB
-                self.PV_model.gridVoltagePhaseC = gridVoltagePhaseC
+            assert isinstance(y0,list), 'Initial states (y0) should be provided as a list in loop mode.'
+            assert isinstance(t,list), 'Time steps (t) should be provided as a list in loop mode.'
+            assert isinstance(gridVoltagePhaseA,complex), 'Grid voltage - phase A should be provided as a complex scalar in loop mode.'
+            
+            if isinstance(self.PV_model,SolarPV_DER_ThreePhase):
+                assert isinstance(gridVoltagePhaseB,complex), 'Grid voltage - phase B should be provided as a complex scalar in loop mode.'
+                assert isinstance(gridVoltagePhaseC,complex), 'Grid voltage - phase C should be provided as a complex scalar in loop mode.'
+            
+            #if isinstance(gridVoltagePhaseA,complex) and y0 != None and t != None:
+                #self.PV_model.gridVoltagePhaseA = gridVoltagePhaseA
+                #self.PV_model.gridVoltagePhaseB = gridVoltagePhaseB
+                #self.PV_model.gridVoltagePhaseC = gridVoltagePhaseC
+            
+            self.update_grid_measurements(gridVoltagePhaseA=gridVoltagePhaseA, gridVoltagePhaseB=gridVoltagePhaseB, gridVoltagePhaseC=gridVoltagePhaseC,gridFrequency=gridFrequency)
         
-            else:
-                raise ValueError('Grid voltage (complex scalar), initial states (y0), and time steps (t) should be provided in loop mode.')
+            #else:
+            #    raise ValueError('Grid voltage (complex scalar), initial states (y0), and time steps (t) should be provided in loop mode.')
             
             if t[0] == 0.0:
                 self.t = t
@@ -831,6 +842,26 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         else:
             self.collect_states(solution)  #Atleast states must be collected    
         
+    def update_grid_measurements(self,gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency):
+        """Update grid voltage and frequency in non-standalone model.
+
+        Args:
+             gridVoltagePhaseA (complex): Value of gridVoltagePhaseA
+             gridVoltagePhaseB (complex): Value of gridVoltagePhaseB
+             gridVoltagePhaseC (complex): Value of gridVoltagePhaseC
+             gridFrequency (float): Value of gridFrequency
+        
+        """
+        
+        self.gridFrequency = gridFrequency
+        self.PV_model.gridVoltagePhaseA = gridVoltagePhaseA
+        if isinstance(self.PV_model,SolarPV_DER_ThreePhase):
+            self.PV_model.gridVoltagePhaseB = gridVoltagePhaseB
+            self.PV_model.gridVoltagePhaseC = gridVoltagePhaseC
+        elif isinstance(self.PV_model,SolarPV_DER_ThreePhaseBalanced):
+            self.PV_model.gridVoltagePhaseB = utility_functions.Ub_calc(gridVoltagePhaseA)
+            self.PV_model.gridVoltagePhaseC = utility_functions.Uc_calc(gridVoltagePhaseA)
+    
     def show_simulation_time(self):
         """Show simulation time."""
         

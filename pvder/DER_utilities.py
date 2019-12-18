@@ -99,22 +99,6 @@ class PVDER_ModelUtilities(BaseValues):
         
         return self.Kp_GCC*self.uc + self.xc #PI controller equation
     
-    def update_grid_measurements(self,gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency):
-        """Update grid voltage and frequency in non-standalone mode.
-
-         Args:
-             gridVoltagePhaseA (complex): Description of gridVoltagePhaseA
-             gridVoltagePhaseB (complex): Description of gridVoltagePhaseB
-             gridVoltagePhaseC (complex): Description of gridVoltagePhaseC
-             gridFrequency (float): Description of gridFrequency
-
-         """
-        
-        if not self.standAlone:
-            assert  gridVoltagePhaseA != None and gridFrequency != None, 'Voltage and frequency of grid voltage source need to be supplied if model is not stand alone!'
-            self.gridVoltagePhaseA, self.gridVoltagePhaseB, self.gridVoltagePhaseC = gridVoltagePhaseA/self.Vbase, gridVoltagePhaseB/self.Vbase, gridVoltagePhaseC/self.Vbase
-            self.gridFrequency = gridFrequency
-    
     #Controller outer loop equations (Current set-point)    
     def ia_ref_calc(self):
         """Phase A current reference"""
@@ -152,11 +136,19 @@ class PVDER_ModelUtilities(BaseValues):
         return self.mc*(self.Vdc/2)
     
     
+    def vpcc_calc(self,vgrid,iph):
+        """PCC - LV side"""
+        
+        vpcc = ((vgrid+(iph/self.a)*self.grid_model.Z2)/(self.a) +iph*self.Z1)*((self.Zload1*self.a*self.a)/((self.a*self.a*(self.Z1+self.Zload1))+self.grid_model.Z2))
+        
+        return vpcc        
+    
     def va_calc(self):
         """PCC - LV side - Phase A"""
         
         if self.standAlone:
-            val=((self.grid_model.vag+(self.ia/self.a)*self.grid_model.Z2)/(self.a) +self.ia*self.Z1)*((self.Zload1*self.a*self.a)/((self.a*self.a*(self.Z1+self.Zload1))+self.grid_model.Z2))
+            #val=((self.grid_model.vag+(self.ia/self.a)*self.grid_model.Z2)/(self.a) +self.ia*self.Z1)*((self.Zload1*self.a*self.a)/((self.a*self.a*(self.Z1+self.Zload1))+self.grid_model.Z2))
+            val = self.vpcc_calc(self.grid_model.vag,self.ia)
         
         else:
             val=self.gridVoltagePhaseA
@@ -172,7 +164,11 @@ class PVDER_ModelUtilities(BaseValues):
                 val=((self.grid_model.vbg)/(self.a))*((self.Zload1*self.a*self.a)/((self.a*self.a*(self.Z1+self.Zload1))+self.grid_model.Z2))
             
             elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
-                val = ((self.grid_model.vbg+(self.ib/self.a)*self.grid_model.Z2)/(self.a) +self.ib*self.Z1)*((self.Zload1*self.a*self.a)/((self.a*self.a*(self.Z1+self.Zload1))+self.grid_model.Z2))
+                #val = ((self.grid_model.vbg+(self.ib/self.a)*self.grid_model.Z2)/(self.a) +self.ib*self.Z1)*((self.Zload1*self.a*self.a)/((self.a*self.a*(self.Z1+self.Zload1))+self.grid_model.Z2))
+                val = self.vpcc_calc(self.grid_model.vbg,self.ib)
+            
+            elif type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
+                val = self.vpcc_calc(utility_functions.Ub_calc(self.grid_model.vag),self.ib)    
         
         else:
             val=self.gridVoltagePhaseB
@@ -188,7 +184,11 @@ class PVDER_ModelUtilities(BaseValues):
                 val=((self.grid_model.vcg)/(self.a))*((self.Zload1*self.a*self.a)/((self.a*self.a*(self.Z1+self.Zload1))+self.grid_model.Z2))
             
             elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
-                val = ((self.grid_model.vcg+(self.ic/self.a)*self.grid_model.Z2)/(self.a) +self.ic*self.Z1)*((self.Zload1*self.a*self.a)/((self.a*self.a*(self.Z1+self.Zload1))+self.grid_model.Z2))
+                #val = ((self.grid_model.vcg+(self.ic/self.a)*self.grid_model.Z2)/(self.a) +self.ic*self.Z1)*((self.Zload1*self.a*self.a)/((self.a*self.a*(self.Z1+self.Zload1))+self.grid_model.Z2))
+                val = self.vpcc_calc(self.grid_model.vcg,self.ic)
+            
+            elif type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
+                val = self.vpcc_calc(utility_functions.Uc_calc(self.grid_model.vag),self.ic)    
         
         else:
             val=self.gridVoltagePhaseC

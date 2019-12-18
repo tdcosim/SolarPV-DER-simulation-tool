@@ -82,13 +82,13 @@ class SolarPV_DER_ThreePhaseBalanced(PV_Module,PVDER_SetupUtilities,PVDER_SmartF
     #Duty cycle
     m_steady_state = 0.96 #Expected duty cycle at steady state    
     
-    def __init__(self,events,grid_model = None,\
+    def __init__(self,events,grid_model = None,
                              Sinverter_rated = 50.0e3, Vrms_rated = None,
-                             ia0 = 0+0j, xa0 = 0+0j, ua0 = 0+0j,\
-                             xDC0 = 0, xQ0 = 0, xPLL0 = 0.0, wte0 = 2*math.pi,\
+                             ia0 = 0+0j, xa0 = 0+0j, ua0 = 0+0j,
+                             xDC0 = 0, xQ0 = 0, xPLL0 = 0.0, wte0 = 2*math.pi,
                              gridVoltagePhaseA = None,                             
-                             gridFrequency = None,\
-                             standAlone = True, STEADY_STATE_INITIALIZATION = False,\
+                             gridFrequency = None,
+                             standAlone = True, STEADY_STATE_INITIALIZATION = False,
                              pvderConfig = None, identifier = None, verbosity = 'INFO',
                              parameter_ID = None):
         
@@ -100,7 +100,7 @@ class SolarPV_DER_ThreePhaseBalanced(PV_Module,PVDER_SetupUtilities,PVDER_SmartF
           Sinverter_rated (float): A scalar specifying the rated power (VA) of the DER.
           ia0,xa0,ua0 (complex): Initial value of inverter states in p.u. of the DER instance.
           xDC0,xQ0,xPLL0,wte0 (float): Initial value of inverter states in the DER instance.
-          gridVoltatePhaseA,gridVoltatePhaseA,gridVoltatePhaseA (float): Initial voltage phasor (V) at PCC - LV side from external program (only need to be suppled if model is not stand alone).
+          gridVoltatePhaseA (float): Initial voltage phasor (V) at PCC - LV side from external program (only need to be suppled if model is not stand alone).
           standAlone (bool): Specify if the DER instance is a stand alone simulation or part of a larger simulation.
           STEADY_STATE_INITIALIZATION (bool): Specify whether states in the DER instance will be initialized to steady state values.
           pvderConfig (dict): Configuration parameters that may be supplied from an external program.
@@ -119,7 +119,7 @@ class SolarPV_DER_ThreePhaseBalanced(PV_Module,PVDER_SetupUtilities,PVDER_SmartF
         self.initialize_logger(logging_level=verbosity)  #Set logging level - {DEBUG,INFO,WARNING,ERROR} 
                
         self.standAlone = standAlone
-        self.update_grid_measurements(gridVoltagePhaseA,utility_functions.Ub_calc(gridVoltagePhaseA), utility_functions.Uc_calc(gridVoltagePhaseA),gridFrequency)
+        self.initialize_grid_measurements(gridVoltagePhaseA = gridVoltagePhaseA,gridFrequency =gridFrequency)
         self.Vrms_rated = Vrms_rated        
         
         self.parameter_ID = self.create_parameter_ID(Sinverter_rated,parameter_ID)
@@ -136,6 +136,7 @@ class SolarPV_DER_ThreePhaseBalanced(PV_Module,PVDER_SetupUtilities,PVDER_SmartF
         self.initialize_DER(pvderConfig)
                 
         self.VRT_initialize() #LVRT and HVRT settings        
+        self.FRT_initialize() #LFRT and HFRT settings
         
         self.initialize_jacobian()
         self.reset_reference_counters()

@@ -90,6 +90,34 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         
         self.logger.info('{}:PV-DER parameters updated with parameters from  parameter dictionary {}!'.format(self.name,self.parameter_ID))
     
+    
+    def initialize_grid_measurements(self,gridVoltagePhaseA = None, gridVoltagePhaseB = None, gridVoltagePhaseC = None, gridFrequency = None):
+        """Initialize inverter states.
+
+        Args:
+             gridVoltagePhaseA (complex): Value of gridVoltagePhaseA
+             gridVoltagePhaseB (complex): Value of gridVoltagePhaseB
+             gridVoltagePhaseC (complex): Value of gridVoltagePhaseC
+             gridFrequency (float): Value of gridFrequency
+        
+        """        
+        
+        if not self.standAlone:
+            assert  gridFrequency != None, 'Frequency of grid voltage source need to be supplied if model is not stand alone!'
+            self.gridFrequency = gridFrequency           
+            
+            if type(self).__name__ == 'SolarPV_DER_SinglePhase' or type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
+                assert  gridVoltagePhaseA != None, 'Phase A voltage of grid voltage source need to be supplied if model is not stand alone!'
+               
+                self.gridVoltagePhaseA = gridVoltagePhaseA/self.Vbase
+                if type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
+                    self.gridVoltagePhaseB = utility_functions.Ub_calc(gridVoltagePhaseA)/self.Vbase
+                    self.gridVoltagePhaseC = utility_functions.Uc_calc(gridVoltagePhaseA)/self.Vbase
+            
+            elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
+                assert  gridVoltagePhaseA != None and gridVoltagePhaseB != None and gridVoltagePhaseC != None, 'Phase A, B, and C voltage of grid voltage source need to be supplied if model is not stand alone!'     
+                self.gridVoltagePhaseA, self.gridVoltagePhaseB, self.gridVoltagePhaseC =  gridVoltagePhaseA/self.Vbase, gridVoltagePhaseB/self.Vbase, gridVoltagePhaseC/self.Vbase                
+    
     def initialize_states(self,ia0,xa0,ua0,xDC0,xQ0,xPLL0,wte0):
         """Initialize inverter states.
 
@@ -140,7 +168,6 @@ class PVDER_SetupUtilities(BaseValues,Logging):
                 self.xc = xc0   #Shift by +120 degrees
                 self.uc = uc0
 
-    
     def initialize_derived_quantities(self):
         """Initialize quantities other than states."""
         
