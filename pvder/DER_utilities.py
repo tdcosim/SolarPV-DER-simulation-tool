@@ -44,7 +44,8 @@ class PVDER_ModelUtilities(BaseValues):
     Vdc_ref_list = []
     Vdc_ref_total = len(Vdc_ref_list) #Get total events
     Vdc_ref_counter = 0
-    del_Vdc_ref = 1.0
+    del_Vdc_ref = config.DEFAULT_del_Vdc_ref
+    del_t_Vdc_ref = config.DEFAULT_del_t_Vdc_ref
     
     #Grid frequency estimate variables
     use_frequency_estimate = config.DEFAULT_USE_FREQUENCY_ESTIMATE
@@ -98,22 +99,6 @@ class PVDER_ModelUtilities(BaseValues):
         """
         
         return self.Kp_GCC*self.uc + self.xc #PI controller equation
-    
-    def update_grid_measurements(self,gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency):
-        """Update grid voltage and frequency in non-standalone mode.
-
-         Args:
-             gridVoltagePhaseA (complex): Description of gridVoltagePhaseA
-             gridVoltagePhaseB (complex): Description of gridVoltagePhaseB
-             gridVoltagePhaseC (complex): Description of gridVoltagePhaseC
-             gridFrequency (float): Description of gridFrequency
-
-         """
-        
-        if not self.standAlone:
-            assert  gridVoltagePhaseA != None and gridFrequency != None, 'Voltage and frequency of grid voltage source need to be supplied if model is not stand alone!'
-            self.gridVoltagePhaseA, self.gridVoltagePhaseB, self.gridVoltagePhaseC = gridVoltagePhaseA/self.Vbase, gridVoltagePhaseB/self.Vbase, gridVoltagePhaseC/self.Vbase
-            self.gridFrequency = gridFrequency
     
     #Controller outer loop equations (Current set-point)    
     def ia_ref_calc(self):
@@ -404,7 +389,16 @@ class PVDER_ModelUtilities(BaseValues):
         if PRINT_ERROR:
             print('Active power output error:{:.4f}\nReactive power output error:{:.4f}'.format(abs(self.Pt_phasor-self.Pt_RMS),abs(self.Qt_phasor-self.Qt_RMS)))    
             print('Inverter filter active power loss error:{:.4f}\nInverter filter reactive power loss error:{:.4f}'.format(abs(self.Pf_phasor-self.Pf_RMS),abs(self.Qf_phasor-self.Qf_RMS)))
-    
+        
+    def set_Vdc_ref(self):
+        """Return the correct Vdc reference voltage."""
+        
+        if self.MPPT_ENABLE:
+            Vdc_ref = self.Vdcmpp/self.Vdcbase
+        else:
+            Vdc_ref = self.Vdcnominal
+        
+        return Vdc_ref        
     
     def MPP_table(self):
         """Method to output Vdc reference corresponding to MPP at different insolation levels values."""
@@ -470,8 +464,11 @@ class PVDER_ModelUtilities(BaseValues):
             self.add_Vdc_ref(t=tstart,Vdc_ref=Vdc_ref_target)
             
         else:
+            if Vdc_ref_start>Vdc_ref_target:
+                self.del_Vdc_ref = -self.del_Vdc_ref
             Vdc_ref_range = np.arange(Vdc_ref_start+self.del_Vdc_ref,Vdc_ref_target+self.del_Vdc_ref,self.del_Vdc_ref)
-            trange = np.arange(tstart,tstart+len(Vdc_ref_range),1.0)
+            Vdc_ref_range[-1]=Vdc_ref_target
+            trange = np.arange(tstart,tstart+len(Vdc_ref_range),self.del_t_Vdc_ref)
             for i,Vdc_ref in enumerate(Vdc_ref_range):
                 self.add_Vdc_ref(t=trange[i],Vdc_ref=Vdc_ref)
             

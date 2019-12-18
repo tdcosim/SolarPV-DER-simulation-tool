@@ -54,8 +54,6 @@ class TestPVDER(unittest.TestCase):
         PVDER = SolarPV_DER_SinglePhase(events = events,
                                        Sinverter_rated = self.power_rating,Vrms_rated = self.Vrms, #175
                                        gridVoltagePhaseA = self.Va,
-                                       gridVoltagePhaseB = self.Vb,
-                                       gridVoltagePhaseC = self.Vc,
                                        gridFrequency = self.wgrid,
                                        standAlone = False,STEADY_STATE_INITIALIZATION=True,verbosity = 'DEBUG')
     
@@ -75,8 +73,6 @@ class TestPVDER(unittest.TestCase):
         PVDER = SolarPV_DER_SinglePhase(events = events,
                                        Sinverter_rated = self.power_rating,Vrms_rated = self.Vrms, #175
                                        gridVoltagePhaseA = self.Va,
-                                       gridVoltagePhaseB = self.Vb,
-                                       gridVoltagePhaseC = self.Vc,
                                        gridFrequency = self.wgrid,
                                        standAlone = False,STEADY_STATE_INITIALIZATION=True,verbosity = 'INFO')   
     
@@ -100,8 +96,6 @@ class TestPVDER(unittest.TestCase):
         PVDER = SolarPV_DER_SinglePhase(events = events,
                                        Sinverter_rated = self.power_rating,Vrms_rated = self.Vrms, #175
                                        gridVoltagePhaseA = self.Va,
-                                       gridVoltagePhaseB = self.Vb,
-                                       gridVoltagePhaseC = self.Vc,
                                        gridFrequency = self.wgrid,
                                        standAlone = False,STEADY_STATE_INITIALIZATION=True,verbosity = 'DEBUG')
     

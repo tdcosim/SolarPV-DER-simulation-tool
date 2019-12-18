@@ -23,6 +23,11 @@ DEFAULT_Vreconnect_HV =  1.02  #Uppder limit of voltage required for reconnectio
 DEFAULT_freconnect_LF = 58.8
 DEFAULT_freconnect_HF = 61.2
 
+#DC link voltage control
+DEFAULT_del_Vdc_ref = 2.0
+DEFAULT_del_t_Vdc_ref = 0.5
+
+
 #Frequency estimation
 DEFAULT_USE_FREQUENCY_ESTIMATE = False
 

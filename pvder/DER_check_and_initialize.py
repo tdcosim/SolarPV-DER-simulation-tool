@@ -90,6 +90,32 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         
         self.logger.info('{}:PV-DER parameters updated with parameters from  parameter dictionary {}!'.format(self.name,self.parameter_ID))
     
+    def initialize_grid_measurements(self,gridVoltagePhaseA=None,gridVoltagePhaseB = None, gridVoltagePhaseC = None, gridFrequency = None):
+        """Initialize inverter states.
+        Args:
+             gridVoltagePhaseA (complex): Value of gridVoltagePhaseA
+             gridVoltagePhaseB (complex): Value of gridVoltagePhaseB
+             gridVoltagePhaseC (complex): Value of gridVoltagePhaseC
+             gridFrequency (float): Value of gridFrequency
+        
+        """        
+
+        if not self.standAlone:
+            assert  gridFrequency != None, 'Frequency of grid voltage source need to be supplied if model is not stand alone!'
+            self.gridFrequency = gridFrequency           
+
+            if type(self).__name__ == 'SolarPV_DER_SinglePhase' or type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
+                assert  gridVoltagePhaseA != None, 'Phase A voltage of grid voltage source need to be supplied if model is not stand alone!'
+
+                self.gridVoltagePhaseA = gridVoltagePhaseA/self.Vbase
+                if type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
+                    self.gridVoltagePhaseB = utility_functions.Ub_calc(gridVoltagePhaseA)/self.Vbase
+                    self.gridVoltagePhaseC = utility_functions.Uc_calc(gridVoltagePhaseA)/self.Vbase
+
+            elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
+                assert  gridVoltagePhaseA != None and gridVoltagePhaseB != None and gridVoltagePhaseC != None, 'Phase A, B, and C voltage of grid voltage source need to be supplied if model is not stand alone!'     
+                self.gridVoltagePhaseA, self.gridVoltagePhaseB, self.gridVoltagePhaseC =  gridVoltagePhaseA/self.Vbase, gridVoltagePhaseB/self.Vbase, gridVoltagePhaseC/self.Vbase
+    
     def initialize_states(self,ia0,xa0,ua0,xDC0,xQ0,xPLL0,wte0):
         """Initialize inverter states.
 
@@ -178,41 +204,53 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         """Initialize inverter voltage and power ratings."""
         
         if self.check_parameter_ID(self.parameter_ID,self.inverter_ratings):
-            self.Sinverter_rated = self.inverter_ratings[self.parameter_ID]['Srated'] #Sinverter_rated #Inverter rating in kVA
-            self.Sinverter_nominal = (self.Sinverter_rated/BaseValues.Sbase) #Converting to p.u. value           
             
-            self.Vdcrated = self.inverter_ratings[self.parameter_ID]['Vdcrated'] #Rated DC voltage
-        
-            if self.Vrms_rated is None:
-                self.Varated = self.inverter_ratings[self.parameter_ID]['Varated'] #L-G peak to peak equivalent to 300 V L-L RMS
-                self.Vrms_rated = self.Varated/math.sqrt(2)
-            else:
-                self.Varated = self.Vrms_rated*math.sqrt(2)
-
-            if type(self).__name__ == 'SolarPV_DER_SinglePhase':
-                self.Iarated = (self.Sinverter_rated/(self.Varated/math.sqrt(2)))*math.sqrt(2)
-            elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
-                self.Iarated = (self.Sinverter_rated/(3*(self.Varated/math.sqrt(2))))*math.sqrt(2)            
-            
-            ##Per-unit values
-            self.Vanominal = self.Varated/BaseValues.Vbase #Converting to p.u. value
-            self.Vrms_ref =  self.Vanominal/math.sqrt(2) 
-
-            self.Vdcnominal = self.Vdcrated/self.Vdcbase   #Converting to p.u. value            
-            
-            if self.MPPT_ENABLE:
-                self.Vdc_ref = self.Vdcmpp/self.Vdcbase
-                self.Vdc_ref_new = self.Vdcmpp/self.Vdcbase
-            else:
-                self.Vdc_ref = self.Vdcnominal
-                self.Vdc_ref_new = self.Vdcnominal
-
-            self.Ioverload = self.inverter_ratings[self.parameter_ID]['Ioverload']  #Inverter current overload rating (Max 10s)            
-            
-            self.iref_limit = (self.Iarated/self.Ibase)*self.Ioverload #Maximum current reference
+            self.initialize_Sinverter()
+            self.initialize_Vdc()
+            self.initialize_Vac()    
+            self.initialize_Iac()
             
         else:
             raise ValueError('Inverter voltage, current, power ratings not available for parameter ID {}!'.format(self.parameter_ID))       
+    
+    def initialize_Sinverter(self):
+        """Initialize inverter power rating."""
+        
+        self.Sinverter_rated = self.inverter_ratings[self.parameter_ID]['Srated'] #Inverter rating in kVA
+        self.Sinverter_nominal = (self.Sinverter_rated/BaseValues.Sbase) #Converting to p.u. value           
+        
+    def initialize_Vdc(self):
+        """Initialize DC side voltages."""
+        
+        self.Vdcrated = self.inverter_ratings[self.parameter_ID]['Vdcrated'] #Rated DC voltage
+        self.Vdcnominal = self.Vdcrated/self.Vdcbase   #Converting to p.u. value 
+        self.Vdc_ref = self.set_Vdc_ref()
+        self.Vdc_ref_new = self.set_Vdc_ref()        
+    
+    def initialize_Vac(self):
+        """Initialize AC side voltages."""
+        
+        if self.Vrms_rated is None:
+            self.Varated = self.inverter_ratings[self.parameter_ID]['Varated'] #L-G peak to peak 
+            self.Vrms_rated = self.Varated/math.sqrt(2) #L-G RMS
+        else:
+            self.Varated = self.Vrms_rated*math.sqrt(2)
+        
+        #Converting to p.u. value
+        self.Vanominal = self.Varated/BaseValues.Vbase
+        self.Vrms_ref =  self.Vanominal/math.sqrt(2)             
+    
+    def initialize_Iac(self):
+        """Initialize AC side currents."""
+        
+        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
+            self.Iarated = (self.Sinverter_rated/(self.Varated/math.sqrt(2)))*math.sqrt(2)
+        elif type(self).__name__ == 'SolarPV_DER_ThreePhase' or type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
+            self.Iarated = (self.Sinverter_rated/(3*(self.Varated/math.sqrt(2))))*math.sqrt(2)            
+        
+        self.Ioverload = self.inverter_ratings[self.parameter_ID]['Ioverload']  #Inverter current overload rating (Max 10s)            
+        self.iref_limit = (self.Iarated/self.Ibase)*self.Ioverload #Maximum current reference
+    
     
     def initialize_circuit_parameters(self):
         """Initialize C, Lf, and Rf parameters."""

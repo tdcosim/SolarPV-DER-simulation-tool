@@ -28,7 +28,8 @@ class PVDER_SmartFeatures():
                        'F_HF1':61.2,'F_HF2':62.0,
                        't_HF1_limit':299.0,'t_HF2_limit':1/60,
                        'FRT_INSTANTANEOUS_TRIP':False,
-                        'OUTPUT_RESTORE_DELAY':0.5}
+                       'OUTPUT_RESTORE_DELAY':0.5,
+                       'RESTORE_Vdc':False}
      #Voltage and frequency ride through settings from IEEE 1557-2018 Category III    
     
     f_ref = 60.0
@@ -174,6 +175,15 @@ class PVDER_SmartFeatures():
         if self.LFRT_TRIP:
             self.PV_DER_disconnect()         
     
+    def check_and_reconnect(self,t):
+        """Check and reconnect."""
+        
+        if self.LVRT_RECONNECT:
+            self.LVRT_RECONNECT = False
+            if self.RESTORE_Vdc:
+                self.Vdc_ref_ramp(t,self.set_Vdc_ref()*self.Vbase)
+                self.logger.info('Ramping Vdc to pre-anomaly setpoint with Vdc reference list:{}'.format(self.Vdc_ref_list))
+    
     def VRT_initialize(self):
         """Initialize LVRT and HVRT settings."""
         
@@ -235,6 +245,8 @@ class PVDER_SmartFeatures():
         
         self.VRT_INSTANTANEOUS_TRIP = self.pvderConfig['VRT_INSTANTANEOUS_TRIP'] #Disconnects PV-DER within one cycle for voltage anomaly
         self.VRT_MOMENTARY_CESSATION = self.pvderConfig['VRT_MOMENTARY_CESSATION'] #Reconnect PV-DER after voltage anomaly
+        self.RESTORE_Vdc = self.pvderConfig['RESTORE_Vdc'] #Restore Vdc to nominal reference by using a ramp
+        
         self.check_LVRT_settings()
         self.check_HVRT_settings()
         

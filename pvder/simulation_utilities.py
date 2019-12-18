@@ -246,12 +246,14 @@ class SimulationResults(Logging):
             y_labels='radians'
         
         elif plot_type == 'frequency':
-            plot_values = [self.simulation.wgrid_t,self.simulation.we_t]
-            #legends=['Grid frequency','PLL frequency']
+            if self.simulation.PV_model.standAlone:
+                plot_values = [self.simulation.wgrid_t,self.simulation.we_t] #legends=['Grid frequency','PLL frequency']
             
-            legends=[r"$\omega_{grid}$",r"$\omega_{PLL}$"]
-            plot_title='Grid voltage source and PLL: Frequency'
-            y_labels='radians/s'
+                legends=[r"$\omega_{grid}$",r"$\omega_{PLL}$"]
+                plot_title='Grid voltage source and PLL: Frequency'
+                y_labels='radians/s'
+            else:
+                raise ValueError('Frequency plot is only available if PV-DER model is stand alone!') 
         
         elif plot_type == 'duty_cycle':
             plot_values = [self.simulation.ma_absolute_t]
