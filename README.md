@@ -16,7 +16,7 @@ The dynamics of the DER are modelled using dynamic phasors. Detailed description
 The following features are available currently:
 1. Single phase, three phase balanced, and three phase unbalanced (phase voltages may be unbalanced) DER models.
 2. Run simulation in stand alone mode with internal grid voltage source (stiff) model.
-3. Run simulation in loop mode where grid voltage and frequency is supplied every time step by a third party program.
+3. Run simulation in loop mode where grid voltage is supplied every time step by a third party program.
 4. Visualize or retrieve simulation results for voltages, current, active, and reactive power.
 5. Introduce solar insolation events (in all modes), grid voltage, and frequency change events (in stand alone mode).
 6. Retrieve and modify model parameters from a third party program.
@@ -106,6 +106,9 @@ Try out Jupyter notebooks with usage examples in Google Colab:
 
 Basic usage:
 [![Basic usage](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sibyjackgrove/SolarPV-DER-simulation-utility/blob/master/examples/PV-DER_usage_example.ipynb)
+
+Running simulation in loop mode:
+[![Updating model parameters](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility/blob/master/examples/PV-DER_usage_example_loop_mode.ipynb)
 
 Updating model parameters:
 [![Updating model parameters](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility/blob/master/examples/PV-DER_parameter_update_example.ipynb)
