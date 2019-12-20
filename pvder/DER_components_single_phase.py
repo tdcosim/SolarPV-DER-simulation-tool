@@ -45,17 +45,23 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
     
     #Inverter current overload rating (Max 10s)
     inverter_ratings = {'10':{'Srated':10e3,'Varated':250.0,'Vdcrated':550.0,'Ioverload':config.DEFAULT_Ioverload},
+                        '1':{'Srated':1e3,'Varated':100.0,'Vdcrated':250.0,'Ioverload':config.DEFAULT_Ioverload},
                         }
     
     circuit_parameters = {'10':{'Rf_actual':0.002,'Lf_actual' :25.0e-6,'C_actual':300.0e-6,'Z1_actual':0.0019 + 1j*0.0561},
+                          '1':{'Rf_actual':0.01,'Lf_actual' :3.0e-3,'C_actual':300.0e-6,'Z1_actual':0.0019 + 1j*0.0561},
                           }
     
     controller_parameters = {'10':{'scale_Kp_GCC':0.025,'scale_Ki_GCC':0.025,\
                                    'scale_Kp_DC':0.025,'scale_Ki_DC' : 0.025,\
                                    'scale_Kp_Q' : 0.025,'scale_Ki_Q' : 0.025,'wp' : 20e4},
-                             }
+                            '1':{'scale_Kp_GCC':0.025,'scale_Ki_GCC':0.025,\
+                                 'scale_Kp_DC':0.025,'scale_Ki_DC' : 0.025,\
+                                 'scale_Kp_Q' : 0.025,'scale_Ki_Q' : 0.025,'wp' : 20e4},
+                            }
     
-    steadystate_values = {'10':{'maR0':0.7,'maI0':0.0,'iaR0':0.5,'iaI0':0.01}
+    steadystate_values = {'10':{'maR0':0.7,'maI0':0.0,'iaR0':0.5,'iaI0':0.01},
+                          '1':{'maR0':0.7,'maI0':0.0,'iaR0':0.5,'iaI0':0.01}
                          }
     
     #Sinverter_list = inverter_ratings.keys()

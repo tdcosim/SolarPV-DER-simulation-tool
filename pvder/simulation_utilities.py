@@ -238,7 +238,13 @@ class SimulationResults(Logging):
             y_labels=_reactive_power_label
     
         elif plot_type == 'phase_angle':
-            plot_values = [self.simulation.phi_at_t,self.simulation.phi_a_t,self.simulation.phi_ag_t,self.simulation.phi_a_t-self.simulation.phi_ag_t]
+            if not self.simulation.PV_model.standAlone:
+                raise ValueError('Plot {} is only available in Stand Alone mode!'.format(plot_type))
+            
+            plot_values = [self.simulation.phi_at_t,self.simulation.phi_a_t]
+            if self.simulation.PV_model.standAlone:
+                plot_values = plot_values + [self.simulation.phi_ag_t,self.simulation.phi_a_t-self.simulation.phi_ag_t]
+                
             #legends=['theta_vat','theta_va','theta_vag','theta_va-theta_vag']
             
             legends=[r"$\phi^{inv}_{a}$",r"$\phi^{PCC-LV}_{a}$",r"$\phi^{grid}_{a}$",r"$\phi^{PCC-LV}_{a}-\phi^{grid}_{a}$"]
@@ -246,15 +252,15 @@ class SimulationResults(Logging):
             y_labels='radians'
         
         elif plot_type == 'frequency':
-            if self.simulation.PV_model.standAlone:
-                plot_values = [self.simulation.wgrid_t,self.simulation.we_t] #legends=['Grid frequency','PLL frequency']
+            if not self.simulation.PV_model.standAlone:
+                raise ValueError('Plot {} is only available in Stand Alone mode!'.format(plot_type))
+                
+            plot_values = [self.simulation.wgrid_t,self.simulation.we_t] #legends=['Grid frequency','PLL frequency']
             
-                legends=[r"$\omega_{grid}$",r"$\omega_{PLL}$"]
-                plot_title='Grid voltage source and PLL: Frequency'
-                y_labels='radians/s'
-            else:
-                raise ValueError('Frequency plot is only available if PV-DER model is stand alone!') 
-        
+            legends=[r"$\omega_{grid}$",r"$\omega_{PLL}$"]
+            plot_title='Grid voltage source and PLL: Frequency'
+            y_labels='radians/s'
+           
         elif plot_type == 'duty_cycle':
             plot_values = [self.simulation.ma_absolute_t]
             #legends = [r"$\m^{absolute}_{a}$"]

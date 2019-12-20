@@ -749,15 +749,12 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
     def run_simulation(self,gridVoltagePhaseA=None,gridVoltagePhaseB=None,gridVoltagePhaseC=None,y0=None,t=None):
         """Call the ODE solver and collect states."""
         
-        #solution  = self.solve_ODE(t)
         self.solution_time = None #Always reset simulation time to None
         
         if self.LOOP_MODE:
-            if isinstance(gridVoltagePhaseA,complex) and y0 != None and t != None:
-            #if type(gridVoltagePhaseA) == complex and y0 != None and t != None:
-                self.PV_model.gridVoltagePhaseA = gridVoltagePhaseA
-                self.PV_model.gridVoltagePhaseB = gridVoltagePhaseB
-                self.PV_model.gridVoltagePhaseC = gridVoltagePhaseC
+            
+            if isinstance(gridVoltagePhaseA,complex) and isinstance(y0,list) and isinstance(t,list):
+                self.update_grid_measurements(gridVoltagePhaseA=gridVoltagePhaseA, gridVoltagePhaseB=gridVoltagePhaseB, gridVoltagePhaseC=gridVoltagePhaseC)
         
             else:
                 raise ValueError('Grid voltage (complex scalar), initial states (y0), and time steps (t) should be provided in loop mode.')
@@ -796,7 +793,24 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             self.collect_solution(solution,t=t)  #Collect full solution
         else:
             self.collect_states(solution)  #Atleast states must be collected    
+    
+    def update_grid_measurements(self,gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC):
+        """Update grid voltage and frequency in non-standalone model.
+        Args:
+             gridVoltagePhaseA (complex): Value of gridVoltagePhaseA
+             gridVoltagePhaseB (complex): Value of gridVoltagePhaseB
+             gridVoltagePhaseC (complex): Value of gridVoltagePhaseC             
         
+        """
+        
+        self.PV_model.gridVoltagePhaseA = gridVoltagePhaseA
+        if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+            self.PV_model.gridVoltagePhaseB = gridVoltagePhaseB
+            self.PV_model.gridVoltagePhaseC = gridVoltagePhaseC
+        #elif type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
+        #    self.PV_model.gridVoltagePhaseB = utility_functions.Ub_calc(gridVoltagePhaseA)
+        #    self.PV_model.gridVoltagePhaseC = utility_functions.Uc_calc(gridVoltagePhaseA)
+    
     def show_simulation_time(self):
         """Show simulation time."""
         
