@@ -29,7 +29,7 @@ class SimulationResults(Logging):
                           }
                 }
     
-    available_plot_types = ['power','active_power','active_power_Ppv_Pac_PCC','active_power_Pac_PCC','reactive_power','reactive_power_Q_PCC','reactive_power_Q_PCC_smoothed','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','voltage_Vpcclv_smoothed','current','phase_angle','frequency','duty_cycle','voltage_Vpcclv_all_phases']
+    available_plot_types = ['power','active_power','active_power_Ppv_Pac_PCC','active_power_Pac_PCC','reactive_power','reactive_power_Q_PCC','reactive_power_Q_PCC_smoothed','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','voltage_Vpcclv_smoothed','current','phase_angle','frequency','pll','duty_cycle','voltage_Vpcclv_all_phases']
     
     def __init__(self,simulation,figure_index=1,PER_UNIT=True,font_size=18,PLOT_TITLE=True,SOLUTION_TIME=True,verbosity='INFO',identifier=None):
         """Creates an instance of `SimulationResults`.
@@ -91,7 +91,6 @@ class SimulationResults(Logging):
         """
         
         if plot_type not in SimulationResults.available_plot_types:
- #{'power','active_power','active_power_Ppv_Pac_PCC','active_power_Pac_PCC','reactive_power','reactive_power_Q_PCC','reactive_power_Q_PCC_smoothed','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','voltage_Vpcclv_smoothed','current','phase_angle','frequency','duty_cycle','voltage_Vpcclv_all_phases'}:
             raise ValueError('Unknown plot type: ' + str(plot_type))
         
         if self.simulation.LOOP_MODE:
@@ -252,15 +251,21 @@ class SimulationResults(Logging):
             y_labels='radians'
         
         elif plot_type == 'frequency':
-            if not self.simulation.PV_model.standAlone:
-                raise ValueError('Plot {} is only available in Stand Alone mode!'.format(plot_type))
+            #if not self.simulation.PV_model.standAlone:
+            #    raise ValueError('Plot {} is only available in Stand Alone mode!'.format(plot_type))
                 
             plot_values = [self.simulation.wgrid_t,self.simulation.we_t] #legends=['Grid frequency','PLL frequency']
             
             legends=[r"$\omega_{grid}$",r"$\omega_{PLL}$"]
             plot_title='Grid voltage source and PLL: Frequency'
             y_labels='radians/s'
-           
+        
+        elif plot_type == 'pll':
+            plot_values = [self.simulation.vd_t,self.simulation.vq_t] #legends=['vd','vq']
+            legends=[r"$v_{d}$",r"$v_{q}$"]
+            plot_title='PCC-LV: d and q axis voltages'
+            y_labels=_voltage_label
+        
         elif plot_type == 'duty_cycle':
             plot_values = [self.simulation.ma_absolute_t]
             #legends = [r"$\m^{absolute}_{a}$"]

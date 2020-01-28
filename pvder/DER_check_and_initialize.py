@@ -98,9 +98,12 @@ class PVDER_SetupUtilities(BaseValues,Logging):
              gridVoltagePhaseC (complex): Value of gridVoltagePhaseC
              gridFrequency (float): Value of gridFrequency
         
-        """        
-
-        if not self.standAlone:
+        """       
+        
+        if self.standAlone:
+            self.gridFrequency = self.grid_model.wgrid
+            
+        else:
             assert  gridFrequency != None, 'Frequency of grid voltage source need to be supplied if model is not stand alone!'
             self.gridFrequency = gridFrequency           
 
@@ -595,13 +598,24 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.Irms = self.Irms_calc()
         
         self.logger.debug('{}:Steady state values for operating point defined by Ppv:{:.2f} W, Vdc:{:.2f} V, va:{:.2f} V found at:'.format(self.name,self.Ppv*self.Sbase,self.Vdc*self.Vdcbase,self.va*self.Vbase))
-            
+        
+        x0 = np.array([2*math.pi])
+        result = minimize(self.pll_steadystate_calc, x0, method='nelder-mead', options={'xatol': 1e-8, 'disp': True})
+        self.wte = result.x[0]
         if self.verbosity == 'DEBUG':
             self.show_PV_DER_states(quantity='power')
             self.show_PV_DER_states(quantity='duty cycle')
             self.show_PV_DER_states(quantity='voltage')
             self.show_PV_DER_states(quantity='current')
-            
+    
+    def pll_steadystate_calc(self,x):
+        """Function to minimize pll error at steadystate."""
+        
+        vat,vbt,vct = utility_functions.phasor_to_time(upha = self.va,uphb = self.vb,uphc = self.vc,w=self.gridFrequency,t=0.0)
+        vd,vq,v0 = utility_functions.abc_to_dq0(vat,vbt,vct,x[0])
+        
+        return vd**2
+    
     def check_jacobian(self,t=0.0):
         """Compare analytical and numerical Jacobian of the ODE model."""
         

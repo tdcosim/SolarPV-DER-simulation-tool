@@ -215,6 +215,12 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.vta_t = self._vta_t = np.array(self.PV_model.vta)
         self.va_t = self._va_t = np.array(self.PV_model.va)
         
+        self.wgrid_t = self._wgrid_t = np.array(self.PV_model.wgrid_measured)
+        self.we_t = self._we_t = np.array(self.PV_model.we)
+        self.wte_t = self._wte_t = np.array(self.PV_model.wte)
+        self.vd_t = self._vd_t = np.array(self.PV_model.vd)
+        self.vq_t = self._vq_t = np.array(self.PV_model.vq)
+                
         self.ma_absolute_t = self._ma_absolute_t = np.array(abs(self.PV_model.ma))
         self.Varms_t  = self._Varms_t = np.array(abs(self.PV_model.va)/math.sqrt(2))
         
@@ -381,9 +387,9 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         if self.PV_model.standAlone:
             self.Vgrms_t = utility_functions.Urms_time_series(self.vag_t,self.vbg_t,self.vcg_t)
             self.Vhvrms_t= utility_functions.Urms_time_series(self.vaHV_t,self.vbHV_t,self.vcHV_t)
-        
+    """    
     def time_series_standalone_grid(self):
-        """Time series grid voltage and frequency for standalone model."""
+        Time series grid voltage and frequency for standalone model.
         
         self.vag_t = []
         self.vbg_t = []
@@ -420,57 +426,89 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         if not self.LOOP_MODE:
             self.simulation_events.reset_event_counters() #reset event counters
-    
     """
-    def time_series_wgrid(self):
-        #Time series grid frequency.
+    def time_series_grid(self):
+        """Time series grid voltage and frequency for standalone model."""
         
         self.wgrid_t = []
-        if self.PV_model.standAlone:
-            for i,t in enumerate(self.t):   #Loop through grid events and calculate wgrid at each time step
-                _,self.grid_model.wgrid =  self.simulation_events.grid_events(t)
-                self.wgrid_t.append(self.grid_model.wgrid)
-            if not self.LOOP_MODE:
-                self.simulation_events.reset_event_counters() #reset event counters    
-        else:
-            self.wgrid_t = np.repeat(self.PV_model.wgrid_measured,len(self.t))
         
+        if self.PV_model.standAlone:
+            self.vag_t = []
+            self.vbg_t = []
+            self.vcg_t = []
+            
+            for i,t in enumerate(self.t):   #Loop through grid events and append voltage and frequency at each time step
+                Vagrid_new,self.grid_model.wgrid = self.simulation_events.grid_events(t)
+                self.grid_model.vag = Vagrid_new*(self.grid_model.Vgridrated/self.Vbase)
+                self.grid_model.vbg = utility_functions.Ub_calc(self.grid_model.vag*self.grid_model.unbalance_ratio_b)
+                self.grid_model.vcg = utility_functions.Uc_calc(self.grid_model.vag*self.grid_model.unbalance_ratio_c)  
+
+                self.vag_t.append(self.grid_model.vag)
+                self.vbg_t.append(self.grid_model.vbg)
+                self.vcg_t.append(self.grid_model.vcg)
+                
+                self.wgrid_t.append(self.grid_model.wgrid)
+
+            self.vag_t = np.asarray(self.vag_t)
+            self.vbg_t = np.asarray(self.vbg_t)
+            self.vcg_t = np.asarray(self.vcg_t)
+                
+            self.vagR_t = self.vag_t.real
+            self.vagI_t = self.vag_t.imag
+                
+            self.vbgR_t = self.vbg_t.real
+            self.vbgI_t = self.vbg_t.imag
+                
+            self.vcgR_t = self.vcg_t.real
+            self.vcgI_t = self.vcg_t.imag
+        
+        else:
+            self.wgrid_t = np.repeat(self.PV_model.wgrid_measured,len(self.t)) #only frequency comes from outside in standalone mode
+            
         self.wgrid_t = np.asarray(self.wgrid_t)
-    """    
+        
+        if not self.LOOP_MODE:
+            self.simulation_events.reset_event_counters() #reset event counters
+   
     def time_series_PLL(self):
         """Calculate time series PLL and d-q quantities."""
         
-        self.vd_t = []
-        self.vq_t = []
-        self.we_t = []
+        if self.PV_model.standAlone:
+            self.we_t = []
+            self.vd_t = []
+            self.vq_t = []
         
-        for i,t in enumerate(self.t):     #Loop through time steps and calculate d-q values at each time step
-            
-            self.PV_model.wte = self.wte_t[i]
-            self.PV_model.xPLL = self.xPLL_t[i]
-            
-            if type(self.PV_model).__name__ == 'SolarPV_DER_SinglePhase':
-                self.PV_model.valpha = utility_functions.phasor_to_time_1phase(self.va_t[i],self.wgrid_t[i],t)
-                self.PV_model.vbeta =utility_functions.phasor_to_time_1phase(self.va_t[i]*pow(math.e,-1j*(math.pi/2)),self.wgrid_t[i],t)
-                self.PV_model.vd,self.PV_model.vq = utility_functions.alpha_beta_to_d_q(self.PV_model.valpha,self.PV_model.vbeta,self.PV_model.wte)
-            
-            elif type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
-                self.PV_model.vat = utility_functions.phasor_to_time_1phase(self.va_t[i],self.wgrid_t[i],t)
-                self.PV_model.vbt = utility_functions.phasor_to_time_1phase(self.vb_t[i],self.wgrid_t[i],t)
-                self.PV_model.vct = utility_functions.phasor_to_time_1phase(self.vc_t[i],self.wgrid_t[i],t)
+            for i,t in enumerate(self.t):     #Loop through time steps and calculate d-q values at each time step
+
+                self.PV_model.wte = self.wte_t[i]
+                self.PV_model.xPLL = self.xPLL_t[i]
+
+                if type(self.PV_model).__name__ == 'SolarPV_DER_SinglePhase':
+                    self.PV_model.valpha = utility_functions.phasor_to_time_1phase(self.va_t[i],self.wgrid_t[i],t)
+                    self.PV_model.vbeta =utility_functions.phasor_to_time_1phase(self.va_t[i]*pow(math.e,-1j*(math.pi/2)),self.wgrid_t[i],t)
+                    self.PV_model.vd,self.PV_model.vq = utility_functions.alpha_beta_to_d_q(self.PV_model.valpha,self.PV_model.vbeta,self.PV_model.wte)
+
+                elif type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+                    self.PV_model.vat = utility_functions.phasor_to_time_1phase(self.va_t[i],self.wgrid_t[i],t)
+                    self.PV_model.vbt = utility_functions.phasor_to_time_1phase(self.vb_t[i],self.wgrid_t[i],t)
+                    self.PV_model.vct = utility_functions.phasor_to_time_1phase(self.vc_t[i],self.wgrid_t[i],t)
+
+                    self.PV_model.vd,self.PV_model.vq,self.PV_model.v0 = utility_functions.abc_to_dq0(self.PV_model.vat,self.PV_model.vbt,self.PV_model.vct,self.PV_model.wte)
+
+                self.PV_model.we = self.PV_model.we_calc() #Calculate inverter frequency from PLL equation
                 
-                self.PV_model.vd,self.PV_model.vq,self.PV_model.v0 = utility_functions.abc_to_dq0(self.PV_model.vat,self.PV_model.vbt,self.PV_model.vct,self.PV_model.wte)
+                self.we_t.append(self.PV_model.we)
+                self.vd_t.append(self.PV_model.vd)
+                self.vq_t.append(self.PV_model.vq)
                 
-            self.PV_model.we = self.PV_model.we_calc() #Calculate inverter frequency from PLL equation
-            
-            self.vd_t.append(self.PV_model.vd)
-            self.vq_t.append(self.PV_model.vq)
-            self.we_t.append(self.PV_model.we)
-            
-        self.vd_t = np.asarray(self.vd_t)
-        self.vq_t = np.asarray(self.vq_t)
-        self.we_t = np.asarray(self.we_t)
-    
+            self.we_t = np.asarray(self.we_t)
+            self.vd_t = np.asarray(self.vd_t)
+            self.vq_t = np.asarray(self.vq_t)
+        else:
+            self.we_t = np.repeat(self.PV_model.we,len(self.t))
+            self.vd_t = np.repeat(self.PV_model.vd,len(self.t))
+            self.vq_t = np.repeat(self.PV_model.vq,len(self.t))
+        
     def time_series_Zload1(self,tOverride=None):
         """Calculate time series load impedance."""
         
@@ -575,6 +613,12 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self._vta_t = np.append(self._vta_t,self.vta_t[1:])
         self._va_t = np.append(self._va_t,self.va_t[1:])
         
+        self._wgrid_t = np.append(self._wgrid_t,self.wgrid_t[1:])
+        self._we_t = np.append(self._we_t,self.we_t[1:])
+        self._wte_t = np.append(self._wte_t,self.wte_t[1:])
+        self._vd_t = np.append(self._vd_t,self.vd_t[1:])
+        self._vq_t = np.append(self._vq_t,self.vq_t[1:])        
+        
         self._ma_absolute_t = np.append(self._ma_absolute_t,self.ma_absolute_t[1:])
         self._Varms_t = np.append(self._Varms_t,self.Varms_t[1:])
         
@@ -636,9 +680,9 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         #Exhibit different behavior in stand alone mode
         if self.PV_model.standAlone:
-            self.time_series_standalone_grid() #Grid voltage
+            #self.time_series_standalone_grid() #Grid voltage
             self.time_series_Zload1()        
-        
+        self.time_series_grid()
         self.time_series_inv_terminal_voltage()
         self.time_series_PCC_LV_side_voltage()
         
@@ -652,8 +696,8 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.time_series_phase_angle()
         #self.time_series_power_transfer()
         #self.time_series_wgrid()
-        if self.PV_model.standAlone:
-            self.time_series_PLL()
+        #if self.PV_model.standAlone:
+        self.time_series_PLL()
         
         self.logger.debug("All states collected!")
     
@@ -717,6 +761,12 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.vta_t = self._vta_t
         self.va_t = self._va_t
         
+        self.wgrid_t = self._wgrid_t
+        self.we_t = self._we_t
+        self.wte_t = self._wte_t
+        self.vd_t = self._vd_t
+        self.vq_t = self._vq_t
+        
         self.ma_absolute_t = self._ma_absolute_t
         self.Varms_t = self._Varms_t
         
@@ -746,15 +796,14 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.S_t =  self._S_t 
         self.S_PCC_t = self._S_PCC_t        
         
-    def run_simulation(self,gridVoltagePhaseA=None,gridVoltagePhaseB=None,gridVoltagePhaseC=None,y0=None,t=None):
+    def run_simulation(self,gridVoltagePhaseA=None,gridVoltagePhaseB=None,gridVoltagePhaseC=None,gridFrequency=None,y0=None,t=None):
         """Call the ODE solver and collect states."""
         
         self.solution_time = None #Always reset simulation time to None
         
         if self.LOOP_MODE:
-            
             if isinstance(gridVoltagePhaseA,complex) and isinstance(y0,list) and isinstance(t,list):
-                self.update_grid_measurements(gridVoltagePhaseA=gridVoltagePhaseA, gridVoltagePhaseB=gridVoltagePhaseB, gridVoltagePhaseC=gridVoltagePhaseC)
+                self.update_grid_measurements(gridVoltagePhaseA=gridVoltagePhaseA, gridVoltagePhaseB=gridVoltagePhaseB, gridVoltagePhaseC=gridVoltagePhaseC,gridFrequency=gridFrequency)
         
             else:
                 raise ValueError('Grid voltage (complex scalar), initial states (y0), and time steps (t) should be provided in loop mode.')
@@ -794,7 +843,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         else:
             self.collect_states(solution)  #Atleast states must be collected    
     
-    def update_grid_measurements(self,gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC):
+    def update_grid_measurements(self,gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency):
         """Update grid voltage and frequency in non-standalone model.
         Args:
              gridVoltagePhaseA (complex): Value of gridVoltagePhaseA
@@ -802,6 +851,11 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
              gridVoltagePhaseC (complex): Value of gridVoltagePhaseC             
         
         """
+        
+        if isinstance(gridFrequency,float):
+            self.PV_model.gridFrequency = gridFrequency
+        else:
+            self.PV_model.gridFrequency = self.PV_model.gridFrequency
         
         self.PV_model.gridVoltagePhaseA = gridVoltagePhaseA
         if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
@@ -811,6 +865,41 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         #    self.PV_model.gridVoltagePhaseB = utility_functions.Ub_calc(gridVoltagePhaseA)
         #    self.PV_model.gridVoltagePhaseC = utility_functions.Uc_calc(gridVoltagePhaseA)
     
+    def playback_3phgrid(self,Va_t,Vb_t,Vc_t,fgrid_t):
+        """Playback grid voltages and frequency.
+         Args:
+             Va_t (list): Time series of phase A grid voltages in complex phasor form (V).
+             Vb_t (list): Time series of phase B grid voltages in complex phasor form (V).
+             Vc_t (list): Time series of phase C grid voltages in complex phasor form (V).
+             fgrid_t (list): Time series of frequency (Hz).             
+        """
+        
+        assert self.LOOP_MODE and not self.PV_model.standAlone, 'Simulation must be in loop mode.'
+        
+        n_time_steps = len(Va_t) #Number of time steps
+        print('Found {} elements in phase A grid voltage time series.'.format(n_time_steps))
+        
+        if isinstance(fgrid_t,float):
+            fgrid_t = [fgrid_t]*n_time_steps
+            print('Creating a list of constant frequency values.')
+        
+        assert len(Va_t) ==len(Vb_t) ==len(Vc_t) ==len(fgrid_t), 'All lists should have equal number of elements.'
+        
+        t0 = 0.0
+        dt = self.tInc
+        
+        for i in range(n_time_steps):
+            Va = Va_t[i]/self.Vbase
+            Vb = Vb_t[i]/self.Vbase
+            Vc = Vc_t[i]/self.Vbase
+            wgrid = 2*math.pi*fgrid_t[i]
+            t_sim= [t0,t0+dt]
+            
+            self.run_simulation(gridVoltagePhaseA=Va, gridVoltagePhaseB=Vb, gridVoltagePhaseC=Vc,gridFrequency=wgrid, y0=self.y0, t=t_sim)
+            
+            print('t:{:.2f},wgrid:{:.2f},winv:{:.2f},Va:{:.2f},Vb:{:.2f},Vc:{:.2f}'.format(t0,wgrid,self.PV_model.winv,Va,Vb,Vc))
+            t0 = t_sim[-1]
+
     def show_simulation_time(self):
         """Show simulation time."""
         

@@ -252,6 +252,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         self.initialize_logger(logging_level=verbosity)  #Set logging level - {DEBUG,INFO,WARNING,ERROR} 
                
         self.standAlone = standAlone
+        self.attach_grid_model(grid_model)
         self.initialize_grid_measurements(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
         self.Vrms_rated = Vrms_rated        
         
@@ -265,9 +266,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         self.STEADY_STATE_INITIALIZATION = STEADY_STATE_INITIALIZATION
         self.allow_unbalanced_m = allow_unbalanced_m
         
-        self.attach_grid_model(grid_model)
         self.initialize_DER(pvderConfig)
-                
         self.VRT_initialize() #LVRT and HVRT settings     
         self.FRT_initialize() #LFRT and HFRT settings
         
