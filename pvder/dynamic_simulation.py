@@ -387,46 +387,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         if self.PV_model.standAlone:
             self.Vgrms_t = utility_functions.Urms_time_series(self.vag_t,self.vbg_t,self.vcg_t)
             self.Vhvrms_t= utility_functions.Urms_time_series(self.vaHV_t,self.vbHV_t,self.vcHV_t)
-    """    
-    def time_series_standalone_grid(self):
-        Time series grid voltage and frequency for standalone model.
-        
-        self.vag_t = []
-        self.vbg_t = []
-        self.vcg_t = []
-        self.wgrid_t = []
-        for i,t in enumerate(self.t):   #Loop through grid events and calculate wgrid at each time step
-
-                Vagrid_new,self.grid_model.wgrid = self.simulation_events.grid_events(t)
-                
-                #Conversion of grid voltage setpoint
-                self.grid_model.vag = Vagrid_new*(self.grid_model.Vgridrated/self.Vbase)
-                self.grid_model.vbg = utility_functions.Ub_calc(self.grid_model.vag*self.grid_model.unbalance_ratio_b)
-                self.grid_model.vcg = utility_functions.Uc_calc(self.grid_model.vag*self.grid_model.unbalance_ratio_c)  
-        
-                self.vag_t.append(self.grid_model.vag)
-                self.vbg_t.append(self.grid_model.vbg)
-                self.vcg_t.append(self.grid_model.vcg)
-                
-                self.wgrid_t.append(self.grid_model.wgrid)
-
-        self.vag_t = np.asarray(self.vag_t)
-        self.vbg_t = np.asarray(self.vbg_t)
-        self.vcg_t = np.asarray(self.vcg_t)
-        self.wgrid_t = np.asarray(self.wgrid_t)
-        
-        self.vagR_t = self.vag_t.real
-        self.vagI_t = self.vag_t.imag
-        
-        self.vbgR_t = self.vbg_t.real
-        self.vbgI_t = self.vbg_t.imag
-        
-        self.vcgR_t = self.vcg_t.real
-        self.vcgI_t = self.vcg_t.imag
-        
-        if not self.LOOP_MODE:
-            self.simulation_events.reset_event_counters() #reset event counters
-    """
+    
     def time_series_grid(self):
         """Time series grid voltage and frequency for standalone model."""
         
@@ -452,6 +413,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             self.vag_t = np.asarray(self.vag_t)
             self.vbg_t = np.asarray(self.vbg_t)
             self.vcg_t = np.asarray(self.vcg_t)
+            self.wgrid_t = np.asarray(self.wgrid_t)
                 
             self.vagR_t = self.vag_t.real
             self.vagI_t = self.vag_t.imag
@@ -464,8 +426,6 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         else:
             self.wgrid_t = np.repeat(self.PV_model.wgrid_measured,len(self.t)) #only frequency comes from outside in standalone mode
-            
-        self.wgrid_t = np.asarray(self.wgrid_t)
         
         if not self.LOOP_MODE:
             self.simulation_events.reset_event_counters() #reset event counters
@@ -680,7 +640,6 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         #Exhibit different behavior in stand alone mode
         if self.PV_model.standAlone:
-            #self.time_series_standalone_grid() #Grid voltage
             self.time_series_Zload1()        
         self.time_series_grid()
         self.time_series_inv_terminal_voltage()
@@ -695,8 +654,6 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         self.time_series_phase_angle()
         #self.time_series_power_transfer()
-        #self.time_series_wgrid()
-        #if self.PV_model.standAlone:
         self.time_series_PLL()
         
         self.logger.debug("All states collected!")

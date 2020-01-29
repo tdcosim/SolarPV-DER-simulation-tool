@@ -235,11 +235,16 @@ def print_to_terminal(text_string='Printing to terminal!'):
     sys.__stdout__.write(text_string+'\n')
     sys.__stdout__.flush()      #Flush buffer to terminal
 
-
-
 def print_dictionary_keys(dictionary,dictionary_name):
     """Print dictionary."""
     
     #print(dictionary_name,':',list(dictionary.keys()))
     
     print(dictionary_name,':',','.join(dictionary))
+
+def numpy_to_csv(file_name,numpy_array,label):
+    """Save a numpy array as csv."""
+    
+    if 'csv' not in file_name:
+        file_name = file_name + '.csv'
+    np.savetxt(file_name, numpy_array,header=label,delimiter=",",comments='')    
