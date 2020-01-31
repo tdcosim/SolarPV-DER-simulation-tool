@@ -128,7 +128,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         if self.LOOP_MODE:
             self.reset_stored_trajectories()
-        
+            
         self.initialize_y0_t()
     
     #@property
@@ -215,6 +215,9 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.vta_t = self._vta_t = np.array(self.PV_model.vta)
         self.va_t = self._va_t = np.array(self.PV_model.va)
         
+        self.phita_t = self._phita_t = np.array(np.angle(self.PV_model.vta))
+        self.phia_t = self._phia_t = np.array(np.angle(self.PV_model.va))
+        
         self.wgrid_t = self._wgrid_t = np.array(self.PV_model.wgrid_measured)
         self.we_t = self._we_t = np.array(self.PV_model.we)
         self.wte_t = self._wte_t = np.array(self.PV_model.wte)
@@ -236,11 +239,17 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             self.vtb_t = self._vtb_t = np.array(self.PV_model.vtb)
             self.vb_t = self._vb_t = np.array(self.PV_model.vb)
             
+            self.phitb_t = self._phitb_t = np.array(np.angle(self.PV_model.vtb))
+            self.phib_t = self._phib_t = np.array(np.angle(self.PV_model.vb))
+            
             self.ic_t = self._ic_t = np.array(self.PV_model.ic)
             self.mc_t = self._mc_t = np.array(self.PV_model.mc)
             self.vtc_t = self._vtc_t = np.array(self.PV_model.vtc)
             self.vc_t = self._vc_t = np.array(self.PV_model.vc)
-        
+            
+            self.phitc_t = self._phitc_t = np.array(np.angle(self.PV_model.vtc))
+            self.phic_t = self._phic_t = np.array(np.angle(self.PV_model.vc))
+            
         self.Irms_t = self._Irms_t = np.array(self.PV_model.Irms)
         self.Ppv_t = self._Ppv_t = np.array(self.PV_model.Ppv)
         self.S_PCC_t = self._S_PCC_t = np.array(self.PV_model.S_PCC)
@@ -527,18 +536,18 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         assert len(self.va_t) == len(self.vta_t) != None, "States must be available from simulation."
         
-        self.phi_at_t = np.angle(self.vta_t)
-        self.phi_a_t = np.angle(self.va_t)
+        self.phita_t = np.angle(self.vta_t)
+        self.phia_t = np.angle(self.va_t)
         
         if self.PV_model.standAlone:
             self.phi_aHV_t = np.angle(self.vaHV_t) 
             self.phi_ag_t = np.angle(self.vag_t)        
         
         if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
-            self.phi_bt_t = np.angle(self.vtb_t)
-            self.phi_ct_t = np.angle(self.vtc_t)
-            self.phi_b_t = np.angle(self.vb_t)
-            self.phi_c_t = np.angle(self.vc_t)
+            self.phitb_t = np.angle(self.vtb_t)
+            self.phitc_t = np.angle(self.vtc_t)
+            self.phib_t = np.angle(self.vb_t)
+            self.phic_t = np.angle(self.vc_t)
             if self.PV_model.standAlone:
                 self.phi_bHV_t = np.angle(self.vbHV_t)
                 self.phi_cHV_t = np.angle(self.vcHV_t)
@@ -573,6 +582,9 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self._vta_t = np.append(self._vta_t,self.vta_t[1:])
         self._va_t = np.append(self._va_t,self.va_t[1:])
         
+        self._phita_t = np.append(self._phita_t,self.phita_t[1:])
+        self._phia_t = np.append(self._phia_t,self.phia_t[1:])
+        
         self._wgrid_t = np.append(self._wgrid_t,self.wgrid_t[1:])
         self._we_t = np.append(self._we_t,self.we_t[1:])
         self._wte_t = np.append(self._wte_t,self.wte_t[1:])
@@ -594,10 +606,16 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             self._vtb_t = np.append(self._vtb_t,self.vtb_t[1:])
             self._vb_t = np.append(self._vb_t,self.vb_t[1:])
             
+            self._phitb_t = np.append(self._phitb_t,self.phitb_t[1:])
+            self._phib_t = np.append(self._phib_t,self.phib_t[1:])
+        
             self._ic_t = np.append(self._ic_t,self.ic_t[1:])
             self._mc_t = np.append(self._mc_t,self.mc_t[1:])
             self._vtc_t = np.append(self._vtc_t,self.vtc_t[1:])
             self._vc_t = np.append(self._vc_t,self.vc_t[1:])
+            
+            self._phitc_t = np.append(self._phitc_t,self.phitc_t[1:])
+            self._phic_t = np.append(self._phic_t,self.phic_t[1:])
         
         self._Irms_t = np.append(self._Irms_t,self.Irms_t[1:])        
 
@@ -718,6 +736,9 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.vta_t = self._vta_t
         self.va_t = self._va_t
         
+        self.phita_t = self._phita_t
+        self.phia_t = self._phia_t
+        
         self.wgrid_t = self._wgrid_t
         self.we_t = self._we_t
         self.wte_t = self._wte_t
@@ -739,10 +760,16 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             self.vtb_t = self._vtb_t
             self.vb_t = self._vb_t
             
+            self.phitb_t = self._phitb_t
+            self.phib_t = self._phib_t
+            
             self.ic_t = self._ic_t
             self.mc_t = self._mc_t
             self.vtc_t = self._vtc_t
             self.vc_t = self._vc_t
+            
+            self.phitc_t = self._phitc_t
+            self.phic_t = self._phic_t
                 
         self.Vtrms_t = self._Vtrms_t
         self.Vrms_t = self._Vrms_t
@@ -822,7 +849,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         #    self.PV_model.gridVoltagePhaseB = utility_functions.Ub_calc(gridVoltagePhaseA)
         #    self.PV_model.gridVoltagePhaseC = utility_functions.Uc_calc(gridVoltagePhaseA)
     
-    def playback_3phgrid(self,Va_t,Vb_t,Vc_t,fgrid_t):
+    def playback_3phgrid(self,Va_t,Vb_t,Vc_t,fgrid_t,n_time_steps=None):
         """Playback grid voltages and frequency.
          Args:
              Va_t (list): Time series of phase A grid voltages in complex phasor form (V).
@@ -833,7 +860,9 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         assert self.LOOP_MODE and not self.PV_model.standAlone, 'Simulation must be in loop mode.'
         
-        n_time_steps = len(Va_t) #Number of time steps
+        if not isinstance(n_time_steps,int):
+            n_time_steps = len(Va_t) #Number of time steps
+        
         print('Found {} elements in phase A grid voltage time series.'.format(n_time_steps))
         
         if isinstance(fgrid_t,float):
@@ -854,7 +883,12 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             
             self.run_simulation(gridVoltagePhaseA=Va, gridVoltagePhaseB=Vb, gridVoltagePhaseC=Vc,gridFrequency=wgrid, y0=self.y0, t=t_sim)
             
-            print('t:{:.2f},wgrid:{:.2f},winv:{:.2f},Va:{:.2f},Vb:{:.2f},Vc:{:.2f}'.format(t0,wgrid,self.PV_model.winv,Va,Vb,Vc))
+            print('t:{:.3f},wgrid:{:.2f},winv:{:.2f},Va:{:.2f},Vb:{:.2f},Vc:{:.2f}'.format(t0,wgrid,self.PV_model.winv,Va,Vb,Vc))
+            print('Va_actual:{:.2f}'.format(self.PV_model.va))
+            print('_Va_t_actual:{:.2f},Va_t_actual:{:.2f}'.format(self._va_t[-1],self.va_t[-1]))
+            print('wgrid_actual:{:.2f},wgrid_measured:{:.2f},_wgrid_t:{:.2f}'.format(wgrid,self.PV_model.gridFrequency,self._wgrid_t[-1]))
+            print('Size:',len(self._va_t))
+            
             t0 = t_sim[-1]
 
     def show_simulation_time(self):

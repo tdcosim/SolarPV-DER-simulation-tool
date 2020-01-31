@@ -15,6 +15,7 @@ import matplotlib.ticker as ticker
 
 from pvder.utility_classes import Logging
 from pvder import config
+from pvder import utility_functions
 
 class SimulationResults(Logging):
     """ Utility class for simulation results."""
@@ -237,23 +238,19 @@ class SimulationResults(Logging):
             y_labels=_reactive_power_label
     
         elif plot_type == 'phase_angle':
-            if not self.simulation.PV_model.standAlone:
-                raise ValueError('Plot {} is only available in Stand Alone mode!'.format(plot_type))
+            plot_values = [self.simulation.phita_t,self.simulation.phia_t]
+            legends=[r"$\phi^{inv}_{a}$",r"$\phi^{PCC-LV}_{a}$"]
             
-            plot_values = [self.simulation.phi_at_t,self.simulation.phi_a_t]
             if self.simulation.PV_model.standAlone:
-                plot_values = plot_values + [self.simulation.phi_ag_t,self.simulation.phi_a_t-self.simulation.phi_ag_t]
-                
-            #legends=['theta_vat','theta_va','theta_vag','theta_va-theta_vag']
+                plot_values = plot_values + [self.simulation.phi_ag_t,self.simulation.phia_t-self.simulation.phi_ag_t]
+                legends = legends + [r"$\phi^{grid}_{a}$",r"$\phi^{PCC-LV}_{a}-\phi^{grid}_{a}$"]
             
-            legends=[r"$\phi^{inv}_{a}$",r"$\phi^{PCC-LV}_{a}$",r"$\phi^{grid}_{a}$",r"$\phi^{PCC-LV}_{a}-\phi^{grid}_{a}$"]
+            #legends=['theta_vat','theta_va','theta_vag','theta_va-theta_vag']
+           
             plot_title='All available phase angle quantities!'
             y_labels='radians'
         
         elif plot_type == 'frequency':
-            #if not self.simulation.PV_model.standAlone:
-            #    raise ValueError('Plot {} is only available in Stand Alone mode!'.format(plot_type))
-                
             plot_values = [self.simulation.wgrid_t,self.simulation.we_t] #legends=['Grid frequency','PLL frequency']
             
             legends=[r"$\omega_{grid}$",r"$\omega_{PLL}$"]
@@ -355,6 +352,49 @@ class SimulationResults(Logging):
         legends = internal_legends + external_plot_legends
         self.plot_multiple(time_values,plot_values,legends,plot_title,y_labels)
         self.figure_index =  self.figure_index+1
+    
+    def save_results(self,file_name):
+        """Save all simulation results as a an xlsx workbook with worksheets."""
+        
+        variable_names = ['Ppv','Pinv','Qinv','P_PCC','Q_PCC','Vdc','Vtrms','Vrms','Irms','wgrid','we','phita','phia']
+        
+        workbook = utility_functions.open_xlsx_workbook(file_name,variable_names)
+        data_list = []
+        for variable in variable_names:
+            if variable == 'Ppv':
+                data = self.simulation.Ppv_t
+            elif variable == 'Pinv':
+                data = self.simulation.S_t.real
+            elif variable == 'Qinv':
+                data = self.simulation.S_t.imag
+            elif variable == 'P_PCC':
+                data = self.simulation.S_PCC_t.real
+            elif variable == 'Q_PCC':
+                data = self.simulation.S_PCC_t.imag
+            elif variable == 'Vdc':
+                data = self.simulation.Vdc_t
+            elif variable == 'Vtrms':
+                data = self.simulation.Vtrms_t
+            elif variable == 'Vrms':
+                data = self.simulation.Vrms_t
+            elif variable == 'Irms':
+                data = self.simulation.Irms_t
+            elif variable == 'wgrid':
+                data = self.simulation.wgrid_t
+            elif variable == 'we':
+                data = self.simulation.we_t
+            elif variable == 'phia':
+                data = self.simulation.phia_t
+            elif variable == 'phita':
+                data = self.simulation.phita_t
+            
+            else:
+                print('{} is not a valid result variable!'.format(variable))
+            data_list.append(data)
+        
+        utility_functions.numpy_to_xlsx_workbook(workbook,variable_names,['time']*len(variable_names),[self.simulation.t_t]*len(variable_names),'A')
+        utility_functions.numpy_to_xlsx_workbook(workbook,variable_names,variable_names,data_list,'B')
+        utility_functions.close_xlsx_workbook(workbook)
     
 class SimulationUtilities():
     """ Utility class for dynamic simulations."""

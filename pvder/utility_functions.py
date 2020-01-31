@@ -8,6 +8,7 @@ import sys
 import time
 import six
 import scipy.io as sio
+from xlsxwriter.workbook import Workbook
 #from numba import jit
 
 def Urms_time_series(ua,ub,uc):
@@ -247,4 +248,40 @@ def numpy_to_csv(file_name,numpy_array,label):
     
     if 'csv' not in file_name:
         file_name = file_name + '.csv'
-    np.savetxt(file_name, numpy_array,header=label,delimiter=",",comments='')    
+    np.savetxt(file_name, numpy_array,header=label,delimiter=",",comments='')  
+    
+def open_xlsx_workbook(file_name,worksheet_names):
+    """Open xlsx workbook with required number of worksheets."""
+    
+    if 'xlsx' not in file_name:
+        file_name = file_name + '.xlsx'
+    print('Saving variables:{} in {}'.format(worksheet_names,file_name))
+    
+    workbook = Workbook(file_name,{'nan_inf_to_errors': True})
+    for worksheet_name in worksheet_names:
+        workbook.add_worksheet(worksheet_name)
+    
+    return workbook
+
+def close_xlsx_workbook(workbook):
+    """Open xlsx workbook with required number of worksheets."""
+    
+    workbook.close()
+
+def numpy_to_xlsx_workbook(workbook,worksheet_names,column_labels,numpy_array_list,column):
+    """Save a numpy array as csv."""
+    
+    assert len(numpy_array_list) == len(worksheet_names), 'Number of labels should be equal to number of data.'
+    
+    for worksheet_name,column_label,numpy_array in zip(worksheet_names,column_labels,numpy_array_list):
+        numpy_to_xlsx_worksheet(workbook.get_worksheet_by_name(worksheet_name),column_label,numpy_array,column)     
+    
+    
+    
+def numpy_to_xlsx_worksheet(worksheet,column_label,numpy_array,column):
+    """Save a numpy array as csv."""
+    
+    assert len(numpy_array.shape) ==1, 'Length of Numpy'
+    worksheet.write_string(column+'1',column_label)
+    worksheet.write_column(column+'2', numpy_array)
+   
