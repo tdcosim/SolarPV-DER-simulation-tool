@@ -268,7 +268,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         
         self.initialize_DER(pvderConfig)
         self.VRT_initialize() #LVRT and HVRT settings     
-        self.FRT_initialize() #LFRT and HFRT settings
+        #self.FRT_initialize() #LFRT and HFRT settings
         
         self.initialize_jacobian()
         self.reset_reference_counters()
@@ -470,8 +470,8 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         self.update_inverter_frequency(t)
         
         self.update_ridethrough_flags(t)
-        self.check_and_trip()
-        self.check_and_reconnect(t)
+        self.check_and_trip(t)
+        #self.check_and_reconnect(t)
         
         #Phase a inverter output current
         diaR = (1/self.Lf)*(-self.Rf*self.ia.real - self.va.real + self.vta.real) + (self.winv/self.wbase)*self.ia.imag 
@@ -666,7 +666,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         #d-q transformation
         self.update_inverter_frequency(t)
        
-        self.check_and_trip()
+        self.check_and_trip(t)
         
         #Phase a inverter output current
         

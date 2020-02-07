@@ -399,7 +399,7 @@ class SimulationResults(Logging):
 class SimulationUtilities():
     """ Utility class for dynamic simulations."""
     
-    max_steps = 1000
+    max_steps = 10000
     solver_list = ['odeint','ode-vode-bdf']
     
     def call_ODE_solver(self,derivatives,jacobian,y,t):
