@@ -470,8 +470,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         self.update_inverter_frequency(t)
         
         self.update_ridethrough_flags(t)
-        self.check_and_trip(t)
-        #self.check_and_reconnect(t)
+        self.disconnect_or_reconnect(t)
         
         #Phase a inverter output current
         diaR = (1/self.Lf)*(-self.Rf*self.ia.real - self.va.real + self.vta.real) + (self.winv/self.wbase)*self.ia.imag 
@@ -666,7 +665,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         #d-q transformation
         self.update_inverter_frequency(t)
        
-        self.check_and_trip(t)
+        self.disconnect_or_reconnect(t)
         
         #Phase a inverter output current
         

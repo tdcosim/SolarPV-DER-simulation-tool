@@ -200,8 +200,8 @@ class PVDER_SmartFeatures():
         self.DER_TRIP = self.LVRT_TRIP or self.HVRT_TRIP# or self.LFRT_TRIP
         self.DER_MOMENTARY_CESSATION = self.LVRT_MOMENTARY_CESSATION or self.HVRT_MOMENTARY_CESSATION   
     
-    def check_and_trip(self,t):
-        """Check whether any trip flags are true and trip DER."""
+    def disconnect_or_reconnect(self,t):
+        """Check flags and ither disconnect or reconnect DER."""
          
         if self.DER_CONNECTED:
             
@@ -230,10 +230,10 @@ class PVDER_SmartFeatures():
                 self.t_disconnect_start = 0.0
                 self.DER_CONNECTED = False
     
-     def DER_disconnect(self):
+    def DER_disconnect(self):
         """Function to disconnect PV-DER from grid."""
         
-        self.logger.info('{}:DER disconnected'.format(self.name))
+        self.logger.debug('{}:DER disconnected'.format(self.name))
        
         self.VOLT_VAR_ENABLE = False
         self.VOLT_WATT_ENABLE = False
