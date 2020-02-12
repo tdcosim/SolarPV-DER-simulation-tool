@@ -46,10 +46,10 @@ class TestPVDER(unittest.TestCase):
                      'case1':{'SinglePhase':True},
                      'case2':{'SteadyState':False}}
     
-    test_scenarios = {'default':{'HVRT_ENABLE':True,'LVRT_INSTANTANEOUS_TRIP':False,'LVRT_MOMENTARY_CESSATION':False,'tEnd':5.0,'Vnominal':1.0,'Vspike':1.1},
-                      'HVRT1':{'HVRT_ENABLE':True,'LVRT_INSTANTANEOUS_TRIP':False,'LVRT_MOMENTARY_CESSATION':False,'tEnd':10.0,'tspike_start':2.0,'tspike_duration':0.5,'Vspike':1.1},
-                      'HVRT2':{'HVRT_ENABLE':True,'LVRT_INSTANTANEOUS_TRIP':False,'LVRT_MOMENTARY_CESSATION':True,'tEnd':10.0,'tspike_start':2.0,'tspike_duration':4.0,'Vspike':1.1},
-                      'HVRT3':{'HVRT_ENABLE':True,'LVRT_INSTANTANEOUS_TRIP':True,'LVRT_MOMENTARY_CESSATION':False,'tEnd':10.0,'tspike_start':2.0,'tspike_duration':4.0,'Vspike':1.1}}
+    test_scenarios = {'default':{'HVRT_ENABLE':True,'tEnd':5.0,'Vnominal':1.0,'Vspike':1.1},
+                      'HVRT1':{'HVRT_ENABLE':True,'tEnd':10.0,'tspike_start':2.0,'tspike_duration':0.5,'Vspike':1.1},
+                      'HVRT2':{'HVRT_ENABLE':True,'tEnd':10.0,'tspike_start':2.0,'tspike_duration':4.0,'Vspike':1.1},
+                      'HVRT3':{'HVRT_ENABLE':True,'tEnd':10.0,'tspike_start':2.0,'tspike_duration':4.0,'Vspike':1.1}}
         
     
     def test_PVDER_default(self):
@@ -80,7 +80,7 @@ class TestPVDER(unittest.TestCase):
         self.loop_and_check(n_time_steps)     
     
     def test_PVDER_HVRT3(self):
-        """Test PV-DER with LVRT."""
+        """Test PV-DER with HVRT."""
             
         self.setup_simulation(scenario='default')
         
@@ -146,9 +146,7 @@ class TestPVDER(unittest.TestCase):
         tspike_start = self.return_settings(scenario=scenario,parameter='tspike_start',settings_type='test')
         tspike_duration = self.return_settings(scenario=scenario,parameter='tspike_duration',settings_type='test')
         
-        DER_model.HVRT_ENABLE = self.return_settings(scenario=scenario,parameter='HVRT_ENABLE',settings_type='test')
-        DER_model.LVRT_INSTANTANEOUS_TRIP = self.return_settings(scenario=scenario,parameter='LVRT_INSTANTANEOUS_TRIP',settings_type='test')
-        DER_model.LVRT_MOMENTARY_CESSATION = self.return_settings(scenario=scenario,parameter='LVRT_MOMENTARY_CESSATION',settings_type='test')
+        DER_model.HVRT_ENABLE = self.return_settings(scenario=scenario,parameter='HVRT_ENABLE',settings_type='test')       
         
         sim.tStop  = self.return_settings(scenario=scenario,parameter='tEnd',settings_type='test')       
         sim.name = scenario+'-'+sim.name
@@ -212,19 +210,23 @@ class TestPVDER(unittest.TestCase):
     
     def check_HVRT_status(self,pvder_object):
         """Check whether ride through is working."""
+        
                  
-        if pvder_object.Vrms >= pvder_object.HVRT_dict['1']['V_HV']:
-                #Check if HVRT trip flag is True
-                print(pvder_object.Vrms)
-                self.assertTrue(pvder_object.HVRT_TRIP, msg='{}: Inverter trip flag  not set despite high voltage!'.format(pvder_object.name))
-                #Check if Inverter stopped supplying power
-                self.assertAlmostEqual(abs(pvder_object.S_PCC), 0.0, places=4, msg='{}:Inverter power output is {:.2f} VA despite trip status!'.format(pvder_object.name,pvder_object.S_PCC*pvder_object.Sbase))
-                #Check if DC link voltage limits are breached
-                self.assertTrue(pvder_object.Vdc*pvder_object.Vdcbase >= pvder_object.Vdcmpp_min or pvder_object.Vdc*pvder.PV_model.Vdcbase <= pvder_object.Vdcmpp_max, msg='{}:DC link voltage exceeded limits!'.format(pvder_object.name))
+        if pvder_object.DER_TRIP: #Check if DER trip flag is True
+            #Check if HVRT momentary cessation is True is connected
+            self.assertTrue(pvder_object.HVRT_TRIP, msg='{}: HVRT trip should be true!'.format(pvder_object.name))
+            #Check if DER is connected
+            self.assertFalse(pvder_object.DER_CONNECTED, msg='{}: DER connected despite trip!'.format(pvder_object.name))
+            #Check if DER stopped supplying power
+            self.assertAlmostEqual(abs(pvder_object.S_PCC), 0.0, places=4, msg='{}:Inverter power output is {:.2f} VA despite trip status!'.format(pvder_object.name,pvder_object.S_PCC*pvder_object.Sbase))
+            #Check if DC link voltage limits are breached
+            self.assertTrue(pvder_object.Vdc*pvder_object.Vdcbase >= pvder_object.Vdcmpp_min or pvder_object.Vdc*pvder.PV_model.Vdcbase <= pvder_object.Vdcmpp_max, msg='{}:DC link voltage exceeded limits!'.format(pvder_object.name))
                 
-        elif pvder_object.Vrms < pvder_object.HVRT_dict['1']['V_HV'] and pvder_object.LVRT_MOMENTARY_CESSATION:
-                #Check if HVRT trip flag is False
-                self.assertFalse(pvder_object.HVRT_TRIP, msg='{}: Inverter trip flag set despite nominal voltage!'.format(pvder_object.name))    
+        elif pvder_object.DER_MOMENTARY_CESSATION:
+            #Check if HVRT momentary cessation is True is connected
+            self.assertTrue(pvder_object.HVRT_MOMENTARY_CESSATION, msg='{}: HVRT momentary cessation should be true!'.format(pvder_object.name))
+            #Check if DER is connected
+            self.assertFalse(pvder_object.DER_CONNECTED, msg='{}: DER connected despite momentary cessation!'.format(pvder_object.name))
         
 parser = argparse.ArgumentParser(description='Unit tests for HVRT operation in OpenDSS - PVDER simulation.')
 

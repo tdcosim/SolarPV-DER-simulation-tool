@@ -471,8 +471,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         self.update_inverter_frequency(t)
         
         self.update_ridethrough_flags(t)
-        self.check_and_trip()
-        self.check_and_reconnect(t)
+        self.disconnect_or_reconnect(t)
         
         #Phase a inverter output current
         diaR = (1/self.Lf)*(-self.Rf*self.ia.real - self.va.real + self.vta.real) + (self.winv/self.wbase)*self.ia.imag 
@@ -611,7 +610,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         
         #Frequency integration to get angle
         dwte = self.we
-        
+        #print(t,self.Ppv,self.Vdc_ref)
         result =     [ diaR,# list of dy/dt=f functions
                        diaI,
                        dxaR,
@@ -666,8 +665,9 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
         
         #d-q transformation
         self.update_inverter_frequency(t)
-       
-        self.check_and_trip()
+        
+        self.update_ridethrough_flags(t)
+        self.disconnect_or_reconnect(t)
         
         #Phase a inverter output current
         

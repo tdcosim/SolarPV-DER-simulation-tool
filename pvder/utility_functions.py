@@ -64,6 +64,12 @@ def Urms_calc(ua,ub,uc):
     """Function to calculate rms value of scalar phasor quantities."""
     
     return math.sqrt((pow(abs(ua),2)+pow(abs(ub),2)+pow(abs(uc),2))/3.0)/math.sqrt(2)  #Pure python implementation is faster      
+
+def Urms_calc_1phase(ua):
+    """Function to calculate rms value of scalar phasor quantities for single phase."""
+    
+    return abs(ua)/math.sqrt(2)  #Pure python implementation is faster      
+
 #@jit(nopython=True)    
 def Ub_calc(Ua):
     """Convert phase A quantity to Phase B."""

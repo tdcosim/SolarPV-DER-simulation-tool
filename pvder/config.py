@@ -17,8 +17,11 @@ DEFAULT_PARAMETER_ID_3PH = '50'
 DEFAULT_Ioverload = 1.3
 
 #Smart inverter feature options
-DEFAULT_Vreconnect_LV =  0.95  #Lower limit of voltage required for reconnection after momentary cessation
-DEFAULT_Vreconnect_HV =  1.02  #Uppder limit of voltage required for reconnection after momentary cessation
+DEFAULT_Vthreshold_high_limit = 1.5 #percentage
+DEFAULT_tthreshold_high_limit = 100.0 #seconds
+
+DEFAULT_tdisconnect_low_limit = 1/120.0 #seconds #Minimum time required to initiate DER disconnection (output cessation)
+DEFAULT_treconnect_low_limit = 0.4 #seconds #Minimum time required to initiate DER reconnection (output restoration)
 
 DEFAULT_freconnect_LF = 58.8
 DEFAULT_freconnect_HF = 61.2
