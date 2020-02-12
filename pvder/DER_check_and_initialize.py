@@ -26,10 +26,9 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     steadystate_solver = config.DEFAULT_STEADYSTATE_SOLVER
     
     def creation_message(self):
-        """Message after PV-DER instance was created."""
-        
-        #self.logger.info('{}:Instance created with parameter ID: {}; Specifications - Srated:{} kVA, Vrms:{:.1f} V ,Steady state:{},LVRT Enable:{}, LVRT Instantaneous trip:{}'.format(self.name,self.parameter_ID,self.Sinverter_rated/1e3,self.Vrms_rated,self.STEADY_STATE_INITIALIZATION,self.LVRT_ENABLE,self.VRT_INSTANTANEOUS_TRIP))
-        self.logger.info('{}:Instance created with parameter ID: {}; Specifications - Srated:{} kVA, Vrms:{:.1f} V ,Steady state:{},LVRT Enable:{}'.format(self.name,self.parameter_ID,self.Sinverter_rated/1e3,self.Vrms_rated,self.STEADY_STATE_INITIALIZATION,self.LVRT_ENABLE))
+        """Message after PV-DER instance was created."""        
+       
+        self.logger.info('{}:Instance created with parameter ID: {}; Specifications - Srated:{} kVA, Vrms:{:.1f} V ,Steady state:{},LVRT Enable:{},HVRT Enable:{}'.format(self.name,self.parameter_ID,self.Sinverter_rated/1e3,self.Vrms_rated,self.STEADY_STATE_INITIALIZATION,self.LVRT_ENABLE,self.HVRT_ENABLE))
     
     def create_parameter_ID(self,power_rating,parameter_ID):
         """Create a parameter ID from inverter rated power output.        

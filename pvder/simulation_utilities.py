@@ -354,7 +354,7 @@ class SimulationResults(Logging):
 class SimulationUtilities():
     """ Utility class for dynamic simulations."""
     
-    max_steps = 2000
+    max_steps = config.DEFAULT_max_steps #Max steps to be used by solver before producing error
     solver_list = ['odeint','ode-vode-bdf']
     
     def call_ODE_solver(self,derivatives,jacobian,y,t):

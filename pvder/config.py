@@ -36,6 +36,7 @@ DEFAULT_USE_FREQUENCY_ESTIMATE = False
 
 #Solver options
 DEFAULT_DELTA_T = 0.001 #Simulation time step
+DEFAULT_max_steps = 1000 #Max steps to be used by solver before producing error
 
 #Steady state solver options
 DEFAULT_STEADYSTATE_SOLVER = 'SLSQP'
