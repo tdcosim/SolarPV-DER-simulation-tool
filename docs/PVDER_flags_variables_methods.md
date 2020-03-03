@@ -14,12 +14,20 @@ Object type name: *SolarPV_DER_ThreePhase*,*SolarPV_DER_ThreePhaseBalanced*,*Sol
 1. **standAlone (Boolean):** If this flag is **True**, the DER model is expected to work as a stand alone model connected to a stif voltage source. If **False**, the DER model expects to recieve voltage  values from an external program (default: **True**).
 1. **STEADY_STATE_INITIALIZATION (Boolean):** If this flag is **True**, the states in the  dynamic DER model will be initialized with values corresponding to its steady state operating point. If **False** the states will be initialized with zeroes (default: **False**).
 
-#### Essential variables and flags
+#### Voltage ride through variables and flags
 1. **LVRT_ENABLE (Boolean):** If this flag is **True**, the low voltage ride through and protection logic will be enabled. If **False** the DER instance will neither trip nor enter momentary cessation when abnormal low voltage conditions are encountered  (default: **True**).
 2. **HVRT_ENABLE (Boolean):** If this flag is **True**, the high voltage ride through and protection logic will be enabled. If **False** the DER instance will neither trip nor enter momentary cessation when abnormal high voltage conditions are encountered (default: **True**).
-2. **LFRT_ENABLE (Boolean):** If this flag is **True**, the low frequency ride through and protection logic will be enabled. If **False** the DER instance will never trip when abnormal low frequency conditions are encountered (default: **False**).
-3. **VOLT_VAR_ENABLE (Boolean):** If this flag is **True**, Volt-VAR control is enabled during voltage sags within a specified voltage range. If **False** the DER will neither supply or absorb reactive power when voltage sags are encountered (default: **False**).
-4. **use_frequency_estimate (Boolean):** If this flag is **True**, grid frequency is estimated using the difference between phase angles at two consecutive time steps (default: **False**).
+3. **pvderConfig (dict)**: Specifies the user defined LVRT and HVRT settings. Can be passed as argument when initializing DER object. An arbitrary number of voltage threshold levels can be specified. Each level also has a mode that defines the DER behavior during the ride through. In both modes, once the t_threshold times are breached, the DER is tripped (i.e. power output reduced to zero permanently). The  definition of the modes are as follows:
+    * *momentary_cessation*: Power output reduced to zero during the ride through.
+    * *mandatory_operation*: Try to maintain rated power output during the ride through.
+    * Example for LVRT setting: 'LVRT':{'0':{'V_threshold':0.5, 't_threshold':1.0, 'mode': 'mandatory_operation'} }
+    * Example for HVRT setting: 'HVRT':{'0':{'V_threshold':1.12, 't_threshold':0.5, 'mode': 'momentary_cessation'} } 
+
+#### Other essential variables and flags
+
+1. **LFRT_ENABLE (Boolean):** If this flag is **True**, the low frequency ride through and protection logic will be enabled. If **False** the DER instance will never trip when abnormal low frequency conditions are encountered (default: **False**).
+2. **VOLT_VAR_ENABLE (Boolean):** If this flag is **True**, Volt-VAR control is enabled during voltage sags within a specified voltage range. If **False** the DER will neither supply or absorb reactive power when voltage sags are encountered (default: **False**).
+3. **use_frequency_estimate (Boolean):** If this flag is **True**, grid frequency is estimated using the difference between phase angles at two consecutive time steps (default: **False**).
 
 #### Essential methods
 1. **show_PV_DER_states(quantity):** Show the values for the specified DER variable (default: 'voltage'). 
