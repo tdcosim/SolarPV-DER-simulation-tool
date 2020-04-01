@@ -40,3 +40,20 @@ DEFAULT_max_steps = 1000 #Max steps to be used by solver before producing error
 
 #Steady state solver options
 DEFAULT_STEADYSTATE_SOLVER = 'SLSQP'
+
+
+#Default DER parameters
+DEFAULT_Z1_actual= 0.0019 + 1j*0.0561
+DEFAULT_der_details = {"n_phases":1,"Sinsol0":1.0}
+DEFAULT_module_parameters = {'Np':2,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 650.0,'Vdcmpp_max': 800.0}
+DEFAULT_inverter_ratings = {"Vdcrated":550.0,"Ioverload":DEFAULT_Ioverload,"Vrmsrated":177.0}
+DEFAULT_circuit_parameters = {"Rf_actual":0.002,"Lf_actual":25.0e-6,
+                              "C_actual":300.0e-6,"R1_actual":DEFAULT_Z1_actual.real,"X1_actual":DEFAULT_Z1_actual.imag}
+DEFAULT_controller_gains ={"Kp_GCC":12000.0,"Ki_GCC":4000.0,
+                               "Kp_DC":-4.0,"Ki_DC":-20.0,
+                               "Kp_Q":0.4,"Ki_Q":20.0,"wp": 20e4}
+DEFAULT_steadystate_values = {"maR0":0.7,"maI0":0.0,"iaR0":0.5,"iaI0":0.01}
+DEFAULT_initial_values = {"iaR0":0,"iaI0":0.0,"xaR0":0.0,"xaI0":0.0,"uaR0":0.0,"uaI0":0.0,
+                          "xDC0":0.0,"xQ0":0.0,"xPLL0":0.0,"wte0":6.28}
+
+

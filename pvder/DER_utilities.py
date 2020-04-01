@@ -100,11 +100,41 @@ class PVDER_ModelUtilities(BaseValues):
         
         return self.Kp_GCC*self.uc + self.xc #PI controller equation
     
+    def get_DER_config(self,config_file,DER_id):
+        """Check DER ID in config file."""
+        
+        config_dict = utility_functions.read_config(config_file) #Get bounds dict
+        
+        available_ids = list(config_dict.keys())
+        if DER_id in available_ids:
+            print('DER configuration with ID:{} was found in {}'.format(DER_id,config_file))
+        else:
+            raise KeyError('DER configuration with ID:{} could not be found in {}! - Available IDs are:{}'.format(DER_id,config_file,available_ids))
+        
+        return config_dict[DER_id]
+    
+    def get_pvderconfig(self,pvderConfig):
+        """Check DER ID in config file."""
+        
+        if pvderConfig is not None:
+            if not isinstance(pvderConfig,dict):
+                raise ValueError('Expected pvderConfig to be a dictionary but got {}'.format(type(pvderConfig)))
+        else:
+            pvderConfig = {}    
+        
+        return pvderConfig
+    
     #Controller outer loop equations (Current set-point)    
     def ia_ref_calc(self):
         """Phase A current reference"""
+        
         return self.xDC + self.Kp_DC*(self.Vdc_ref - self.Vdc) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)) #PI controller equation
-           
+    
+    def ia_ref_constantVdc_calc(self):
+        """Phase A current reference for constant Vdc"""
+        
+        return self.xDC + self.Kp_DC*(self.Ppv -  self.S.real) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)) #PI controller equation
+      
     def ib_ref_calc(self):
         """Phase B current reference"""
         
@@ -323,6 +353,7 @@ class PVDER_ModelUtilities(BaseValues):
         if parameter_type not in {'module_parameters','inverter_ratings','controller_gains','circuit_parameters','all'}:
             raise ValueError('Unknown quantity: ' + str(parameter_type))
         
+        print('Parameters for DER with ID:{}'.format(self.parameter_ID))
         if parameter_type ==  'module_parameters' or parameter_type ==  'all':
             print('Np:{},Ns:{}'.format(self.Np,self.Ns))
             print('Vdcmpp0:{:.3f} V\nVdcmpp_min:{:.3f} V\nVdcmpp_max:{:.3f} V'.format(self.Vdcmpp0,self.Vdcmpp_min,self.Vdcmpp_max))

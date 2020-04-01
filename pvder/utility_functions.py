@@ -7,6 +7,7 @@ import cmath
 import sys
 import time
 import six
+import json
 import scipy.io as sio
 #from numba import jit
 
@@ -249,3 +250,15 @@ def print_dictionary_keys(dictionary,dictionary_name):
     #print(dictionary_name,':',list(dictionary.keys()))
     
     print(dictionary_name,':',','.join(dictionary))
+
+def read_config(file_name):
+    """Load config json file and return dictionary."""
+    
+    assert isinstance(file_name,(str,unicode)),'Config file name should be a string!'
+    assert file_name[-4:]=='json','Config file name should be a JSON file!'
+    
+    with open(file_name, "r") as config_file:
+        print('Reading configuration file:{}'.format(config_file.name))
+        confDict = json.load(config_file)
+        
+    return confDict

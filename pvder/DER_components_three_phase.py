@@ -12,6 +12,7 @@ import logging
 
 from scipy.optimize import fsolve, minimize
 
+from pvder.DER_components import SolarPVDER,PV_Module
 from pvder.utility_classes import Logging
 from pvder.DER_check_and_initialize import PVDER_SetupUtilities
 from pvder.DER_features import PVDER_SmartFeatures
@@ -20,140 +21,8 @@ from pvder.grid_components import BaseValues
 
 from pvder import utility_functions
 from pvder import config
-
-class PV_Module(object):
-    """
-    Class for describing PV module.
     
-    Attributes:
-        Iph (float):Photocurrent from a single cell.
-        Ipv (float): PV module current.
-    
-    """
-    
-    #Select either NN or polyfit model for MPP
-    USE_POLYNOMIAL_MPP = True
-    _MPP_fit_points = 50
-    _Tactual_min = 273.15 #0 degree celsius
-    _S_min = 10.0
-    _Tactual_max = _Tactual_min + 35.0 #35 degree celsius
-    _S_max = 100.0
-    
-    Iscr = 8.03 #Cell short-circuit current at reference temperature and radiation
-    Kv = 0.0017  #Short-circuit current temperature co-efficient 
-    T0 = 273.15 + 25.0 #Cell reference temperature in Kelvin
-    Irs = 1.2e-7         #Cell reverse saturation current
-    q = 1.602e-19        #Charge of an electron
-    k = 1.38e-23        #Boltzmann's constant
-    A = 1.92      #p-n junction ideality factor
-    
-    module_parameters = {'1':{'Np':2,'Ns':500,'Vdcmpp0':250.0,'Vdcmpp_min': 225.0,'Vdcmpp_max': 300.0},
-                         '10':{'Np':2,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 650.0,'Vdcmpp_max': 800.0},
-                         '50':{'Np':11,'Ns':735,'Vdcmpp0':550.0,'Vdcmpp_min': 520.0,'Vdcmpp_max': 650.0},
-                         '250':{'Np':45,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 750.0,'Vdcmpp_max': 1000.0}}
-    
-    module_parameters_list = module_parameters.keys()
-    
-    def __init__(self,events,Sinverter_rated):
-        """Creates an instance of `PV_Module`.
-        
-        Args:
-           events (SimulationEvents): An instance of `SimulationEvents`.
-           Sinverter_rated (float): A scalar specifying the rated power of the DER in Watts.
-        
-        Raises:
-          ValueError: If parameters corresponding to `Sinverter_rated` are not available.
-        
-        """
-        
-        self.events = events
-        if (type(self).__name__ == 'SolarPV_DER_SinglePhase' and Sinverter_rated in {10e3}) or\
-           (type(self).__name__ == 'SolarPV_DER_ThreePhase' and Sinverter_rated in {50e3,100e3,250e3}):
-            
-            self.logger.debug('Creating PV module instance for {} DER with rating:{} kVA'.format(type(self).__name__.replace('SolarPV_DER_',''),str(int(Sinverter_rated/1e3))))
-            self.initialize_module_parameters()
-        
-        #Fit polynomial
-        if self.MPPT_ENABLE and self.USE_POLYNOMIAL_MPP:
-            self.fit_MPP_poly()
-        
-        #PV conditions
-        self.Sinsol,self.Tactual= events.solar_events(t=0.0)
-        
-        self.Iph = self.Iph_calc()
-    
-    @property    
-    def Vdcmpp(self):
-        """Voltage at maximum power point for given insolation and temperature"""
-        
-        #sol, = fsolve(lambda x: 2.5 - np.sqrt(x), 8)
-        self.Iph = self.Iph_calc() #This function uses solar insolation
-        
-        return fsolve(lambda Vdc0:-((self.Np*self.Irs*(scipy.exp((self.q*Vdc0)/(self.k*self.Tactual*self.A*self.Ns))))*(self.q/(self.k*self.Tactual*self.A*self.Ns))*Vdc0)-((self.Np*self.Irs*(scipy.exp((self.q*Vdc0)/(self.k*self.Tactual*self.A*self.Ns))-1)))\
-                       +(self.Np*self.Iph),self.Vdcmpp0)[0] #This is a time consuming operation 
-    
-    def Iph_calc(self):
-        """Photocurrent from a single cell for given insolation and temperature."""
-        
-        return (self.Iscr+(self.Kv*(self.Tactual-self.T0)))*(self.Sinsol/100.0)
-    
-    def Ppv_calc(self,Vdc_actual):
-        """PV panel power output from  solar insolation.
-                
-        Args:
-          Vdc_actual (float): DC link voltage in volts
-          
-        Returns:
-             float: Power output from PV module in p.u.
-        """
-    
-        self.Iph = self.Iph_calc()
-        self.Ipv = (self.Np*self.Iph)-(self.Np*self.Irs*(math.exp((self.q*Vdc_actual)/(self.k*self.Tactual*self.A*self.Ns))-1))   #Faster  with Pure Python functions
-       
-        return max(0,(self.Ipv*Vdc_actual))/BaseValues.Sbase
-       
-       #return utility_functions.Ppv_calc(self.Iph,self.Np,self.Ns,Vdc_actual,self.Tactual,Grid.Sbase)
-    
-    def fit_MPP_poly(self):
-        """Method to fit MPP to a polynomial function."""
-        
-        self.Tactual =  298.15  #Use constant temperature
-        self._MPP_fit_points = 10
-        _Srange = np.linspace(self._S_min,self._S_max,self._MPP_fit_points+1)
-        _Vdcmpp_list = []
-        _Ppvmpp_list =[]
-        _Sinsol_list= []
-        utility_functions.print_to_terminal('Calculating {} values for MPP polynomial fit!'.format(len(_Srange)))
-        for S in _Srange:
-            self.Sinsol = S
-            _Vdcmpp = self.Vdcmpp
-            _Ppvmpp = self.Ppv_calc(self.Vdcmpp)*BaseValues.Sbase
-            
-            _Sinsol_list.append(S)
-            _Vdcmpp_list.append(_Vdcmpp)
-            _Ppvmpp_list.append(_Ppvmpp)
-            #print(f'S:{self.Sinsol},Tactual:{self.Tactual},Vdcmpp:{_Vdcmpp},Ppvmpp:{_Ppvmpp/1e3}')
-        
-        _x = np.array(_Sinsol_list)
-        _y = np.array(_Vdcmpp_list)
-        self.z = np.polyfit(_x, _y, 3)
-        utility_functions.print_to_terminal('Found polynomial for MPP :{:.4f}x^3 + {:.4f}x^2 +{:.4f}x^1 + {:.4f}!'.format(self.z[0],self.z[1],self.z[2], self.z[3]))        
-        
-    def initialize_module_parameters(self):
-        """Initialize PV module parameters."""
-                
-        if self.check_parameter_ID(self.parameter_ID,self.module_parameters):
-            
-            self.Np = self.module_parameters[self.parameter_ID]['Np']
-            self.Ns = self.module_parameters[self.parameter_ID]['Ns']
-            self.Vdcmpp0 = self.module_parameters[self.parameter_ID]['Vdcmpp0']
-            self.Vdcmpp_min = self.module_parameters[self.parameter_ID]['Vdcmpp_min']
-            self.Vdcmpp_max = self.module_parameters[self.parameter_ID]['Vdcmpp_max']
-            
-        else:
-            raise ValueError('PV module parameters not available for parameter ID {} '.format(self.parameter_ID))
-    
-class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,BaseValues):
+class SolarPV_DER_ThreePhase(PV_Module,SolarPVDER,PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,BaseValues):
     """
        Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
        control systems.
@@ -174,7 +43,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
     
    
     #Ioverload = 1.5  #Inverter current overload rating (Max 10s)
-    
+    """
     inverter_ratings = {'50':{'Srated':50e3,'Varated':245.0,'Vdcrated':550.0,'Ioverload':config.DEFAULT_Ioverload},
                         '250':{'Srated':250e3,'Varated':320.0,'Vdcrated':750.0,'Ioverload':config.DEFAULT_Ioverload}}
     
@@ -201,7 +70,7 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
     circuit_parameters_list = circuit_parameters.keys()
     controller_parameters_list = controller_parameters.keys()
     steadystate_values_list = steadystate_values.keys()    
-    
+    """
     #Frequency
     winv = we = 2.0*math.pi*60.0
     fswitching  = 10e3
@@ -212,17 +81,12 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
     #Duty cycle
     m_steady_state = 0.96 #Expected duty cycle at steady state    
     
-    def __init__(self,events,grid_model = None,\
-                             Sinverter_rated = 50.0e3, Vrms_rated = None,
-                             ia0 = 0+0j, xa0 = 0+0j, ua0 = 0+0j,\
-                             xDC0 = 0, xQ0 = 0, xPLL0 = 0.0, wte0 = 2*math.pi,\
-                             gridVoltagePhaseA = None,\
-                             gridVoltagePhaseB = None,\
-                             gridVoltagePhaseC = None,\
-                             gridFrequency = None,\
-                             standAlone = True, STEADY_STATE_INITIALIZATION = False, allow_unbalanced_m = False,\
-                             pvderConfig = None, identifier = None, verbosity = 'INFO',
-                             parameter_ID = None):
+    def __init__(self,events,configFile=None,**kwargs):
+        #grid_model = None,Sinverter_rated = 50.0e3, Vrms_rated = None,
+        #ia0 = 0+0j, xa0 = 0+0j, ua0 = 0+0j,xDC0 = 0, xQ0 = 0, xPLL0 = 0.0, wte0 = 2*math.pi,\
+        #gridVoltagePhaseA = None,gridVoltagePhaseB = None,gridVoltagePhaseC = None,\
+        #gridFrequency = None,standAlone = True, STEADY_STATE_INITIALIZATION = False, allow_unbalanced_m = False,\
+        #pvderConfig = None, identifier = None, verbosity = 'INFO',parameter_ID = None
         
         """Creates an instance of `SolarPV_DER_ThreePhase`.
         
@@ -244,43 +108,15 @@ class SolarPV_DER_ThreePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,
           ValueError: If rated DC link voltage is not sufficient.
         
         """
-        
-        #Increment count to keep track of number of PV-DER model instances
-        SolarPV_DER_ThreePhase.count = SolarPV_DER_ThreePhase.count+1
-        self.name_instance(identifier)  #Generate a name for the instance
-        
-        self.initialize_logger(logging_level=verbosity)  #Set logging level - {DEBUG,INFO,WARNING,ERROR} 
-               
-        self.standAlone = standAlone
-        self.initialize_grid_measurements(gridVoltagePhaseA, gridVoltagePhaseB, gridVoltagePhaseC,gridFrequency)
-        self.Vrms_rated = Vrms_rated        
-        
-        self.parameter_ID = self.create_parameter_ID(Sinverter_rated,parameter_ID)
+                
+        SolarPV_DER_ThreePhase.count = SolarPV_DER_ThreePhase.count+1 #Increment count to keep track of number of PV-DER model instances
+        DER_arguments = self.setup_DER(configFile,**kwargs)        
         
         if six.PY3:
-            super().__init__(events,Sinverter_rated)  #Initialize PV module class (base class)
+            super().__init__(events,self.DER_config['inverter_ratings']['Srated'] )  #Initialize PV module class (base class)
         elif six.PY2:
-            super(SolarPV_DER_ThreePhase,self).__init__(events,Sinverter_rated)
-        
-        self.STEADY_STATE_INITIALIZATION = STEADY_STATE_INITIALIZATION
-        self.allow_unbalanced_m = allow_unbalanced_m
-        
-        self.attach_grid_model(grid_model)
-        self.initialize_DER(pvderConfig)
-                
-        self.VRT_initialize() #LVRT and HVRT settings     
-        self.FRT_initialize() #LFRT and HFRT settings
-        
-        self.initialize_jacobian()
-        self.reset_reference_counters()
-        
-        #Reference
-        self.update_Qref(t=0.0)
-        
-        self.initialize_states(ia0,xa0,ua0,xDC0,xQ0,xPLL0,wte0) #initialize_states
-        
-        self.initialize_derived_quantities()
-        self.initialize_Volt_VAR() #Volt-VAR settings
+            super(SolarPV_DER_ThreePhase,self).__init__(events,self.DER_config['inverter_ratings']['Srated'] )
+        self.initialize_DER(DER_arguments)         
         
         if self.standAlone:
             self._vag_previous = self.grid_model.vag

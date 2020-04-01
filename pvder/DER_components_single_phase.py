@@ -14,6 +14,7 @@ import scipy
 from scipy.optimize import fsolve, minimize
 
 from pvder.utility_classes import Logging
+from pvder.DER_components import SolarPVDER,PV_Module
 from pvder.DER_components_three_phase import PV_Module
 from pvder.DER_check_and_initialize import PVDER_SetupUtilities
 from pvder.DER_features import PVDER_SmartFeatures
@@ -23,7 +24,7 @@ from pvder.grid_components import Grid
 from pvder import utility_functions
 from pvder import config
 
-class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,Grid,Logging):
+class SolarPV_DER_SinglePhase(PV_Module,SolarPVDER,PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,Grid,Logging):
     """
     Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
     control systems.
@@ -44,6 +45,7 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
     Ki_PLL = 320 #32000
     
     #Inverter current overload rating (Max 10s)
+    """
     inverter_ratings = {'10':{'Srated':10e3,'Varated':250.0,'Vdcrated':550.0,'Ioverload':config.DEFAULT_Ioverload},
                         '1':{'Srated':1e3,'Varated':100.0,'Vdcrated':250.0,'Ioverload':config.DEFAULT_Ioverload},
                         }
@@ -64,12 +66,10 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
                           '1':{'maR0':0.7,'maI0':0.0,'iaR0':0.5,'iaI0':0.01}
                          }
     
+    """
+        
     #Sinverter_list = inverter_ratings.keys()
-    
-    inverter_ratings_list = inverter_ratings.keys()
-    circuit_parameters_list = circuit_parameters.keys()
-    controller_parameters_list = controller_parameters.keys()
-    steadystate_values_list = steadystate_values.keys()    
+       
     
     #Frequency
     winv = we = 2.0*math.pi*60.0
@@ -81,30 +81,24 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
     #Duty cycle
     m_steady_state = 0.96 #Expected duty cycle at steady state    
     
-    def __init__(self,events,grid_model=None,\
-                             Sinverter_rated = 10.0e3,Vrms_rated = None,
-                             ia0 = 0+0j,xa0 =0+0j , ua0 = 0+0j,\
-                             xDC0 = 0,xQ0 = 0,xPLL0 = 0.0,wte0 = 2*math.pi,\
-                             gridVoltagePhaseA = None,\
-                             gridVoltagePhaseB = None,\
-                             gridVoltagePhaseC = None,\
-                             gridFrequency = None,\
-                             standAlone=True,STEADY_STATE_INITIALIZATION=False,allow_unbalanced_m = False,\
-                             pvderConfig=None,identifier=None,verbosity='INFO',
-                             parameter_ID = None): 
+    def __init__(self,events,configFile=None,**kwargs): 
         
+        #ia0 = 0+0j,xa0 =0+0j , ua0 = 0+0j,xDC0 = 0,xQ0 = 0,xPLL0 = 0.0,wte0 = 2*math.pi,Sinverter_rated = None,Vrms_rated = None,\
+        #standAlone=True,STEADY_STATE_INITIALIZATION=False,allow_unbalanced_m = False,
+        #grid_model=None,pvderConfig = None,parameter_ID = None,gridVoltagePhaseA = None,gridVoltagePhaseB = None,gridVoltagePhaseC = None,
+        #gridFrequency = None,  
         """Creates an instance of `SolarPV_DER`.
         
         Args:
           events (SimulationEvents): An instance of `SimulationEvents`.
-          grid_model (Grid): An instance of `Grid`(only need to be suppled for stand alone simulation).
+          gridModel (Grid): An instance of `Grid`(only need to be suppled for stand alone simulation).
           Sinverter_rated (float): A scalar specifying the rated power (VA) of the DER.
           ia0,xa0,ua0 (complex): Initial value of inverter states in p.u. of the DER instance.
           xDC0,xQ0,xPLL0,wte0 (float): Initial value of inverter states in the DER instance.
           gridVoltatePhaseA,gridVoltatePhaseA,gridVoltatePhaseA (float): Initial voltage phasor (V) at PCC - LV side from external program (only need to be suppled if model is not stand alone).
           standAlone (bool): Specify if the DER instance is a stand alone simulation or part of a larger simulation.
-          STEADY_STATE_INITIALIZATION (bool): Specify whether states in the DER instance will be initialized to steady state values.
-          allow_unbalanced_m (bool): Allow duty cycles to take on unbalanced values during initialization (default: False).
+          steadyStateInitialization (bool): Specify whether states in the DER instance will be initialized to steady state values.
+          allowUnbalancedM (bool): Allow duty cycles to take on unbalanced values during initialization (default: False).
           pvderConfig (dict): Configuration parameters that may be supplied from an external program.
           identifier (str): An identifier that can be used to name the instance (default: None).
           
@@ -114,43 +108,18 @@ class SolarPV_DER_SinglePhase(PV_Module,PVDER_SetupUtilities,PVDER_SmartFeatures
         
         """
         
-        #Increment count to keep track of number of PV-DER model instances
-        SolarPV_DER_SinglePhase.count = SolarPV_DER_SinglePhase.count+1
-        self.name_instance(identifier) #Generate a name for the instance        
-        
-        self.initialize_logger(logging_level=verbosity)  #Set logging level - {DEBUG,INFO,WARNING,ERROR}       
-        
-        self.standAlone = standAlone
-        self.initialize_grid_measurements(gridVoltagePhaseA = gridVoltagePhaseA,gridFrequency =gridFrequency)
-        self.Vrms_rated = Vrms_rated
-        
-        self.parameter_ID = self.create_parameter_ID(Sinverter_rated,parameter_ID)
-        
+        SolarPV_DER_SinglePhase.count = SolarPV_DER_SinglePhase.count+1 #Increment count to keep track of number of PV-DER model instances
+               
+       
+        DER_arguments = self.setup_DER(configFile,**kwargs)
+                               
         if six.PY3:
-            super().__init__(events,Sinverter_rated)  #Initialize PV module class (base class)
+            super().__init__(events,self.DER_config['inverter_ratings']['Srated'])  #Initialize PV module class (base class)
         elif six.PY2:
-            super(SolarPV_DER_SinglePhase,self).__init__(events,Sinverter_rated)
+            super(SolarPV_DER_SinglePhase,self).__init__(events,self.DER_config['inverter_ratings']['Srated']   )
         
-        self.STEADY_STATE_INITIALIZATION = STEADY_STATE_INITIALIZATION
-        self.allow_unbalanced_m = allow_unbalanced_m
-        
-        self.attach_grid_model(grid_model)
-        self.initialize_DER(pvderConfig)
-        
-        self.VRT_initialize() #LVRT and HVRT settings  
-        self.FRT_initialize() #LFRT and HFRT settings
-        
-        self.initialize_jacobian()
-        self.reset_reference_counters()
-        
-        #Reference
-        self.update_Qref(t=0.0)
-        
-        self.initialize_states(ia0,xa0,ua0,xDC0,xQ0,xPLL0,wte0) #initialize_states
-        
-        self.initialize_derived_quantities()
-        self.initialize_Volt_VAR() #Volt-VAR settings
-        
+        self.initialize_DER(DER_arguments)
+            
         if self.standAlone:
             self._vag_previous = self.grid_model.vag
         self._va_previous = self.va

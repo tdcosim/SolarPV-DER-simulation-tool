@@ -29,7 +29,7 @@ class SimulationEvents(Logging):
     del_t_event = config.DEFAULT_DELTA_T
     override_angle = True
     
-    def __init__(self,events_spec = None,SOLAR_EVENT_ENABLE = True,GRID_EVENT_ENABLE = True, LOAD_EVENT_ENABLE = True,verbosity='INFO',identifier=None):
+    def __init__(self,events_spec = None,SOLAR_EVENT_ENABLE = True,GRID_EVENT_ENABLE = True, LOAD_EVENT_ENABLE = True,verbosity='INFO',identifier=''):
         """Creates an instance of `SimulationEvents`.
         
         Args:
