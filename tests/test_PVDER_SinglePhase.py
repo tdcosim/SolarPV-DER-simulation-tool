@@ -16,6 +16,7 @@ from pvder.simulation_events import SimulationEvents
 from pvder.simulation_utilities import SimulationResults
 
 from unittest_utilities import show_DER_status, plot_DER_trajectories
+config_file = r'..\config_der.json'
 
 def suite():
     """Define a test suite."""
@@ -46,19 +47,24 @@ class TestPVDER(unittest.TestCase):
     
     wgrid = 2*math.pi*60.0
     
+    flag_arguments = {'standAlone': False,
+                      'steadyStateInitialization':True,
+                      'verbosity':'DEBUG'}
+    ratings_arguments ={'powerRating':power_rating,
+                        'VrmsRating':Vrms}
+    voltage_arguments = {'gridVoltagePhaseA':Va,
+                         'gridFrequency':wgrid}        
+    
     def test_init(self):
         """Test PV-DER three phase mode."""          
                         
         events = SimulationEvents()
-                
-        PVDER = SolarPV_DER_SinglePhase(events = events,
-                                       Sinverter_rated = self.power_rating,Vrms_rated = self.Vrms, #175
-                                       gridVoltagePhaseA = self.Va,
-                                       gridFrequency = self.wgrid,
-                                       standAlone = False,STEADY_STATE_INITIALIZATION=True,verbosity = 'DEBUG')
+        
+        PVDER = SolarPV_DER_SinglePhase(events = events,configFile=config_file,
+                                       **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})
     
         self.assertIsInstance(PVDER, SolarPV_DER_SinglePhase)
-        self.assertTrue(PVDER.STEADY_STATE_INITIALIZATION)      
+        self.assertTrue(PVDER.steady_state_initialization)      
         
     def test_parameter_dict(self):
         """Test initalization and update of paraemter dictionary.""" 
@@ -69,12 +75,9 @@ class TestPVDER(unittest.TestCase):
         new_circuit_parameters = {'C_actual':100.0e-6}
                 
         events = SimulationEvents()
-                
-        PVDER = SolarPV_DER_SinglePhase(events = events,
-                                       Sinverter_rated = self.power_rating,Vrms_rated = self.Vrms, #175
-                                       gridVoltagePhaseA = self.Va,
-                                       gridFrequency = self.wgrid,
-                                       standAlone = False,STEADY_STATE_INITIALIZATION=True,verbosity = 'INFO')   
+        
+        PVDER = SolarPV_DER_SinglePhase(events = events,configFile=config_file,
+                                       **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})
     
         PVDER.initialize_parameter_dict(parameter_ID = new_ID,source_parameter_ID = source_ID)
         
@@ -92,14 +95,9 @@ class TestPVDER(unittest.TestCase):
         """Test PV-DER Jacobian."""          
                         
         events = SimulationEvents()
-                
-        PVDER = SolarPV_DER_SinglePhase(events = events,
-                                       Sinverter_rated = self.power_rating,Vrms_rated = self.Vrms, #175
-                                       gridVoltagePhaseA = self.Va,
-                                       gridFrequency = self.wgrid,
-                                       standAlone = False,STEADY_STATE_INITIALIZATION=True,verbosity = 'DEBUG')
-    
-        
+        PVDER = SolarPV_DER_SinglePhase(events = events,configFile=config_file,
+                                       **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})
+            
         jac_CHECK,Jn,Ja = PVDER.check_jacobian()
         self.assertTrue(jac_CHECK,'Analytical and numerical Jacobian should be same.')      
         self.assertEqual(Jn.shape,(PVDER.n_ODE,PVDER.n_ODE))    

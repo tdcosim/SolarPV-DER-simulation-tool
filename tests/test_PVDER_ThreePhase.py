@@ -18,7 +18,7 @@ from pvder.simulation_utilities import SimulationResults
 from pvder import utility_functions
 
 from unittest_utilities import show_DER_status, plot_DER_trajectories
-
+config_file = r'..\config_der.json'
 def suite():
     """Define a test suite."""
     
@@ -49,21 +49,26 @@ class TestPVDER(unittest.TestCase):
     
     wgrid = 2*math.pi*60.0
     
+    flag_arguments = {'standAlone': False,
+                      'steadyStateInitialization':True,
+                      'verbosity':'DEBUG'}
+    ratings_arguments ={'powerRating':power_rating,
+                        'VrmsRating':Vrms}
+    voltage_arguments = {'gridVoltagePhaseA': Va,
+                         'gridVoltagePhaseB':Vb,
+                         'gridVoltagePhaseC':Vc,
+                         'gridFrequency':wgrid}              
+    
     def test_init(self):
         """Test PV-DER three phase mode."""          
                         
         events = SimulationEvents()
                 
-        PVDER = SolarPV_DER_ThreePhase(events = events,
-                                       Sinverter_rated = self.power_rating,Vrms_rated = self.Vrms, #175
-                                       gridVoltagePhaseA = self.Va,
-                                       gridVoltagePhaseB = self.Vb,
-                                       gridVoltagePhaseC = self.Vc,
-                                       gridFrequency = self.wgrid,
-                                       standAlone = False,STEADY_STATE_INITIALIZATION=True,verbosity = 'DEBUG')
+        PVDER = SolarPV_DER_ThreePhase(events = events,configFile=config_file,
+                                       **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})
     
         self.assertIsInstance(PVDER, SolarPV_DER_ThreePhase)
-        self.assertTrue(PVDER.STEADY_STATE_INITIALIZATION)      
+        self.assertTrue(PVDER.steady_state_initialization)      
         
     def test_parameter_dict(self):
         """Test initalization and update of paraemter dictionary.""" 
@@ -73,15 +78,10 @@ class TestPVDER(unittest.TestCase):
         new_module_parameters = {'Np':5}
         new_circuit_parameters = {'C_actual':500.0e-6}
                 
-        events = SimulationEvents()
+        events = SimulationEvents()                
                 
-        PVDER = SolarPV_DER_ThreePhase(events = events,
-                                       Sinverter_rated = self.power_rating,Vrms_rated = self.Vrms, #175
-                                       gridVoltagePhaseA = self.Va,
-                                       gridVoltagePhaseB = self.Vb,
-                                       gridVoltagePhaseC = self.Vc,
-                                       gridFrequency = self.wgrid,
-                                       standAlone = False,STEADY_STATE_INITIALIZATION=True,verbosity = 'INFO')   
+        PVDER = SolarPV_DER_ThreePhase(events = events,configFile=config_file,
+                                       **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})
     
         PVDER.initialize_parameter_dict(parameter_ID = new_ID,source_parameter_ID = source_ID)
         
@@ -93,22 +93,16 @@ class TestPVDER(unittest.TestCase):
         PVDER.update_parameter_dict(parameter_ID = new_ID,parameter_type = 'circuit_parameters',parameter_dict = new_circuit_parameters)        
                          
         self.assertEqual(PVDER.module_parameters[new_ID]['Np'],new_module_parameters['Np']) 
-        self.assertEqual(PVDER.circuit_parameters[new_ID]['C_actual'],new_circuit_parameters['C_actual'])        
-    
+        self.assertEqual(PVDER.circuit_parameters[new_ID]['C_actual'],new_circuit_parameters['C_actual'])            
     
     def test_jacobian(self):
         """Test PV-DER three phase mode."""          
                         
-        events = SimulationEvents()
+        events = SimulationEvents()                
                 
-        PVDER = SolarPV_DER_ThreePhase(events = events,
-                                       Sinverter_rated = self.power_rating,Vrms_rated = self.Vrms, #175
-                                       gridVoltagePhaseA = self.Va,
-                                       gridVoltagePhaseB = self.Vb,
-                                       gridVoltagePhaseC = self.Vc,
-                                       gridFrequency = self.wgrid,
-                                       standAlone = False,STEADY_STATE_INITIALIZATION=True,verbosity = 'INFO')    
-        
+        PVDER = SolarPV_DER_ThreePhase(events = events,configFile=config_file,
+                                       **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})
+    
         jac_CHECK,Jn,Ja = PVDER.check_jacobian()
         self.assertTrue(jac_CHECK,'Analytical and numerical Jacobian should be same.')      
         self.assertEqual(Jn.shape,(PVDER.n_ODE,PVDER.n_ODE))    
@@ -127,14 +121,9 @@ class TestPVDER(unittest.TestCase):
             Vc = voltages[2]
             
             print('Testing voltages:{}'.format(voltages))
-            
-            PVDER = SolarPV_DER_ThreePhase(events = events,
-                                       Sinverter_rated = self.power_rating,Vrms_rated = self.Vrms, #175
-                                       gridVoltagePhaseA = Va,
-                                       gridVoltagePhaseB = Vb,
-                                       gridVoltagePhaseC = Vc,
-                                       gridFrequency = self.wgrid,
-                                       standAlone = False,STEADY_STATE_INITIALIZATION=True,verbosity = 'INFO')    
+                    
+            PVDER = SolarPV_DER_ThreePhase(events = events,configFile=config_file,
+                                       **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})    
         
             self.assertAlmostEqual(PVDER.Ppv,PVDER.S.real,delta=0.001,msg='Inverter power output must be equal to PV module power output at steady-state!')
             self.assertAlmostEqual(PVDER.S_PCC.imag,PVDER.Q_ref,delta=0.001,msg='Inverter reactive power output must be equal to Q reference!')

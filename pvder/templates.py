@@ -4,7 +4,7 @@ Created on Mon Mar 30 10:19:16 2020
 
 @author: splathottam
 """
-
+import six
 from pvder.grid_components import Grid,BaseValues
 
 DER_design_template = {"der_details":["n_phases","Sinsol"],
@@ -15,14 +15,20 @@ DER_design_template = {"der_details":["n_phases","Sinsol"],
                        "steadystate_values":["maR0","maI0","iaR0","iaI0"],
                        "initial_values":["iaR0","iaI0","xaR0","xaI0","uaR0","uaI0","xDC0","xQ0","xPLL0","wte0"]
                       }
-
-DER_argument_template = {'derId':{'default_value':None,'type':(str,unicode)},
-                          'powerRating':{'default_value':None,'type':(int,float)},
-                           'VrmsRating':{'default_value':None,'type':(int,float)},'Vdcrated':{'default_value':None,'type':(int,float)},
-                             'gridModel':{'default_value':None,'type':Grid},
-                             'verbosity':{'default_value':'INFO','type':str},'identifier':{'default_value':'','type':(str,unicode)},
-                             'derConfig':{'default_value':{},'type':dict},
-                             'gridVoltagePhaseA':{'default_value':None,'type':complex},'gridVoltagePhaseB':{'default_value':None,'type':complex},'gridVoltagePhaseC':{'default_value':None,'type':complex},
+if six.PY3:
+    string_type = (str)
+elif six.PY2:
+    string_type = (str,unicode)
+           
+DER_argument_template = {'derId':{'default_value':None,'type':string_type},
+                         'powerRating':{'default_value':None,'type':(int,float)},
+                         'VrmsRating':{'default_value':None,'type':(int,float)},'Vdcrated':{'default_value':None,'type':(int,float)},
+                         'gridModel':{'default_value':None,'type':Grid},
+                         'verbosity':{'default_value':'INFO','type':string_type},'identifier':{'default_value':'','type':string_type},
+                         'derConfig':{'default_value':{},'type':dict},
+                         'gridVoltagePhaseA':{'default_value':None,'type':complex},
+                         'gridVoltagePhaseB':{'default_value':None,'type':complex},
+                         'gridVoltagePhaseC':{'default_value':None,'type':complex},
                              'gridFrequency':{'default_value':None,'type':(int,float)},
                              'standAlone':{'default_value':True,'type':bool},'steadyStateInitialization':{'default_value':True,'type':bool},
                              'allowUnbalancedM':{'default_value':False,'type':bool},

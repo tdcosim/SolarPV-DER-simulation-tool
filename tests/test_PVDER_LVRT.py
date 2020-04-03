@@ -21,11 +21,11 @@ from unittest_utilities import show_DER_status, plot_DER_trajectories
 
 #sys.path.append(module_folder)
 #os.environ['PATH']+=';'+module_folder
-
+config_file = r'..\config_der.json'
 
 def suite():
     """Define a test suite."""
-    avoid_tests = ['LVRT3']
+    avoid_tests = ['LVRT2','LVRT3']
     tests = test_options.options #['LVRT1'] #,,'LVRT2','LVRT3'   
     tests = list(set(tests) - set(avoid_tests))
     print('Following unittest scenarios will be run:{}'.format(tests))
@@ -42,7 +42,7 @@ class TestPVDER(unittest.TestCase):
     default_setup_scenario = 'default'
     default_test_scenario = 'default'
     
-    setup_scenarios ={'default':{'power_rating':50e3,'SinglePhase':False,'SteadyState':True,'n_DER':1},
+    setup_scenarios ={'default':{'powerRating':50e3,'SinglePhase':False,'steadyStateInitialization':True,'n_DER':1},
                      'case1':{'SinglePhase':True},
                      'case2':{'SteadyState':False}}
     
@@ -99,9 +99,13 @@ class TestPVDER(unittest.TestCase):
         
         self.n_instances = self.return_settings(scenario=scenario,parameter='n_DER',settings_type='setup')
         
-        power_rating = self.return_settings(scenario=scenario,parameter='power_rating',settings_type='setup')
+        
+        flag_arguments = {'standAlone': True,
+                          'steadyStateInitialization':self.return_settings(scenario=scenario,parameter='steadyStateInitialization',settings_type='setup'),
+                          'verbosity':'DEBUG'}
+        ratings_arguments ={'powerRating': self.return_settings(scenario=scenario,parameter='powerRating',settings_type='setup')}
+        
         SinglePhase = self.return_settings(scenario=scenario,parameter='SinglePhase',settings_type='setup')
-        SteadyState = self.return_settings(scenario=scenario,parameter='SteadyState',settings_type='setup')
         
         for i in range(self.n_instances):
             
@@ -109,15 +113,11 @@ class TestPVDER(unittest.TestCase):
             self.grid_list.append(Grid(events=self.events_list[-1]))
         
             if SinglePhase:
-                self.DER_model_list.append(SolarPV_DER_SinglePhase(grid_model=self.grid_list[-1],events=self.events_list[-1],
-                                                                   standAlone=True,
-                                                                   Sinverter_rated = power_rating,
-                                                                   STEADY_STATE_INITIALIZATION=SteadyState))
+                self.DER_model_list.append(SolarPV_DER_SinglePhase(events=self.events_list[-1],configFile=config_file,
+                                                                   **{"gridModel":self.grid_list[-1],"identifier":scenario,**flag_arguments,**ratings_arguments}))
             else:
-                self.DER_model_list.append(SolarPV_DER_ThreePhase(grid_model=self.grid_list[-1],events=self.events_list[-1],
-                                                                  standAlone=True,
-                                                                  Sinverter_rated = power_rating,
-                                                                  STEADY_STATE_INITIALIZATION=SteadyState))
+                self.DER_model_list.append(SolarPV_DER_ThreePhase(events=self.events_list[-1],configFile=config_file,
+                                                                  **{"gridModel":self.grid_list[-1],"identifier":scenario,**flag_arguments,**ratings_arguments}))
 
             self.sim_list.append(DynamicSimulation(grid_model=self.grid_list[-1],PV_model=self.DER_model_list[-1],events = self.events_list[-1],LOOP_MODE=False,COLLECT_SOLUTION=True))
             self.sim_list[-1].jacFlag = False      #Provide analytical Jacobian to ODE solver
@@ -140,21 +140,21 @@ class TestPVDER(unittest.TestCase):
     def specify_scenario(self,events,DER_model,sim,scenario='LVRT1'):
         """Specify scenario for unit test."""
         
-        _Vnominal = self.return_settings(scenario=scenario,parameter='Vnominal',settings_type='test')
-        _Vfault = self.return_settings(scenario=scenario,parameter='Vfault',settings_type='test')
+        Vnominal = self.return_settings(scenario=scenario,parameter='Vnominal',settings_type='test')
+        Vfault = self.return_settings(scenario=scenario,parameter='Vfault',settings_type='test')
         
-        _tfault_start = self.return_settings(scenario=scenario,parameter='tfault_start',settings_type='test')
-        _tfault_duration = self.return_settings(scenario=scenario,parameter='tfault_duration',settings_type='test')
+        tfault_start = self.return_settings(scenario=scenario,parameter='tfault_start',settings_type='test')
+        tfault_duration = self.return_settings(scenario=scenario,parameter='tfault_duration',settings_type='test')
         
         DER_model.LVRT_ENABLE = self.return_settings(scenario=scenario,parameter='LVRT_ENABLE',settings_type='test')
         
         sim.tStop  = self.return_settings(scenario=scenario,parameter='tEnd',settings_type='test')       
         
-        if _tfault_start is not None:
-            events.add_grid_event(_tfault_start,_Vfault)
+        if tfault_start is not None:
+           events.add_grid_event(tfault_start,Vfault)
         
-        if _tfault_duration is not None:
-            events.add_grid_event(_tfault_start+_tfault_duration,_Vnominal)    
+        if tfault_duration is not None:
+           events.add_grid_event(tfault_start+tfault_duration,Vnominal)    
                 
     def return_settings(self,scenario,parameter,settings_type):
         """Check and repalce with correct parameter from scenario."""
@@ -201,7 +201,7 @@ class TestPVDER(unittest.TestCase):
         """Check whether DER states are nominal."""
         
         #Check if DC link voltage within inverter limits.
-        self.assertTrue(pvder_object.Vdc*pvder_object.Vdcbase >= pvder_object.Vdcmpp_min or pvder_object.Vdc*pvder.PV_model.Vdcbase <= pvder_object.Vdcmpp_max, msg='{}:DC link voltage {:.2f} V exceeded limit!'.format(pvder_object.name,pvder_object.Vdc*pvder_object.Vdcbase))
+        self.assertTrue(pvder_object.Vdc*pvder_object.Vdcbase >= pvder_object.Vdcmpp_min or pvder_object.Vdc*pvder_object.Vdcbase <= pvder_object.Vdcmpp_max, msg='{}:DC link voltage {:.2f} V exceeded limit!'.format(pvder_object.name,pvder_object.Vdc*pvder_object.Vdcbase))
         
         #Check current reference and power output within inverter limits.
         self.assertTrue(abs(pvder_object.ia_ref)<= pvder_object.iref_limit, msg='{}:Inverter current exceeded limit by {:.2f} A!'.format(pvder_object.name,(abs(pvder_object.ia_ref) - pvder_object.iref_limit)*pvder_object.Ibase))
@@ -219,7 +219,7 @@ class TestPVDER(unittest.TestCase):
             #Check if DER stopped supplying power
             self.assertAlmostEqual(abs(pvder_object.S_PCC), 0.0, places=4, msg='{}:Inverter power output is {:.2f} VA despite trip status!'.format(pvder_object.name,pvder_object.S_PCC*pvder_object.Sbase))
             #Check if DC link voltage limits are breached
-            self.assertTrue(pvder_object.Vdc*pvder_object.Vdcbase >= pvder_object.Vdcmpp_min or pvder_object.Vdc*pvder.PV_model.Vdcbase <= pvder_object.Vdcmpp_max, msg='{}:DC link voltage exceeded limits!'.format(pvder_object.name))
+            self.assertTrue(pvder_object.Vdc*pvder_object.Vdcbase >= pvder_object.Vdcmpp_min or pvder_object.Vdc*pvder_object.Vdcbase <= pvder_object.Vdcmpp_max, msg='{}:DC link voltage exceeded limits!'.format(pvder_object.name))
                 
         elif pvder_object.DER_MOMENTARY_CESSATION:
             #Check if LVRT momentary cessation is True is connected

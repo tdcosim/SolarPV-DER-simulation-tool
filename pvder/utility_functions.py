@@ -254,7 +254,12 @@ def print_dictionary_keys(dictionary,dictionary_name):
 def read_config(file_name):
     """Load config json file and return dictionary."""
     
-    assert isinstance(file_name,(str,unicode)),'Config file name should be a string!'
+    if six.PY3:
+        string_type = (str)
+    elif six.PY2:
+        string_type = (str,unicode)           
+    
+    assert isinstance(file_name,string_type),'Config file name should be a string!'
     assert file_name[-4:]=='json','Config file name should be a JSON file!'
     
     with open(file_name, "r") as config_file:
