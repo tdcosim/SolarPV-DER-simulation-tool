@@ -11,7 +11,7 @@ from scipy.optimize import fsolve, minimize
 from pvder.utility_classes import Logging
 from pvder.grid_components import BaseValues
 from pvder import utility_functions
-from pvder import config
+from pvder import config,templates,specifications
 
 PHASE_DIFFERENCE_120 = 120.0*(math.pi/180.0)
 
@@ -19,59 +19,100 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     """
        Utility class for error checking during model initialization.
     """
-        
-    solver_spec = {'SLSQP':{'ftol': 1e-10, 'disp': True, 'maxiter':10000},
-                   'nelder-mead':{'xtol': 1e-8, 'disp': True, 'maxiter':10000}}
+    module_parameters = {}
+    inverter_ratings = {}
+    circuit_parameters = {}
+    controller_gains ={}
+    steadystate_values= {}    
+    
+    DER_design_template = templates.DER_design_template
+    solver_spec = specifications.solver_spec
+    
+    default_DER_config = dict((key, eval('config.DEFAULT_'+key)) for key in DER_design_template.keys()) 
+    
+    DER_config =  dict((key, {}) for key in DER_design_template.keys()) 
+    DER_config_external = {}    
                    
     steadystate_solver = config.DEFAULT_STEADYSTATE_SOLVER
     
     def creation_message(self):
         """Message after PV-DER instance was created."""        
        
-        self.logger.info('{}:Instance created with parameter ID: {}; Specifications - Srated:{} kVA, Vrms:{:.1f} V ,Steady state:{},LVRT Enable:{},HVRT Enable:{}'.format(self.name,self.parameter_ID,self.Sinverter_rated/1e3,self.Vrms_rated,self.STEADY_STATE_INITIALIZATION,self.LVRT_ENABLE,self.HVRT_ENABLE))
-    
-    def create_parameter_ID(self,power_rating,parameter_ID):
-        """Create a parameter ID from inverter rated power output.        
+        self.logger.info('{}:Instance created with DER parameter ID: {}; Specifications - Srated:{} kVA, Vrms:{:.1f} V ,Steady state:{},LVRT Enable:{},HVRT Enable:{}'.format(self.name,self.parameter_ID,self.Sinverter_rated/1e3,self.Vrms_rated,self.steady_state_initialization,self.LVRT_ENABLE,self.HVRT_ENABLE))
         
-        Args:
-             power_rating (float): The inverter power rating in kVA.
-             parameter_ID (str): User specified parameter ID (can be None). 
+    def update_DER_config(self,DER_config,DER_arguments,DER_id):
+        """Update PV-DER design."""  
+        
+        self.check_DER_config(DER_config,DER_id)
+        
+        #parameters_from_arguments = {}
+        #parameters_from_config = {}
+        #parameters_from_default = {}
+        
+        for DER_component in self.DER_design_template:
+            if DER_component in DER_arguments['derConfig']: 
+                self.DER_config[DER_component] = DER_arguments['derConfig'][DER_component]
+            else:
+                for DER_parameter in self.DER_design_template[DER_component]:
+                    _ = self.update_DER_parameter(DER_config,DER_arguments,DER_id,DER_component,DER_parameter)
 
-        Returns:
-             str: Parameter id
-        """
+        self.basic_specs = {DER_id:self.DER_config['basic_specs']}
+        self.module_parameters = {DER_id:self.DER_config['module_parameters']}
+        self.inverter_ratings = {DER_id:self.DER_config['inverter_ratings']}
+        self.circuit_parameters = {DER_id:self.DER_config['circuit_parameters']}
+        self.circuit_parameters[DER_id].update({'Z1_actual':self.DER_config['circuit_parameters']['R1_actual'] + 1j*self.DER_config['circuit_parameters']['X1_actual']})
         
-        if power_rating is not None:
-            assert isinstance(power_rating,float), 'Inverter power ratings should be a float.'
-            parameter_ID = str(int(power_rating/1e3)) 
+        self.controller_gains = {DER_id:self.DER_config['controller_gains']}
+        self.steadystate_values = {DER_id:self.DER_config['steadystate_values']}   
+        
+    def update_DER_parameter(self,DER_config,DER_arguments,DER_id,DER_component,DER_parameter):
+        """Update DER config using both config file and arguments."""
+        
+        parameters ={}
+        
+        if DER_parameter in DER_arguments: #Check if parameter exists in DER key word arguments
+            self.DER_config[DER_component].update({DER_parameter:DER_arguments[DER_parameter]})
+            parameters.update({DER_parameter:DER_arguments[DER_parameter]})
+            source = 'DER arguments'
+            
+        elif DER_parameter in DER_config[DER_component]: #Check if parameter exists in config file
+            if isinstance(DER_config[DER_component][DER_parameter],(int,float)):
+                self.DER_config[DER_component].update({DER_parameter:DER_config[DER_component][DER_parameter]})
+                parameters.update({DER_parameter:DER_config[DER_component][DER_parameter]})
+                source = 'DER config'
+            else:
+                raise ValueError('Found {} to have type {} - expected type:(int,float)!'.format(DER_parameter,type(DER_config[DER_component][DER_parameter])))
+        
+        elif DER_parameter in self.default_DER_config[DER_component]:  #Check if parameter exists in default DER config
+                self.logger.info('{}: Parameter {} not found for ID:{} - updating with default value.'.format(self.name,DER_parameter,DER_id)) 
+                self.DER_config[DER_component].update({DER_parameter:self.default_DER_config[DER_component][DER_parameter]})
+                parameters.update({DER_parameter:self.default_DER_config[DER_component][DER_parameter]})
+                source = 'DER default values'
         else:
-            assert isinstance(parameter_ID,str), 'parameter_ID should be a string.'
-            parameter_ID = parameter_ID       
-                   
-        return parameter_ID    
+            raise ValueError('{}: Parameter {} not found for ID:{} - update config file and try again.'.format(self.name,DER_parameter,DER_id))
+        
+        self.logger.debug('{}:Following parameters were obtained from {}:{}'.format(self.name,source,parameters))
+        
+        return parameters
+             
+    def check_DER_config(self,DER_config,DER_id):
+        """Check DER config."""
+        
+        available_keys = sorted(list(DER_config.keys()))
+        required_keys = sorted(self.DER_design_template.keys())
+        missing_keys = set(required_keys)-set(available_keys)
+        if not bool(missing_keys):
+            self.logger.debug('{}:DER configuration with ID {} contained all required keys.'.format(self.name,DER_id))        
+        else:
+            raise KeyError('{}:DER configuration with ID:{} did not contain the required config keys:{}!'.format(self.name, DER_id,missing_keys))              
     
-    def check_parameter_exists(self,parameter_ID):
-        """Check existence of parameter ID within the parameter dictionaries."""
+    def check_config_file(self,config_file,config_dict):
+        """Check whether DER config file contains necessary fields."""
         
-        return (self.check_parameter_ID(parameter_ID,self.module_parameters) and 
-                self.check_parameter_ID(parameter_ID,self.inverter_ratings)  and 
-                self.check_parameter_ID(parameter_ID,self.circuit_parameters) and
-                self.check_parameter_ID(parameter_ID,self.controller_parameters)
-               )
-    
-    def check_parameter_ID(self,parameter_ID,parameter_list):
-        """Check whether the parameter ID is available in the parameter list.
-        
-        Args:
-             parameter_ID (str): User specified parameter ID (can be None). 
-             parameter_list (list): List of parameter IDs.
-
-        Returns:
-             bool: Whether parmeter ID is available in the list.
-        """
-        
-        return parameter_ID  in parameter_list
-        
+        self.logger.debug('Checking config file {}.'.format(config_file))                 
+        for DER_id,DER_config in config_dict.items():
+            self.check_DER_config(DER_config,DER_id)           
+                               
     def modify_DER_parameters(self,parameter_ID):
         """Modify the DER parameters to parameters corresponding to the given parameter ID.
         
@@ -79,9 +120,9 @@ class PVDER_SetupUtilities(BaseValues,Logging):
              parameter_ID (str): User specified parameter ID (can be None). 
         """
         
-        self.parameter_ID = self.create_parameter_ID(power_rating=None,parameter_ID=parameter_ID)
+        self.parameter_ID = self.get_DER_id(derId=parameter_ID)
         self.initialize_module_parameters()
-        self.initialize_DER(self.pvderConfig)
+        self.initialize_DER_model()
         
         self.initialize_states(ia0 = 0+0j, xa0 = 0+0j, ua0 = 0+0j,\
                                xDC0 = 0, xQ0 = 0, xPLL0 = 0.0,wte0 = 2*math.pi)
@@ -90,7 +131,15 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         
         self.logger.info('{}:PV-DER parameters updated with parameters from  parameter dictionary {}!'.format(self.name,self.parameter_ID))
     
-    def initialize_grid_measurements(self,gridVoltagePhaseA=None,gridVoltagePhaseB = None, gridVoltagePhaseC = None, gridFrequency = None):
+    def initialize_basic_specs(self):
+        """Initialize number of ODEs and phases"""
+        
+        self.n_ODE = specifications.DER_basic_spec[type(self).__name__]['n_ODE'] #23  #Number of ODE's
+        self.n_phases = specifications.DER_basic_spec[type(self).__name__]['n_phases'] #3 #Number of phases    
+        self.t_stable = specifications.DER_basic_spec[type(self).__name__]['t_stable'] #0.5  #Time delay before activating logic for MPP, Volt-VAR control,  LVRT/LFRT 
+        self.m_steady_state = specifications.DER_basic_spec[type(self).__name__]['m_steady_state'] #0.96 #Expected duty cycle at steady state 
+    
+    def initialize_grid_measurements(self,DER_arguments):
         """Initialize inverter states.
         Args:
              gridVoltagePhaseA (complex): Value of gridVoltagePhaseA
@@ -101,22 +150,35 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         """        
 
         if not self.standAlone:
-            assert  gridFrequency != None, 'Frequency of grid voltage source need to be supplied if model is not stand alone!'
-            self.gridFrequency = gridFrequency           
-
-            if type(self).__name__ == 'SolarPV_DER_SinglePhase' or type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
-                assert  gridVoltagePhaseA != None, 'Phase A voltage of grid voltage source need to be supplied if model is not stand alone!'
-
-                self.gridVoltagePhaseA = gridVoltagePhaseA/self.Vbase
+            if 'gridFrequency' in DER_arguments:
+                self.gridFrequency = DER_arguments['gridFrequency']
+            else:
+                raise ValueError('Grid voltage source Frequency need to be supplied if model is not stand alone!')
+            
+            if type(self).__name__ in ['SolarPV_DER_SinglePhase','SolarPV_DER_ThreePhaseBalanced','SolarPV_DER_ThreePhase']:
+                if 'gridVoltagePhaseA' in DER_arguments:
+                    self.gridVoltagePhaseA = DER_arguments['gridVoltagePhaseA']/self.Vbase
+                    
+                else:
+                    raise ValueError('Grid voltage source phase A need to be supplied if model is not stand alone!')
+                               
                 if type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
-                    self.gridVoltagePhaseB = utility_functions.Ub_calc(gridVoltagePhaseA)/self.Vbase
-                    self.gridVoltagePhaseC = utility_functions.Uc_calc(gridVoltagePhaseA)/self.Vbase
+                    self.gridVoltagePhaseB = utility_functions.Ub_calc(self.gridVoltagePhaseA)
+                    self.gridVoltagePhaseC = utility_functions.Uc_calc(self.gridVoltagePhaseA)
 
-            elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
-                assert  gridVoltagePhaseA != None and gridVoltagePhaseB != None and gridVoltagePhaseC != None, 'Phase A, B, and C voltage of grid voltage source need to be supplied if model is not stand alone!'     
-                self.gridVoltagePhaseA, self.gridVoltagePhaseB, self.gridVoltagePhaseC =  gridVoltagePhaseA/self.Vbase, gridVoltagePhaseB/self.Vbase, gridVoltagePhaseC/self.Vbase
-    
-    def initialize_states(self,ia0,xa0,ua0,xDC0,xQ0,xPLL0,wte0):
+            if type(self).__name__ in ['SolarPV_DER_ThreePhase']:
+                if 'gridVoltagePhaseB' in DER_arguments:
+                    self.gridVoltagePhaseB = DER_arguments['gridVoltagePhaseB']/self.Vbase
+                else:
+                    raise ValueError('Grid voltage source phase B need to be supplied if model is not stand alone!')
+                
+                if 'gridVoltagePhaseC' in DER_arguments:
+                    self.gridVoltagePhaseC = DER_arguments['gridVoltagePhaseC']/self.Vbase
+                else:
+                    raise ValueError('Grid voltage source phase C need to be supplied if model is not stand alone!')
+
+                
+    def initialize_states(self,DER_arguments):
         """Initialize inverter states.
 
         Args:
@@ -125,12 +187,36 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             ua0 (float): Initial controller state
 
         """        
-       
+        
+        if 'ia0' in DER_arguments:
+            ia0 = DER_arguments['ia0']
+        else:
+            ia0 = self.DER_config['initial_values']['iaR0'] + 1j*self.DER_config['initial_values']['iaI0']
+        if 'xa0' in DER_arguments:
+            xa0 = DER_arguments['xa0']
+        else:
+            xa0 = self.DER_config['initial_values']['xaR0'] + 1j*self.DER_config['initial_values']['xaI0']
+        if 'ua0' in DER_arguments:
+            ua0 = DER_arguments['ua0']
+        else:
+            ua0 = self.DER_config['initial_values']['uaR0'] + 1j*self.DER_config['initial_values']['uaI0']
+        if 'xDC0' in DER_arguments:
+            xDC0 = DER_arguments['xDC0']
+        else:
+            xDC0 = self.DER_config['initial_values']['xDC0']
+        if 'xQ0' in DER_arguments:
+            xQ0 = DER_arguments['xQ0']
+        else:
+            xQ0 = self.DER_config['initial_values']['xQ0']
+        
+        xPLL0 = self.DER_config['initial_values']['xPLL0']
+        wte0 = self.DER_config['initial_values']['wte0']        
+        
         self.Vdc = self.Vdc_ref  #DC link voltage        
         self.Ppv = self.Ppv_calc(self.Vdc_actual) #PV module power output    
         
          #Initialize all states with steady state values at current operating point
-        if self.STEADY_STATE_INITIALIZATION:
+        if self.steady_state_initialization:
             #ia0,xa0,ua0,ib0,xb0,ub0,ic0,xc0,uc0,Vdc0,xDC0,xQ0,xPLL0,wte0
             self.steady_state_calc()
         else:
@@ -177,11 +263,11 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.update_iref() #Reference currents
         self.update_inverter_frequency(t=0.0)
     
-    def initialize_DER(self,pvderConfig=None):
+    def initialize_DER_model(self,DER_arguments):
         """Initialize DER ratings.
 
         Args:
-             Sinverter_rated (float): Rated inverter power output in W at unity power factor.
+             DER_arguments (dict): Key word arguments.
 
         Raises:
              ValueError: If specified parameters correponding to `parameter_ID` is not available.
@@ -189,56 +275,66 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         
         self.logger.debug('Creating inverter instance for DER with parameter ID:{}!'.format(self.parameter_ID))
         
-            
-        self.pvderConfig = pvderConfig #Protection and ridethrough settings from external programs (can be None)
-            
-        self.initialize_inverter_ratings() #Initialize inverter ratings according to DER rating
+        self.initialize_module_parameters()
+        self.initialize_inverter_ratings(DER_arguments) #Initialize inverter ratings according to DER rating
         self.check_voltage() #Check if voltage is feasible
-            
+               
+        
         self.initialize_circuit_parameters()
         self.check_circuit_parameters()  #Check PV-DER circuit parameters
             
         self.initialize_controller_gains()  #Initialize control loop gains according to DER rating           
-        
-    def initialize_inverter_ratings(self):
+    
+    def initialize_inverter_ratings(self,DER_arguments):
         """Initialize inverter voltage and power ratings."""
         
-        if self.check_parameter_ID(self.parameter_ID,self.inverter_ratings):
+        if self.parameter_ID in self.inverter_ratings:
             
-            self.initialize_Sinverter()
-            self.initialize_Vdc()
-            self.initialize_Vac()    
+            self.initialize_Sinverter(DER_arguments)
+            self.initialize_Vdc(DER_arguments)
+            self.initialize_Vac(DER_arguments)    
             self.initialize_Iac()
             
         else:
             raise ValueError('Inverter voltage, current, power ratings not available for parameter ID {}!'.format(self.parameter_ID))       
     
-    def initialize_Sinverter(self):
+    def initialize_Sinverter(self,DER_arguments):
         """Initialize inverter power rating."""
         
-        self.Sinverter_rated = self.inverter_ratings[self.parameter_ID]['Srated'] #Inverter rating in kVA
+        if 'powerRating' in DER_arguments:
+            self.Sinverter_rated = DER_arguments['powerRating'] #Inverter rating in kVA
+        elif 'Srated' in self.inverter_ratings[self.parameter_ID]:
+            self.Sinverter_rated = self.inverter_ratings[self.parameter_ID]['Srated']
+        else:
+            raise ValueError('Sinverter rated not found for {}'.format(self.parameter_ID))
+        
         self.Sinverter_nominal = (self.Sinverter_rated/BaseValues.Sbase) #Converting to p.u. value           
         
-    def initialize_Vdc(self):
+    def initialize_Vdc(self,DER_arguments):
         """Initialize DC side voltages."""
         
-        self.Vdcrated = self.inverter_ratings[self.parameter_ID]['Vdcrated'] #Rated DC voltage
+        if 'Vdcrated' in DER_arguments:
+            self.Vdcrated = DER_arguments['Vdcrated'] #Rated DC link voltage in V
+        else:
+            self.Vdcrated = self.inverter_ratings[self.parameter_ID]['Vdcrated'] #Rated DC link voltage in V
+        
         self.Vdcnominal = self.Vdcrated/self.Vdcbase   #Converting to p.u. value 
         self.Vdc_ref = self.set_Vdc_ref()
         self.Vdc_ref_new = self.set_Vdc_ref()        
     
-    def initialize_Vac(self):
+    def initialize_Vac(self,DER_arguments):
         """Initialize AC side voltages."""
         
-        if self.Vrms_rated is None:
-            self.Varated = self.inverter_ratings[self.parameter_ID]['Varated'] #L-G peak to peak 
-            self.Vrms_rated = self.Varated/math.sqrt(2) #L-G RMS
+        if 'VrmsRating' in DER_arguments: #First check if rated voltage is given in arguments
+            self.Vrms_rated = DER_arguments['VrmsRating'] #Inverter rating in kVA
+        elif 'Vrmsrated' in self.inverter_ratings[self.parameter_ID]:
+            self.Vrms_rated = self.inverter_ratings[self.parameter_ID]['Vrmsrated']
         else:
-            self.Varated = self.Vrms_rated*math.sqrt(2)
+            raise ValueError('Vrms rated not found for {}'.format(self.parameter_ID))
+        self.Varated = self.Vrms_rated*math.sqrt(2) #L-G peak to peak 
         
-        #Converting to p.u. value
-        self.Vanominal = self.Varated/BaseValues.Vbase
-        self.Vrms_ref =  self.Vanominal/math.sqrt(2)             
+        self.Vanominal = self.Varated/BaseValues.Vbase #Converting to p.u. value
+        self.Vrms_ref =  self.Vanominal/math.sqrt(2)   #Reference voltage          
     
     def initialize_Iac(self):
         """Initialize AC side currents."""
@@ -250,12 +346,11 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         
         self.Ioverload = self.inverter_ratings[self.parameter_ID]['Ioverload']  #Inverter current overload rating (Max 10s)            
         self.iref_limit = (self.Iarated/self.Ibase)*self.Ioverload #Maximum current reference
-    
-    
+        
     def initialize_circuit_parameters(self):
         """Initialize C, Lf, and Rf parameters."""
         
-        if self.check_parameter_ID(self.parameter_ID,self.inverter_ratings):
+        if self.parameter_ID in self.inverter_ratings:
         
             if self.standAlone:
                 self.a = self.grid_model.Vgridrated/self.Varated  #Transformer turns ratio
@@ -307,27 +402,19 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     def initialize_controller_gains(self):
         """Initialize controller settings."""
         
-        if self.check_parameter_ID(self.parameter_ID,self.inverter_ratings):
+        if self.parameter_ID in self.controller_gains:
             
-            _Kp_GCC = 300
-            _Ki_GCC = 100
+            #Current controller gains
+            self.Kp_GCC = self.controller_gains[self.parameter_ID]['Kp_GCC'] #Current controller Proportional constant
+            self.Ki_GCC = self.controller_gains[self.parameter_ID]['Ki_GCC']  #Current controller Integral constant
+            self.wp =  self.controller_gains[self.parameter_ID]['wp']      #First order filter gain for GCC
 
-            _Kp_DC = -0.1
-            _Ki_DC = -0.5
-            _Kp_Q =  0.01
-            _Ki_Q = 0.5
-            #Current controller parameters
-            #_DER_rating = str(int(self.Sinverter_rated/1e3))
-            self.Kp_GCC = _Kp_GCC/self.controller_parameters[self.parameter_ID]['scale_Kp_GCC'] #Current controller Proportional constant
-            self.Ki_GCC = _Ki_GCC/self.controller_parameters[self.parameter_ID]['scale_Ki_GCC']  #Current controller Integral constant
-            self.wp =  self.controller_parameters[self.parameter_ID]['wp']      #First order filter gain for GCC
-
-            #Power (active and reactive) controller parameters
-            self.Kp_DC = _Kp_DC/self.controller_parameters[self.parameter_ID]['scale_Kp_DC']   #Active power controller Proportional constant
-            self.Ki_DC = _Ki_DC/self.controller_parameters[self.parameter_ID]['scale_Ki_DC'] #Active power controller Integral constant
-            self.Kp_Q = _Kp_Q/self.controller_parameters[self.parameter_ID]['scale_Kp_Q']  #Reactive power controller Proportional constant
-            self.Ki_Q = _Ki_Q/self.controller_parameters[self.parameter_ID]['scale_Ki_Q']   #Reactive power controller Integral constant   
-
+            #Power (active and reactive) controller gains
+            self.Kp_DC = self.controller_gains[self.parameter_ID]['Kp_DC']   #Active power controller Proportional constant
+            self.Ki_DC = self.controller_gains[self.parameter_ID]['Ki_DC'] #Active power controller Integral constant
+            self.Kp_Q = self.controller_gains[self.parameter_ID]['Kp_Q']  #Reactive power controller Proportional constant
+            self.Ki_Q = self.controller_gains[self.parameter_ID]['Ki_Q']   #Reactive power controller Integral constant   
+            
         else:
             raise ValueError('Controller gains not available for parameter ID: {}!'.format(self.parameter_ID))    
             
@@ -352,7 +439,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             self.varInd[entry]=n
             n+=1
     
-    def attach_grid_model(self,grid_model):
+    def attach_grid_model(self,DER_arguments):
         """Attach a grid model to the PV-DER instance.
 
         Args:
@@ -363,11 +450,12 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         """
         
         #Connect grid instance only if working in stand alone mode
-        if self.standAlone and grid_model is not None:
-            self.grid_model = grid_model
-            self.logger.debug('{}:Grid model {} attached since PV-DER instance is stand alone!'.format(grid_model.name,self.name))
-        elif self.standAlone and grid_model is None:
-            raise ValueError('`Grid` instance need to be provided in stand alone mode for creating `SolarPV_DER` instance`!')
+        if self.standAlone:
+            if 'gridModel' in DER_arguments:
+                self.grid_model = DER_arguments['gridModel']
+                self.logger.debug('{}:Grid model {} attached since PV-DER instance is stand alone!'.format(self.name,DER_arguments['gridModel'].name))
+            else:
+                raise ValueError('`Grid` instance need to be provided in stand alone mode for creating `SolarPV_DER` instance`!')
         else: #Grid model is not connected
             self.logger.debug('{}:No grid model attached since PV-DER instance is not stand alone!'.format(self.name))
                              
@@ -379,7 +467,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         """
                              
         if not self.standAlone and abs(abs(self.gridVoltagePhaseA) - self.Vanominal)/self.Vanominal > 0.1:
-            raise ValueError('The rated PCC-LV voltage {} V has more than 10% deviation from the voltage input from external program {} V!'.format(self.Vanominal, abs(self.gridVoltagePhaseA)))
+            raise ValueError('The rated PCC-LV voltage {:.2f} V has more than 10% deviation from the voltage input from external program {:.2f} V!'.format(self.Vanominal, abs(self.gridVoltagePhaseA)))
                              
         if self.m_steady_state*(self.Vdcrated/2) < self.Varated:
             raise ValueError('The nominal DC link voltage {:.1f} V is not sufficient for the inverter to generate the nominal voltage at PCC - LV side {:.1f} V (L-G peak). Increase nominal DC link voltage to {:.1f} V.'.format(self.Vdcrated,self.Varated,math.ceil((self.Varated/self.m_steady_state)*2)))
@@ -476,7 +564,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         #P_PCC_error = ((S_PCC.real + Sloss_filter.real)   - self.Ppv)**2         
         #S_error = (abs(St -(S_PCC+Sloss_filter)))**2
         #Q_error_filter_expected =  (St.imag - Qloss_filter_expected)**2 
-        #print('solver:',St.imag,Qloss_filter_expected)
+        
         
         if type(self).__name__ == 'SolarPV_DER_ThreePhase':
             del_1 = utility_functions.relative_phase_calc(ma,mb)

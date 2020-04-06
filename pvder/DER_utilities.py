@@ -14,7 +14,7 @@ import numpy as np
 from pvder.utility_classes import Logging
 from pvder.grid_components import BaseValues
 from pvder import utility_functions
-from pvder import config
+from pvder import config, templates
 
 class PVDER_ModelUtilities(BaseValues):
     """
@@ -100,11 +100,41 @@ class PVDER_ModelUtilities(BaseValues):
         
         return self.Kp_GCC*self.uc + self.xc #PI controller equation
     
+    def get_DER_config(self,config_file,DER_id):
+        """Check DER ID in config file."""
+        
+        config_dict = self.read_config(config_file) #Get bounds dict
+        
+        available_ids = list(config_dict.keys())
+        if DER_id in available_ids:
+            print('DER configuration with ID:{} was found in {}'.format(DER_id,config_file))
+        else:
+            raise KeyError('DER configuration with ID:{} could not be found in {}! - Available IDs are:{}'.format(DER_id,config_file,available_ids))
+        
+        return config_dict[DER_id]
+    
+    def get_pvderconfig(self,pvderConfig):
+        """Check DER ID in config file."""
+        
+        if pvderConfig is not None:
+            if not isinstance(pvderConfig,dict):
+                raise ValueError('Expected pvderConfig to be a dictionary but got {}'.format(type(pvderConfig)))
+        else:
+            pvderConfig = {}    
+        
+        return pvderConfig
+    
     #Controller outer loop equations (Current set-point)    
     def ia_ref_calc(self):
         """Phase A current reference"""
+        
         return self.xDC + self.Kp_DC*(self.Vdc_ref - self.Vdc) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)) #PI controller equation
-           
+    
+    def ia_ref_constantVdc_calc(self):
+        """Phase A current reference for constant Vdc"""
+        
+        return self.xDC + self.Kp_DC*(self.Ppv -  self.S.real) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)) #PI controller equation
+      
     def ib_ref_calc(self):
         """Phase B current reference"""
         
@@ -323,6 +353,7 @@ class PVDER_ModelUtilities(BaseValues):
         if parameter_type not in {'module_parameters','inverter_ratings','controller_gains','circuit_parameters','all'}:
             raise ValueError('Unknown quantity: ' + str(parameter_type))
         
+        print('Parameters for DER with ID:{}'.format(self.parameter_ID))
         if parameter_type ==  'module_parameters' or parameter_type ==  'all':
             print('Np:{},Ns:{}'.format(self.Np,self.Ns))
             print('Vdcmpp0:{:.3f} V\nVdcmpp_min:{:.3f} V\nVdcmpp_max:{:.3f} V'.format(self.Vdcmpp0,self.Vdcmpp_min,self.Vdcmpp_max))
@@ -423,7 +454,7 @@ class PVDER_ModelUtilities(BaseValues):
         
         for ref in self.Vdc_ref_list:
             if t==ref['t']:
-                print('Removing existing Vdc_ref at {:.2f}!'.format(event['t']))
+                print('Removing existing Vdc_ref at {:.2f}!'.format(t))
                 self.Vdc_ref_list.remove(ref)   # in {}Remove exi,self.events_IDsting event at same time stamp
         
         print('Adding new Vdc reference at {:.2f} s'.format(t))
@@ -500,7 +531,7 @@ class PVDER_ModelUtilities(BaseValues):
         self.module_parameters[parameter_ID] = dict.fromkeys(list(self.module_parameters[default_ID].keys()), None)
         self.inverter_ratings[parameter_ID] = dict.fromkeys(list(self.inverter_ratings[default_ID].keys()), None)
         self.circuit_parameters[parameter_ID] = dict.fromkeys(list(self.circuit_parameters[default_ID].keys()), None)
-        self.controller_parameters[parameter_ID] = dict.fromkeys(list(self.controller_parameters[default_ID].keys()), None)
+        self.controller_gains[parameter_ID] = dict.fromkeys(list(self.controller_gains[default_ID].keys()), None)
         self.steadystate_values[parameter_ID] = dict.fromkeys(list(self.steadystate_values[default_ID].keys()), None)
         
         self.logger.debug('{}:Creating parameter dicitonary with ID {}!'.format(self.name,parameter_ID))            
@@ -518,24 +549,20 @@ class PVDER_ModelUtilities(BaseValues):
     def initialize_parameter_dict(self,parameter_ID,source_parameter_ID):
         """Initialize a new parameter dictinary with values from an existing parameter dictionary."""
         
-        if not self.check_parameter_exists(parameter_ID):
-            self.create_parameter_dict(parameter_ID)
+        self.create_parameter_dict(parameter_ID)
         
         self.update_parameter_dict(parameter_ID,'module_parameters',self.module_parameters[source_parameter_ID])
         self.update_parameter_dict(parameter_ID,'inverter_ratings',self.inverter_ratings[source_parameter_ID])
         self.update_parameter_dict(parameter_ID,'circuit_parameters',self.circuit_parameters[source_parameter_ID])  
-        self.update_parameter_dict(parameter_ID,'controller_parameters',self.controller_parameters[source_parameter_ID])
+        self.update_parameter_dict(parameter_ID,'controller_gains',self.controller_gains[source_parameter_ID])
         self.update_parameter_dict(parameter_ID,'steadystate_values',self.steadystate_values[source_parameter_ID])
         
         self.logger.info('{}:Created and initialized new parameter dicitonary {} with source dictionary {}.'.format(self.name,parameter_ID,source_parameter_ID))
     
     def update_parameter_dict(self,parameter_ID,parameter_type,parameter_dict):
         """Update parameters."""
-        
-        if not self.check_parameter_exists(parameter_ID):
-            raise ValueError('Unknown parameter ID: ' + str(parameter_type))
-        
-        if parameter_type not in ['module_parameters','inverter_ratings','circuit_parameters','controller_parameters','steadystate_values']:
+                
+        if parameter_type not in templates.DER_design_template:
             raise ValueError('Unknown parameter type: ' + str(parameter_type))
         
         for parameter in parameter_dict.keys():

@@ -7,6 +7,8 @@ import cmath
 import sys
 import time
 import six
+import json
+import logging
 import scipy.io as sio
 #from numba import jit
 
@@ -249,3 +251,30 @@ def print_dictionary_keys(dictionary,dictionary_name):
     #print(dictionary_name,':',list(dictionary.keys()))
     
     print(dictionary_name,':',','.join(dictionary))
+
+def read_json(file_name):
+    """Load json file and return dictionary."""
+    
+    if six.PY3:
+        string_type = (str)
+    elif six.PY2:
+        string_type = (str,unicode)           
+    
+    assert isinstance(file_name,string_type),'File name should be a string!'
+    assert file_name[-4:]=='json','File should be a JSON file!'
+    
+    with open(file_name, "r") as config_file:
+        #logger.debug('Reading configuration file:{}'.format(config_file.name))
+        confDict = json.load(config_file)
+        
+    return confDict
+
+def get_logger(logging_level):
+    """Get logger."""
+    
+    logger=logging.getLogger()  #Creating an object 
+    logger.setLevel(eval('logging.'+logging_level)) #Setting the threshold of logger to DEBUG 
+    
+    return logger
+    
+    

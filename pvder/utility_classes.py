@@ -15,7 +15,7 @@ class Logging(object):
     
     pp = pprint.PrettyPrinter(indent=4)
     
-    def name_instance(self,identifier):
+    def name_instance(self,identifier=''):
         #Provide a name to the instance.
         
         self.ID = self.count  #ID is same as current instance count
@@ -33,8 +33,7 @@ class Logging(object):
         else:
             raise ValueError('{} is not a valid instance name.'.format(type(self).__name__))
             
-        if identifier is not None:
-            self.name  = str(identifier) + '-' +self.name  #Add additional identifier to object name if it was provided
+        self.name  = str(identifier) + '-' +self.name  #Add additional identifier to object name if it was provided
     
     def initialize_logger(self,logging_level):
         """Initialize loggers for different classes."""

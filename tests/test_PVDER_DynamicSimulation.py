@@ -16,6 +16,7 @@ from pvder.simulation_events import SimulationEvents
 from pvder.simulation_utilities import SimulationResults
 
 from unittest_utilities import show_DER_status, plot_DER_trajectories
+config_file = r'..\config_der.json'
 
 def suite():
     """Define a test suite."""
@@ -46,19 +47,25 @@ class TestPVDER(unittest.TestCase):
     Vrms = abs(Va)/math.sqrt(2)
     
     wgrid = 2*math.pi*60.0
+    events = SimulationEvents()
+    
+    flag_arguments = {'standAlone': False,
+                      'steadyStateInitialization':True,
+                      'verbosity':'DEBUG'}
+    ratings_arguments ={'powerRating':power_rating,
+                        'VrmsRating':Vrms}
+    voltage_arguments = {'gridVoltagePhaseA': Va,
+                         'gridVoltagePhaseB':Vb,
+                         'gridVoltagePhaseC':Vc,
+                         'gridFrequency':wgrid}                         
     
     def test_init(self):
         """Test Dynamic Simulation initialization."""          
                         
         events = SimulationEvents()
-                
-        PVDER = SolarPV_DER_ThreePhase(events = events,
-                                       Sinverter_rated = self.power_rating,Vrms_rated = self.Vrms, #175
-                                       gridVoltagePhaseA = self.Va,
-                                       gridVoltagePhaseB = self.Vb,
-                                       gridVoltagePhaseC = self.Vc,
-                                       gridFrequency = self.wgrid,
-                                       standAlone = False,STEADY_STATE_INITIALIZATION=True,verbosity = 'DEBUG')
+                        
+        PVDER = SolarPV_DER_ThreePhase(events = events,configFile=config_file,
+                                       **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})
     
         sim = DynamicSimulation(PV_model=PVDER,events = events,jacFlag = True,verbosity = 'DEBUG',solver_type='odeint')
         
@@ -70,13 +77,8 @@ class TestPVDER(unittest.TestCase):
         
         events = SimulationEvents()
                 
-        PVDER = SolarPV_DER_ThreePhase(events = events,
-                                       Sinverter_rated = self.power_rating,Vrms_rated = self.Vrms, #175
-                                       gridVoltagePhaseA = self.Va,
-                                       gridVoltagePhaseB = self.Vb,
-                                       gridVoltagePhaseC = self.Vc,
-                                       gridFrequency = self.wgrid,
-                                       standAlone = False,STEADY_STATE_INITIALIZATION=True,verbosity = 'DEBUG')
+        PVDER = SolarPV_DER_ThreePhase(events = events,configFile=config_file,
+                                       **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})
     
         sim = DynamicSimulation(PV_model=PVDER,events = events,
                                 jacFlag = True,verbosity = 'DEBUG',solver_type='odeint')
