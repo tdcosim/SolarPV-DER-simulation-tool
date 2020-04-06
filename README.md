@@ -17,7 +17,8 @@ The following features are available currently:
 1. Single phase, three phase balanced, and three phase unbalanced (phase voltages may be unbalanced) DER models.
 2. Run simulation in stand alone mode with internal grid voltage source (stiff) model.
 3. Run simulation in loop mode where grid voltage is supplied every time step by a third party program.
-4. Visualize or retrieve simulation results for voltages, current, active, and reactive power.
+4. Customize all aspects of the model through a [JSON](config_der.json) file which provides access to parameters in all the model components. 
+5. Visualize or retrieve simulation results for voltages, current, active, and reactive power.
 5. Introduce solar insolation events (in all modes), grid voltage, and frequency change events (in stand alone mode).
 6. Retrieve and modify model parameters from a third party program.
 7. Following smart inverter features are available: Low/High voltage ride through (LVRT/HVRT), Low frequency ride through (LFRT), and Volt-VAR control logic.
@@ -66,9 +67,9 @@ events = SimulationEvents()
 ```
 grid = Grid(events=events)
 ```
-3. Create a **SolarPV_DER_SinglePhase** or **SolarPV_DER_ThreePhase** object: This object describes the dynamic DER model. It needs both an **_SimulationEvents_** object and a **Grid** object. The power rating of the DER are should also be provided.
+3. Create a **SolarPV_DER_SinglePhase** or **SolarPV_DER_ThreePhase** object: This object describes the dynamic DER model. It needs both an **_SimulationEvents_** object, and a path name for JSON file containing the DER configuration parameters.  It also needs a **Grid** object in stand alone mode). Additionaly either the power rating of the DER or the id for the parameter dictionary should be provided.
 ```
-PV_DER = SolarPV_DER_SinglePhase(grid_model=grid,events=events,Sinverter_rated = 10.0e3,standAlone = True)
+PV_DER = SolarPV_DER_SinglePhase(events=events,configFile=r'config_der.json',gridModel=grid,derId= '10',standAlone = True)
 ```
 4. Create a **DynamicSimulation** object: This object runs the simulation and stores the solution. It takes **_SimulationEvents_**, **Grid** and, **SolarPV_DER_SinglePhase** objects as arguments.
 ```
