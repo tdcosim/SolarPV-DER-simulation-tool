@@ -8,18 +8,20 @@ Created on Wed Mar 25 09:36:27 2020
 
 """PV-DER base class."""
 
-
-
 import numpy as np
 import math
-import cmath
 
-from pvder.grid_components import Grid,BaseValues
+from pvder.DER_check_and_initialize import PVDER_SetupUtilities
+from pvder.DER_features import PVDER_SmartFeatures
+from pvder.DER_utilities import PVDER_ModelUtilities
+from pvder.grid_components import BaseValues
 
 from pvder import utility_functions
-from pvder import config,templates
+from pvder import config,templates,specifications
 
-class SolarPVDER():
+logger = utility_functions.get_logger(config.DEFAULT_LOGGING_LEVEL)
+
+class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,BaseValues):
     """
     Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
     control systems.
@@ -30,19 +32,17 @@ class SolarPVDER():
     
     """
     
-    count = 0
-    
-    models_and_phases = {'SolarPV_DER_SinglePhase':1,
-                         'SolarPV_DER_ThreePhase':3,
-                         'SolarPV_DER_ThreePhaseBalanced':3}
+    #PLL controller parameters
+    Kp_PLL = 180 #1800
+    Ki_PLL = 320 #32000    
+   
+    winv = we = 2.0*math.pi*60.0 #Frequency of fundamental waveform
+    fswitching  = 10e3 #Inverter switching frequency (not used by model)
     
     DER_argument_template = templates.DER_argument_template    
     
     def setup_DER(self,configFile,**kwargs):
         """Setup pvder instance"""
-        
-        SolarPVDER.count = SolarPVDER.count+1 #Increment count to keep track of number of PV-DER model instances
-        
         
         self.parameter_ID = self.get_DER_id(**kwargs)
         
@@ -53,8 +53,10 @@ class SolarPVDER():
         self.initialize_logger(DER_arguments['verbosity'])  #Set logging level - {DEBUG,INFO,WARNING,ERROR}       
         
         self.update_DER_config(DER_config,DER_arguments,self.parameter_ID)
+        self.check_basic_specs(DER_config,self.parameter_ID)
         
-        return DER_arguments
+        return DER_arguments   
+    
     
     def get_DER_id(self,**kwargs):
         """Create a parameter ID from inverter rated power output.        
@@ -102,13 +104,14 @@ class SolarPVDER():
             elif self.DER_argument_template[key]['default_value'] is not None:
                 DER_arguments.update({key:self.DER_argument_template[key]['default_value']})
                 
-        #print('Used arguments:{}\nInvalid arguments:{}'.format(used_arguments,list(set(found_arguments).difference(set(used_arguments)))))       
+        logger.debug('Used arguments:{}\nInvalid arguments:{}'.format(used_arguments,list(set(found_arguments).difference(set(used_arguments)))))       
         
         return DER_arguments
        
     def initialize_DER(self,DER_arguments):
         """Initialize flags"""
         
+        self.initialize_basic_specs()        
         self.initialize_flags(DER_arguments)
         self.attach_grid_model(DER_arguments)
         
@@ -126,6 +129,10 @@ class SolarPVDER():
         self.initialize_Volt_VAR() #Volt-VAR settings        
         
         self.reset_reference_counters()
+        
+        if self.standAlone:
+            self._vag_previous = self.grid_model.vag
+        self._va_previous = self.va
     
     def initialize_flags(self,DER_arguments):
         """Initialize flags"""
@@ -134,22 +141,34 @@ class SolarPVDER():
         self.steady_state_initialization = DER_arguments['steadyStateInitialization']
         self.allow_unbalanced_m = DER_arguments['allowUnbalancedM'] 
     
-    def update_DER_phases(self,DER_config,DER_id):
+    def check_basic_specs(self,DER_config,DER_id):
         """Check DER config."""
         
-        if 'n_phases' in DER_config['der_details']:
-            n_phases = DER_config['der_details']['n_phases']
-         
-            if type(self).__name__ in SolarPVDER.models_and_phases:
-               if n_phases == SolarPVDER.models_and_phases[type(self).__name__]:
-                  self.n_phases = n_phases
-               else:
-                  raise ValueError('{}:DER configuration with ID {} has {} phases which is invalid for {} DER model!'.format(self.name,DER_id,n_phases,type(self).__name__))
-            else:
-                raise ValueError('{}:{} is an invalid DER model class'.format(self.name,type(self).__name__))
-       
+        model_name = type(self).__name__
+        
+        if model_name in specifications.DER_basic_spec:
+        
+            if 'n_phases' in DER_config['basic_specs']:
+                n_phases = DER_config['basic_specs']['n_phases']
+                if not n_phases == specifications.DER_basic_spec[model_name]['n_phases']:
+                    raise ValueError('{}:DER configuration with ID:{} has {} phases which is invalid for {} DER model!'.format(self.name,DER_id,n_phases,model_name))
+            
+            if 'n_ODE' in DER_config['basic_specs']:
+                n_ODE = DER_config['basic_specs']['n_ODE']
+                if not n_ODE == specifications.DER_basic_spec[model_name]['n_ODE']:
+                    raise ValueError('{}:DER configuration with ID:{} has {} ODE equations which is invalid for {} DER model!'.format(self.name,DER_id,n_ODE,model_name))
+        else:
+            raise ValueError('{}:{} is an invalid DER model class'.format(self.name,model_name))     
+            
+    def read_config(self,configFile):
+        """Load config json file and return dictionary."""
+    
+        logger.debug('Reading configuration file:{}'.format(configFile))
+        confDict = utility_functions.read_json(configFile)
+        
+        return confDict
 
-class PV_Module(object):
+class PVModule(object):
     """
     Class for describing PV module.
     
@@ -195,16 +214,7 @@ class PV_Module(object):
         """
         
         self.events = events
-        #if type(self).__name__ == 'SolarPV_DER_SinglePhase':
-        #    if Sinverter_rated in {10e3}:
                 
-        #elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
-        #    if Sinverter_rated in {50e3,100e3,250e3}:
-                
-        
-        #if (type(self).__name__ == 'SolarPV_DER_SinglePhase' and Sinverter_rated in {10e3}) or\
-        #   (type(self).__name__ == 'SolarPV_DER_ThreePhase' and Sinverter_rated in {50e3,100e3,250e3}):
-        
         self.logger.debug('Creating PV module instance for {} DER with rating:{} kVA'.format(type(self).__name__.replace('SolarPV_DER_',''),str(int(Sinverter_rated/1e3))))
         self.initialize_module_parameters()
         
@@ -212,8 +222,7 @@ class PV_Module(object):
         if self.MPPT_ENABLE and self.USE_POLYNOMIAL_MPP:
             self.fit_MPP_poly()
         
-        #PV conditions
-        self.Sinsol,self.Tactual= self.events.solar_events(t=0.0)
+        self.Sinsol,self.Tactual= self.events.solar_events(t=0.0) #PV module initial conditions
         
         self.Iph = self.Iph_calc()
     
@@ -258,7 +267,7 @@ class PV_Module(object):
         _Vdcmpp_list = []
         _Ppvmpp_list =[]
         _Sinsol_list= []
-        utility_functions.print_to_terminal('Calculating {} values for MPP polynomial fit!'.format(len(_Srange)))
+        self.logger('Calculating {} values for MPP polynomial fit!'.format(len(_Srange)))
         for S in _Srange:
             self.Sinsol = S
             _Vdcmpp = self.Vdcmpp
@@ -271,7 +280,7 @@ class PV_Module(object):
         _x = np.array(_Sinsol_list)
         _y = np.array(_Vdcmpp_list)
         self.z = np.polyfit(_x, _y, 3)
-        utility_functions.print_to_terminal('Found polynomial for MPP :{:.4f}x^3 + {:.4f}x^2 +{:.4f}x^1 + {:.4f}!'.format(self.z[0],self.z[1],self.z[2], self.z[3]))        
+        self.logger('Found polynomial for MPP :{:.4f}x^3 + {:.4f}x^2 +{:.4f}x^1 + {:.4f}!'.format(self.z[0],self.z[1],self.z[2], self.z[3]))        
         
     def initialize_module_parameters(self):
         """Initialize PV module parameters."""

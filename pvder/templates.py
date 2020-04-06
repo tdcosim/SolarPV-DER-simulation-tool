@@ -6,8 +6,8 @@ Created on Mon Mar 30 10:19:16 2020
 """
 import six
 from pvder.grid_components import Grid,BaseValues
-
-DER_design_template = {"der_details":["n_phases","Sinsol"],
+ 
+DER_design_template = {"basic_specs":["n_phases","Sinsol"],
                        "module_parameters":['Np','Ns','Vdcmpp0','Vdcmpp_min','Vdcmpp_max'],
                        "inverter_ratings":["Srated","Vdcrated","Ioverload","Vrmsrated"],
                        "circuit_parameters":["Rf_actual","Lf_actual","C_actual","R1_actual","X1_actual"],
@@ -36,6 +36,9 @@ DER_argument_template = {'derId':{'default_value':None,'type':string_type},
                              'ua0':{'default_value':None,'type':complex},'xDC0':{'default_value':None,'type':complex},
                              'xQ0':{'default_value':None,'type':complex}}
 
+#Voltage and frequency ride through settings from IEEE 1557-2018 Category III (Table 16, page 48) 
+#V1 to V2 - zone 2,V1 < - zone 1 
+    
 RT_config_template = {'LVRT':{'0':['V_threshold','t_threshold','mode','t_start','threshold_breach']},
                       'HVRT':{'0':['V_threshold','t_threshold','mode','t_start','threshold_breach']},
                       'OUTPUT_CESSATION_DELAY':'','OUTPUT_RESTORE_DELAY':'','RESTORE_Vdc':'',

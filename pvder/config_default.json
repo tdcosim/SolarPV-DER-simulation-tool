@@ -65,38 +65,5 @@
       "initial_values":{"iaR0":0,"iaI0":0.0,"xaR0":0.0,"xaI0":0.0,"uaR0":0.0,"uaI0":0.0,
                         "xDC0":0.0,"xQ0":0.0,"xPLL0":0.0,"wte0":6.28}
       
-     },
-    "10_constantVdc_simple_loop":{"basic_specs":{"n_phases":1,"Sinsol":1.0},
-      "module_parameters":{"Np":2,"Ns":1000,"Vdcmpp0":750.0,"Vdcmpp_min": 650.0,"Vdcmpp_max": 800.0},
-      
-      "inverter_ratings":{"Srated":10e3,"Varated":250.0,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0},
-      
-      "circuit_parameters":{"Rf_actual":0.002,"Lf_actual":25.0e-6,
-                            "C_actual":30.0e-6,"R1_actual":0.0019,"X1_actual":0.0561},
-      
-      "controller_gains":{"Kp_GCC":1.0,"Ki_GCC":1000.0,
-                               "Kp_DC":0.01,"Ki_DC":1.0,
-                               "Kp_Q":0.01,"Ki_Q":1.0,"wp": 20e4},
-      
-      "steadystate_values":{"maR0":0.7,"maI0":0.0,"iaR0":0.5,"iaI0":0.01},
-      "initial_values":{"iaR0":0,"iaI0":0.0,"xaR0":0.0,"xaI0":0.0,"uaR0":0.0,"uaI0":0.0,
-                        "xDC0":0.0,"xQ0":0.0,"xPLL0":0.0,"wte0":6.28}
-      
-     },
-    
-"1":{"basic_specs":{"n_phases":1,"Sinsol":1.0},
-     "module_parameters":{"Np":2,"Ns":1000,"Vdcmpp0":750.0,"Vdcmpp_min": 650.0,"Vdcmpp_max": 800.0},
-     "inverter_ratings":{"Srated":10e3,"Varated":250.0,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0},
-     
-     "circuit_parameters":{"Rf_actual":0.01,"Lf_actual":3.0e-3,
-                            "C_actual":300.0e-6,"R1_actual":0.0019,"X1_actual":0.0561},
-     
-     "controller_gains":{"Kp_GCC":12000.0,"Ki_GCC":4000.0,
-                               "Kp_DC":-4.0,"Ki_DC":-20.0,
-                               "Kp_Q":0.4,"Ki_Q":20.0,"wp": 20e4},
-     
-     "steadystate_values":{"maR0":0.7,"maI0":0.0,"iaR0":0.5,"iaI0":0.01},
-      "initial_values":{"iaR0":0,"iaI0":0.0,"xaR0":0.0,"xaI0":0.0,"uaR0":0.0,"uaI0":0.0,
-                        "xDC0":0.0,"xQ0":0.0,"xPLL0":0.0,"wte0":6.28}
-   }
-}
+     }
+   

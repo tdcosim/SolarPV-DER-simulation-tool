@@ -103,7 +103,7 @@ class PVDER_ModelUtilities(BaseValues):
     def get_DER_config(self,config_file,DER_id):
         """Check DER ID in config file."""
         
-        config_dict = utility_functions.read_config(config_file) #Get bounds dict
+        config_dict = self.read_config(config_file) #Get bounds dict
         
         available_ids = list(config_dict.keys())
         if DER_id in available_ids:

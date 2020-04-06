@@ -22,51 +22,10 @@ class PVDER_SmartFeatures():
     t_threshold_high_limit = config.DEFAULT_tthreshold_high_limit #seconds
     t_disconnect_low_limit = config.DEFAULT_tdisconnect_low_limit #seconds #Minimum time to initiate DER disconnection (output cessation)
     t_reconnect_low_limit = config.DEFAULT_treconnect_low_limit #seconds #Minimum time to initiate DER reconnection (output restoration)
-    
-    # Voltage and frequency ride through settings from IEEE 1557-2018 Category III (Table 16, page 48) 
-    #V1 to V2 - zone 2,V1 < - zone 1 
-    
+      
     RT_config_template =templates.RT_config_template
-    """
-    {'LVRT':{'0':['V_threshold','t_threshold','mode','t_start','threshold_breach']},
-                          'HVRT':{'0':['V_threshold','t_threshold','mode','t_start','threshold_breach']},
-                          'OUTPUT_CESSATION_DELAY':'','OUTPUT_RESTORE_DELAY':'','RESTORE_Vdc':'',
-                          'F_LF1':'','F_LF2':'','t_LF1_limit':'','t_LF2_limit':'',
-                           'F_HF1':'','F_HF2':'',
-                           't_HF1_limit':'','t_HF2_limit':'',
-                           'FRT_INSTANTANEOUS_TRIP':''
-                         }
-    """
-    default_RT_config =  {'LVRT':{'0':{'V_threshold':0.5,
-                                    't_threshold':1.0,
-                                    'mode':'mandatory_operation',
-                                    't_start':0.0,
-                                    'threshold_breach':False},
-                                '1':{'V_threshold':0.7,
-                                     't_threshold':3.5,
-                                     'mode':'momentary_cessation', #'momentary_cessation'
-                                     't_start':0.0,
-                                     'threshold_breach':False},
-                                '2':{'V_threshold':0.88,
-                                     't_threshold':5.0,
-                                     'mode':'mandatory_operation',
-                                     't_start':0.0,
-                                     'threshold_breach':False},
-                              },                       
-                       'HVRT':{'0':{'V_threshold':1.12,
-                                    't_threshold':0.5,
-                                    'mode':'mandatory_operation',
-                                    't_start':0.0,
-                                    'threshold_breach':False},
-                               '1':{'V_threshold':1.06,
-                                     't_threshold':1.0,
-                                     'mode':'mandatory_operation',
-                                     't_start':0.0,
-                                     'threshold_breach':False},
-                              },
-                       'OUTPUT_CESSATION_DELAY':0.01,
-                       'OUTPUT_RESTORE_DELAY':1.75,
-                       'RESTORE_Vdc':False}
+
+    default_RT_config =  config.default_RT_config
    
     RT_config =  dict((key, {}) for key in RT_config_template.keys()) 
     #Temporitly using earlier settings for FRT
@@ -478,7 +437,7 @@ class PVDER_SmartFeatures():
 
                 if VRT_values['mode'] not in {'mandatory_operation','momentary_cessation'}:
                     raise ValueError('{} is not a valid mode for zone {}'.format(VRT_values['mode'],zone_name))    
-            print(self.t_disconnect_delay , self.t_disconnect_low_limit)
+            
             if self.t_disconnect_delay < self.t_disconnect_low_limit:
                 raise ValueError('DER output cessation time delay {} s is infeasible!'.format(self.t_disconnect_delay))   
             

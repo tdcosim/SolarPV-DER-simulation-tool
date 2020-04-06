@@ -10,19 +10,16 @@ import pdb
 import warnings
 import logging
 
-from scipy.optimize import fsolve, minimize
-
-from pvder.DER_components import SolarPVDER,PV_Module
-from pvder.utility_classes import Logging
+from pvder.DER_components import SolarPVDER,PVModule
 from pvder.DER_check_and_initialize import PVDER_SetupUtilities
 from pvder.DER_features import PVDER_SmartFeatures
 from pvder.DER_utilities import PVDER_ModelUtilities
 from pvder.grid_components import BaseValues
 
 from pvder import utility_functions
-from pvder import config
-    
-class SolarPV_DER_ThreePhase(PV_Module,SolarPVDER,PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,BaseValues):
+from pvder import config,templates
+
+class SolarPV_DER_ThreePhase(PVModule,SolarPVDER):
     """
        Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
        control systems.
@@ -33,74 +30,22 @@ class SolarPV_DER_ThreePhase(PV_Module,SolarPVDER,PVDER_SetupUtilities,PVDER_Sma
        
     """
     count = 0 #Object count
-   
-    n_ODE = 23  #Number of ODE's
-    n_phases = 3
     
-    #PLL controller parameters
-    Kp_PLL = 180 #1800
-    Ki_PLL = 320 #32000
-    
-   
-    #Ioverload = 1.5  #Inverter current overload rating (Max 10s)
-    """
-    inverter_ratings = {'50':{'Srated':50e3,'Varated':245.0,'Vdcrated':550.0,'Ioverload':config.DEFAULT_Ioverload},
-                        '250':{'Srated':250e3,'Varated':320.0,'Vdcrated':750.0,'Ioverload':config.DEFAULT_Ioverload}}
-    
-    circuit_parameters = {'50':{'Rf_actual':0.002,'Lf_actual' :25.0e-6,'C_actual':300.0e-6,'Z1_actual':0.0019 + 1j*0.0561},
-                          '250':{'Rf_actual':0.002,'Lf_actual':300.0e-6,'C_actual':300.0e-6,'Z1_actual':0.0019 + 1j*0.0561}}
-    
-    controller_parameters = {'50':{'scale_Kp_GCC':0.05,'scale_Ki_GCC':0.05,\
-                                   'scale_Kp_DC':0.05,'scale_Ki_DC' : 0.05,\
-                                   'scale_Kp_Q' : 0.05,'scale_Ki_Q' : 0.05,'wp' : 20e4},
-                             '250':{'scale_Kp_GCC':0.05,'scale_Ki_GCC':0.05,\
-                                    'scale_Kp_DC':0.05,'scale_Ki_DC' : 0.05,\
-                                    'scale_Kp_Q' : 0.05,'scale_Ki_Q' : 0.05,'wp' : 20e4},
-                             '250_1':{'scale_Kp_GCC':0.1,'scale_Ki_GCC':0.1,\
-                                    'scale_Kp_DC':0.01,'scale_Ki_DC' : 0.01,\
-                                    'scale_Kp_Q' : 0.01,'scale_Ki_Q' : 0.01,'wp' : 20e4}}
-    
-    ma0 = 0.89+1j*0.0
-    ia0 = 1.0+1j*0.001
-    steadystate_values = {'50':{'maR0':ma0.real,'maI0':ma0.imag,'iaR0':ia0.real,'iaI0':ia0.imag,
-                                'mbR0':utility_functions.Ub_calc(ma0).real,'mbI0':utility_functions.Ub_calc(ma0).imag,'ibR0':utility_functions.Ub_calc(ia0).real,'ibI0':utility_functions.Ub_calc(ia0).imag,                              'mcR0':utility_functions.Uc_calc(ma0).real,'mcI0':utility_functions.Uc_calc(ma0).imag,'icR0':utility_functions.Uc_calc(ia0).real,'icI0':utility_functions.Uc_calc(ia0).imag},
-                          '250':{'maR0':0.7,'maI0':0.01,'iaR0':6.0,'iaI0':0.001}}
-    
-    inverter_ratings_list = inverter_ratings.keys()
-    circuit_parameters_list = circuit_parameters.keys()
-    controller_parameters_list = controller_parameters.keys()
-    steadystate_values_list = steadystate_values.keys()    
-    """
-    #Frequency
-    winv = we = 2.0*math.pi*60.0
-    fswitching  = 10e3
-    
-     #Time delay before activating logic for MPP, Volt-VAR control,  LVRT/LFRT 
-    t_stable = 0.5
-    
-    #Duty cycle
-    m_steady_state = 0.96 #Expected duty cycle at steady state    
-    
-    def __init__(self,events,configFile=None,**kwargs):
-        #grid_model = None,Sinverter_rated = 50.0e3, Vrms_rated = None,
-        #ia0 = 0+0j, xa0 = 0+0j, ua0 = 0+0j,xDC0 = 0, xQ0 = 0, xPLL0 = 0.0, wte0 = 2*math.pi,\
-        #gridVoltagePhaseA = None,gridVoltagePhaseB = None,gridVoltagePhaseC = None,\
-        #gridFrequency = None,standAlone = True, STEADY_STATE_INITIALIZATION = False, allow_unbalanced_m = False,\
-        #pvderConfig = None, identifier = None, verbosity = 'INFO',parameter_ID = None
-        
+    def __init__(self,events,configFile=None,**kwargs):        
         """Creates an instance of `SolarPV_DER_ThreePhase`.
         
         Args:
           events (SimulationEvents): An instance of `SimulationEvents`.
-          grid_model (Grid): An instance of `Gridl`(only need to be suppled for stand alone simulation).
-          Sinverter_rated (float): A scalar specifying the rated power (VA) of the DER.
+          gridModel (Grid): An instance of `Gridl`(only need to be suppled for stand alone simulation).
+          powerRating (float): A scalar specifying the rated power (VA) of the DER.
+          VrmsRating (float): A scalar specifying the rated RMS L-G voltage (V) of the DER.
           ia0,xa0,ua0 (complex): Initial value of inverter states in p.u. of the DER instance.
           xDC0,xQ0,xPLL0,wte0 (float): Initial value of inverter states in the DER instance.
           gridVoltatePhaseA,gridVoltatePhaseA,gridVoltatePhaseA (float): Initial voltage phasor (V) at PCC - LV side from external program (only need to be suppled if model is not stand alone).
           standAlone (bool): Specify if the DER instance is a stand alone simulation or part of a larger simulation.
           STEADY_STATE_INITIALIZATION (bool): Specify whether states in the DER instance will be initialized to steady state values.
           allow_unbalanced_m (bool): Allow duty cycles to take on unbalanced values during initialization (default: False).
-          pvderConfig (dict): Configuration parameters that may be supplied from an external program.
+          derConfig (dict): Configuration parameters that may be supplied from an external program.
           identifier (str): An identifier that can be used to name the instance (default: None).
           
         Raises:
@@ -116,12 +61,8 @@ class SolarPV_DER_ThreePhase(PV_Module,SolarPVDER,PVDER_SetupUtilities,PVDER_Sma
             super().__init__(events,self.DER_config['inverter_ratings']['Srated'] )  #Initialize PV module class (base class)
         elif six.PY2:
             super(SolarPV_DER_ThreePhase,self).__init__(events,self.DER_config['inverter_ratings']['Srated'] )
+        
         self.initialize_DER(DER_arguments)         
-        
-        if self.standAlone:
-            self._vag_previous = self.grid_model.vag
-        self._va_previous = self.va
-        
         self.creation_message()        
     
     @property                         #Decorator used for auto updating
@@ -362,7 +303,7 @@ class SolarPV_DER_ThreePhase(PV_Module,SolarPVDER,PVDER_SetupUtilities,PVDER_Sma
                 dxbI = 0.0
             else:
                 dxbI = self.Ki_GCC*self.ub.imag
-                #print(dxbR+1j*dxbI,np.sign(self.Ki_GCC*self.ub))
+                
         else: 
             dxbR = self.Ki_GCC*self.ub.real
             dxbI = self.Ki_GCC*self.ub.imag
@@ -401,7 +342,7 @@ class SolarPV_DER_ThreePhase(PV_Module,SolarPVDER,PVDER_SetupUtilities,PVDER_Sma
                 dxcI = 0.0
             else:
                 dxcI = self.Ki_GCC*self.uc.imag
-                #print(dxaR+1j*dxaI,np.sign(self.Ki_GCC*self.ua))
+                
         else: 
             dxcR = self.Ki_GCC*self.uc.real
             dxcI = self.Ki_GCC*self.uc.imag
@@ -446,7 +387,7 @@ class SolarPV_DER_ThreePhase(PV_Module,SolarPVDER,PVDER_SetupUtilities,PVDER_Sma
         
         #Frequency integration to get angle
         dwte = self.we
-        #print(t,self.Ppv,self.Vdc_ref)
+        
         result =     [ diaR,# list of dy/dt=f functions
                        diaI,
                        dxaR,

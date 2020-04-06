@@ -11,7 +11,7 @@ from scipy.optimize import fsolve, minimize
 from pvder.utility_classes import Logging
 from pvder.grid_components import BaseValues
 from pvder import utility_functions
-from pvder import config,templates
+from pvder import config,templates,specifications
 
 PHASE_DIFFERENCE_120 = 120.0*(math.pi/180.0)
 
@@ -26,13 +26,12 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     steadystate_values= {}    
     
     DER_design_template = templates.DER_design_template
+    solver_spec = specifications.solver_spec
     
     default_DER_config = dict((key, eval('config.DEFAULT_'+key)) for key in DER_design_template.keys()) 
     
     DER_config =  dict((key, {}) for key in DER_design_template.keys()) 
-    DER_config_external = {}
-    solver_spec = {'SLSQP':{'ftol': 1e-10, 'disp': True, 'maxiter':10000},
-                   'nelder-mead':{'xtol': 1e-8, 'disp': True, 'maxiter':10000}}
+    DER_config_external = {}    
                    
     steadystate_solver = config.DEFAULT_STEADYSTATE_SOLVER
     
@@ -45,16 +44,19 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         """Update PV-DER design."""  
         
         self.check_DER_config(DER_config,DER_id)
-        self.update_DER_phases(DER_config,DER_id)
-            
+        
+        #parameters_from_arguments = {}
+        #parameters_from_config = {}
+        #parameters_from_default = {}
+        
         for DER_component in self.DER_design_template:
             if DER_component in DER_arguments['derConfig']: 
                 self.DER_config[DER_component] = DER_arguments['derConfig'][DER_component]
             else:
                 for DER_parameter in self.DER_design_template[DER_component]:
-                    self.update_DER_parameter(DER_config,DER_arguments,DER_id,DER_component,DER_parameter)
+                    _ = self.update_DER_parameter(DER_config,DER_arguments,DER_id,DER_component,DER_parameter)
 
-        self.der_details = {DER_id:self.DER_config['der_details']}
+        self.basic_specs = {DER_id:self.DER_config['basic_specs']}
         self.module_parameters = {DER_id:self.DER_config['module_parameters']}
         self.inverter_ratings = {DER_id:self.DER_config['inverter_ratings']}
         self.circuit_parameters = {DER_id:self.DER_config['circuit_parameters']}
@@ -66,20 +68,33 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     def update_DER_parameter(self,DER_config,DER_arguments,DER_id,DER_component,DER_parameter):
         """Update DER config using both config file and arguments."""
         
+        parameters ={}
+        
         if DER_parameter in DER_arguments: #Check if parameter exists in DER key word arguments
-            self.DER_config[DER_component].update({DER_parameter:self.DER_arguments[DER_parameter]})
+            self.DER_config[DER_component].update({DER_parameter:DER_arguments[DER_parameter]})
+            parameters.update({DER_parameter:DER_arguments[DER_parameter]})
+            source = 'DER arguments'
+            
         elif DER_parameter in DER_config[DER_component]: #Check if parameter exists in config file
             if isinstance(DER_config[DER_component][DER_parameter],(int,float)):
                 self.DER_config[DER_component].update({DER_parameter:DER_config[DER_component][DER_parameter]})
+                parameters.update({DER_parameter:DER_config[DER_component][DER_parameter]})
+                source = 'DER config'
             else:
                 raise ValueError('Found {} to have type {} - expected type:(int,float)!'.format(DER_parameter,type(DER_config[DER_component][DER_parameter])))
-        else:
-            if DER_parameter in self.default_DER_config[DER_component]:  #Check if parameter exists in default DER config
+        
+        elif DER_parameter in self.default_DER_config[DER_component]:  #Check if parameter exists in default DER config
                 self.logger.info('{}: Parameter {} not found for ID:{} - updating with default value.'.format(self.name,DER_parameter,DER_id)) 
                 self.DER_config[DER_component].update({DER_parameter:self.default_DER_config[DER_component][DER_parameter]})
-            else:
-                raise ValueError('{}: Parameter {} not found for ID:{} - update config file and try again.'.format(self.name,DER_parameter,DER_id))
+                parameters.update({DER_parameter:self.default_DER_config[DER_component][DER_parameter]})
+                source = 'DER default values'
+        else:
+            raise ValueError('{}: Parameter {} not found for ID:{} - update config file and try again.'.format(self.name,DER_parameter,DER_id))
         
+        self.logger.debug('{}:Following parameters were obtained from {}:{}'.format(self.name,source,parameters))
+        
+        return parameters
+             
     def check_DER_config(self,DER_config,DER_id):
         """Check DER config."""
         
@@ -96,19 +111,8 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         
         self.logger.debug('Checking config file {}.'.format(config_file))                 
         for DER_id,DER_config in config_dict.items():
-            self.check_DER_config(DER_config,DER_id)            
+            self.check_DER_config(DER_config,DER_id)           
                                
-    
-    """
-    def check_parameter_exists(self,parameter_ID):
-        Check existence of parameter ID within the parameter dictionaries.
-        
-        return (self.check_parameter_ID(parameter_ID,self.module_parameters) and 
-                self.check_parameter_ID(parameter_ID,self.inverter_ratings)  and 
-                self.check_parameter_ID(parameter_ID,self.circuit_parameters) and
-                self.check_parameter_ID(parameter_ID,self.controller_parameters)
-               )
-  """
     def modify_DER_parameters(self,parameter_ID):
         """Modify the DER parameters to parameters corresponding to the given parameter ID.
         
@@ -126,6 +130,14 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.initialize_derived_quantities()
         
         self.logger.info('{}:PV-DER parameters updated with parameters from  parameter dictionary {}!'.format(self.name,self.parameter_ID))
+    
+    def initialize_basic_specs(self):
+        """Initialize number of ODEs and phases"""
+        
+        self.n_ODE = specifications.DER_basic_spec[type(self).__name__]['n_ODE'] #23  #Number of ODE's
+        self.n_phases = specifications.DER_basic_spec[type(self).__name__]['n_phases'] #3 #Number of phases    
+        self.t_stable = specifications.DER_basic_spec[type(self).__name__]['t_stable'] #0.5  #Time delay before activating logic for MPP, Volt-VAR control,  LVRT/LFRT 
+        self.m_steady_state = specifications.DER_basic_spec[type(self).__name__]['m_steady_state'] #0.96 #Expected duty cycle at steady state 
     
     def initialize_grid_measurements(self,DER_arguments):
         """Initialize inverter states.
@@ -552,7 +564,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         #P_PCC_error = ((S_PCC.real + Sloss_filter.real)   - self.Ppv)**2         
         #S_error = (abs(St -(S_PCC+Sloss_filter)))**2
         #Q_error_filter_expected =  (St.imag - Qloss_filter_expected)**2 
-        #print('solver:',St.imag,Qloss_filter_expected)
+        
         
         if type(self).__name__ == 'SolarPV_DER_ThreePhase':
             del_1 = utility_functions.relative_phase_calc(ma,mb)
