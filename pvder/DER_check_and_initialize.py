@@ -23,16 +23,9 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     inverter_ratings = {}
     circuit_parameters = {}
     controller_gains ={}
-    steadystate_values= {}    
+    steadystate_values= {}        
     
-    DER_design_template = templates.DER_design_template
-    solver_spec = specifications.solver_spec
-    
-    default_DER_config = dict((key, eval('config.DEFAULT_'+key)) for key in DER_design_template.keys()) 
-    
-    DER_config =  dict((key, {}) for key in DER_design_template.keys()) 
-    DER_config_external = {}    
-                   
+    solver_spec = specifications.steadystate_solver_spec
     steadystate_solver = config.DEFAULT_STEADYSTATE_SOLVER
     
     def creation_message(self):
@@ -54,13 +47,13 @@ class PVDER_SetupUtilities(BaseValues,Logging):
                 self.DER_config[DER_component] = DER_arguments['derConfig'][DER_component]
             else:
                 for DER_parameter in self.DER_design_template[DER_component]:
+                    
                     _ = self.update_DER_parameter(DER_config,DER_arguments,DER_id,DER_component,DER_parameter)
-
+        
         self.basic_specs = {DER_id:self.DER_config['basic_specs']}
         self.module_parameters = {DER_id:self.DER_config['module_parameters']}
         self.inverter_ratings = {DER_id:self.DER_config['inverter_ratings']}
         self.circuit_parameters = {DER_id:self.DER_config['circuit_parameters']}
-        self.circuit_parameters[DER_id].update({'Z1_actual':self.DER_config['circuit_parameters']['R1_actual'] + 1j*self.DER_config['circuit_parameters']['X1_actual']})
         
         self.controller_gains = {DER_id:self.DER_config['controller_gains']}
         self.steadystate_values = {DER_id:self.DER_config['steadystate_values']}   
@@ -83,13 +76,14 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             else:
                 raise ValueError('Found {} to have type {} - expected type:(int,float)!'.format(DER_parameter,type(DER_config[DER_component][DER_parameter])))
         
-        elif DER_parameter in self.default_DER_config[DER_component]:  #Check if parameter exists in default DER config
-                self.logger.info('{}: Parameter {} not found for ID:{} - updating with default value.'.format(self.name,DER_parameter,DER_id)) 
-                self.DER_config[DER_component].update({DER_parameter:self.default_DER_config[DER_component][DER_parameter]})
-                parameters.update({DER_parameter:self.default_DER_config[DER_component][DER_parameter]})
-                source = 'DER default values'
+        elif DER_parameter in self.DER_design_template[DER_component]:  #Check if parameter exists in default DER config
+            self.logger.info('{}: Parameter {} not found for ID:{} - updating with default value from template.'.format(self.name,DER_parameter,DER_id)) 
+            self.DER_config[DER_component].update({DER_parameter:self.DER_design_template[DER_component][DER_parameter]})
+            parameters.update({DER_parameter:self.DER_design_template[DER_component][DER_parameter]})
+            source = 'DER default values'        
+     
         else:
-            raise ValueError('{}: Parameter {} not found for ID:{} - update config file and try again.'.format(self.name,DER_parameter,DER_id))
+            raise ValueError('{}: Parameter {} in {} not found for ID:{} - update config file and try again.'.format(self.name,DER_parameter,DER_component,DER_id))
         
         self.logger.debug('{}:Following parameters were obtained from {}:{}'.format(self.name,source,parameters))
         
@@ -134,10 +128,12 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     def initialize_basic_specs(self):
         """Initialize number of ODEs and phases"""
         
-        self.n_ODE = specifications.DER_basic_spec[type(self).__name__]['n_ODE'] #23  #Number of ODE's
-        self.n_phases = specifications.DER_basic_spec[type(self).__name__]['n_phases'] #3 #Number of phases    
-        self.t_stable = specifications.DER_basic_spec[type(self).__name__]['t_stable'] #0.5  #Time delay before activating logic for MPP, Volt-VAR control,  LVRT/LFRT 
-        self.m_steady_state = specifications.DER_basic_spec[type(self).__name__]['m_steady_state'] #0.96 #Expected duty cycle at steady state 
+        model_name = type(self).__name__
+        
+        self.n_ODE = templates.DER_design_template[model_name]['basic_specs']['n_ODE'] #23  #Number of ODE's
+        self.n_phases = templates.DER_design_template[model_name]['basic_specs']['n_phases'] #3 #Number of phases    
+        self.t_stable = self.DER_config['basic_specs']['t_stable'] #0.5  #Time delay before activating logic for MPP, Volt-VAR control,  LVRT/LFRT 
+        self.m_steady_state = self.DER_config['basic_specs']['m_steady_state'] #0.96 #Expected duty cycle at steady state 
     
     def initialize_grid_measurements(self,DER_arguments):
         """Initialize inverter states.
@@ -155,28 +151,34 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             else:
                 raise ValueError('Grid voltage source Frequency need to be supplied if model is not stand alone!')
             
-            if type(self).__name__ in ['SolarPV_DER_SinglePhase','SolarPV_DER_ThreePhaseBalanced','SolarPV_DER_ThreePhase']:
+            model_name = type(self).__name__            
+            
+            if templates.DER_design_template[model_name]['basic_specs']['n_phases'] >=1: #Check if model has one phase
                 if 'gridVoltagePhaseA' in DER_arguments:
                     self.gridVoltagePhaseA = DER_arguments['gridVoltagePhaseA']/self.Vbase
-                    
                 else:
                     raise ValueError('Grid voltage source phase A need to be supplied if model is not stand alone!')
-                               
-                if type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
+               
+            if templates.DER_design_template[model_name]['basic_specs']['n_phases'] >=2: #Check if model has 2 phases
+                if templates.DER_design_template[model_name]['basic_specs']['unbalanced']: #Check if model is unbalanced
+                    if 'gridVoltagePhaseB' in DER_arguments:
+                        self.gridVoltagePhaseB = DER_arguments['gridVoltagePhaseB']/self.Vbase
+                    else:
+                        raise ValueError('Grid voltage source phase B need to be supplied if model is not stand alone!')
+                else:
                     self.gridVoltagePhaseB = utility_functions.Ub_calc(self.gridVoltagePhaseA)
+                    
+            if templates.DER_design_template[model_name]['basic_specs']['n_phases'] >=3: #Check if model has 3 phases
+                if templates.DER_design_template[model_name]['basic_specs']['unbalanced']: #Check if model is unbalanced
+                    if 'gridVoltagePhaseC' in DER_arguments:
+                        self.gridVoltagePhaseC = DER_arguments['gridVoltagePhaseC']/self.Vbase
+                    else:
+                        raise ValueError('Grid voltage source phase C need to be supplied if model is not stand alone!')
+                else:
                     self.gridVoltagePhaseC = utility_functions.Uc_calc(self.gridVoltagePhaseA)
-
-            if type(self).__name__ in ['SolarPV_DER_ThreePhase']:
-                if 'gridVoltagePhaseB' in DER_arguments:
-                    self.gridVoltagePhaseB = DER_arguments['gridVoltagePhaseB']/self.Vbase
-                else:
-                    raise ValueError('Grid voltage source phase B need to be supplied if model is not stand alone!')
-                
-                if 'gridVoltagePhaseC' in DER_arguments:
-                    self.gridVoltagePhaseC = DER_arguments['gridVoltagePhaseC']/self.Vbase
-                else:
-                    raise ValueError('Grid voltage source phase C need to be supplied if model is not stand alone!')
-
+            
+            if templates.DER_design_template[model_name]['basic_specs']['n_phases'] >=4: #Check if model has 3 phases
+                raise ValueError('Model has more than 3 phases!')
                 
     def initialize_states(self,DER_arguments):
         """Initialize inverter states.
@@ -188,29 +190,24 @@ class PVDER_SetupUtilities(BaseValues,Logging):
 
         """        
         
-        if 'ia0' in DER_arguments:
-            ia0 = DER_arguments['ia0']
-        else:
-            ia0 = self.DER_config['initial_values']['iaR0'] + 1j*self.DER_config['initial_values']['iaI0']
-        if 'xa0' in DER_arguments:
-            xa0 = DER_arguments['xa0']
-        else:
-            xa0 = self.DER_config['initial_values']['xaR0'] + 1j*self.DER_config['initial_values']['xaI0']
-        if 'ua0' in DER_arguments:
-            ua0 = DER_arguments['ua0']
-        else:
-            ua0 = self.DER_config['initial_values']['uaR0'] + 1j*self.DER_config['initial_values']['uaI0']
-        if 'xDC0' in DER_arguments:
-            xDC0 = DER_arguments['xDC0']
-        else:
-            xDC0 = self.DER_config['initial_values']['xDC0']
-        if 'xQ0' in DER_arguments:
-            xQ0 = DER_arguments['xQ0']
-        else:
-            xQ0 = self.DER_config['initial_values']['xQ0']
+        states_dict = dict((key, 0.0) for key in self.DER_design_template['initial_states'].keys()) 
         
-        xPLL0 = self.DER_config['initial_values']['xPLL0']
-        wte0 = self.DER_config['initial_values']['wte0']        
+        for state in states_dict:
+            if state in DER_arguments: #Check if state exists in arguments
+                states_dict[state] = DER_arguments[state]
+                source = 'DER arguments'
+            elif state in  self.DER_config['initial_states']: #Check if state exists in config file
+                states_dict[state] = self.DER_config['initial_states'][state]
+                source = 'DER config'
+            elif state in self.DER_design_template['initial_states']:
+                states_dict[state] = self.DER_design_template['initial_states'][state]
+                source = 'DER template defaults'
+            else:
+                raise ValueError('{}:State {} not found for ID:{} - update config file and try again.'.format(self.name,state, self.parameter_ID))
+        
+            self.logger.debug('{}:Initial state {}:{} was obtained from {}'.format(self.name,state,states_dict[state],source))
+       
+        self.map_states(states_dict)
         
         self.Vdc = self.Vdc_ref  #DC link voltage        
         self.Ppv = self.Ppv_calc(self.Vdc_actual) #PV module power output    
@@ -219,7 +216,8 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         if self.steady_state_initialization:
             #ia0,xa0,ua0,ib0,xb0,ub0,ic0,xc0,uc0,Vdc0,xDC0,xQ0,xPLL0,wte0
             self.steady_state_calc()
-        else:
+        #else:
+        """
             #Phase a
             self.ia = ia0
             self.xa = xa0
@@ -251,7 +249,33 @@ class PVDER_SetupUtilities(BaseValues,Logging):
                 self.ic = ic0
                 self.xc = xc0   #Shift by +120 degrees
                 self.uc = uc0
-
+        """    
+    
+    def map_states(self,states_dict):
+        """Initialize quantities other than states."""
+        
+        self.__dict__.update(states_dict)        
+        
+        if 'iaR' in states_dict:
+            self.ia = self.convert2complex(self.iaR,self.iaI)
+        if 'ibR' in states_dict:
+            self.ib = self.convert2complex(self.ibR,self.ibI)
+        if 'icR' in states_dict:
+            self.ic = self.convert2complex(self.icR,self.icI)
+        
+        if 'xaR' in states_dict:
+            self.xa = self.convert2complex(self.xaR,self.xaI)
+        if 'xbR' in states_dict:
+            self.xb = self.convert2complex(self.xbR,self.xbI)
+        if 'xbR' in states_dict:
+            self.xc = self.convert2complex(self.xcR,self.xcI)
+        
+        if 'uaR' in states_dict:
+            self.ua = self.convert2complex(self.uaR,self.uaI)
+        if 'ubR' in states_dict:
+            self.ub = self.convert2complex(self.ubR,self.ubI)
+        if 'ucR' in states_dict:
+            self.uc = self.convert2complex(self.ucR,self.ucI)
     
     def initialize_derived_quantities(self):
         """Initialize quantities other than states."""
@@ -339,10 +363,12 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     def initialize_Iac(self):
         """Initialize AC side currents."""
         
-        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
-            self.Iarated = (self.Sinverter_rated/(self.Varated/math.sqrt(2)))*math.sqrt(2)
-        elif type(self).__name__ == 'SolarPV_DER_ThreePhase' or type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
-            self.Iarated = (self.Sinverter_rated/(3*(self.Varated/math.sqrt(2))))*math.sqrt(2)            
+        self.Iarated = (self.Sinverter_rated/(self.n_phases*(self.Varated/math.sqrt(2))))*math.sqrt(2)  
+        
+        #if type(self).__name__ == 'SolarPV_DER_SinglePhase':
+        #    self.Iarated = (self.Sinverter_rated/(self.Varated/math.sqrt(2)))*math.sqrt(2)
+        #elif type(self).__name__ == 'SolarPV_DER_ThreePhase' or type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
+            #self.Iarated = (self.Sinverter_rated/(3*(self.Varated/math.sqrt(2))))*math.sqrt(2)            
         
         self.Ioverload = self.inverter_ratings[self.parameter_ID]['Ioverload']  #Inverter current overload rating (Max 10s)            
         self.iref_limit = (self.Iarated/self.Ibase)*self.Ioverload #Maximum current reference
@@ -355,24 +381,40 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             if self.standAlone:
                 self.a = self.grid_model.Vgridrated/self.Varated  #Transformer turns ratio
 
-            self.Rf_actual =  self.circuit_parameters[self.parameter_ID]['Rf_actual'] #Filter resistance
-            self.Lf_actual = self.circuit_parameters[self.parameter_ID]['Lf_actual']  #Filter inductance
-            self.C_actual =  self.circuit_parameters[self.parameter_ID]['C_actual']   #DC link capacitance
+            self.__dict__.update(self.circuit_parameters[self.parameter_ID]) #Convert dictionary to attributes
+            
+            #self.Rf_actual =  self.circuit_parameters[self.parameter_ID]['Rf_actual'] #Filter resistance
+            #self.Lf_actual = self.circuit_parameters[self.parameter_ID]['Lf_actual']  #Filter inductance
+            #self.C_actual =  self.circuit_parameters[self.parameter_ID]['C_actual']   #DC link capacitance
+            
+            temp_dict =  dict((key.strip('_actual'), 0.0) for key in self.circuit_parameters[self.parameter_ID].keys())
+            
+            for parameter in temp_dict: #create dictiory with per unit values
+                if templates.parameter_properties[parameter]['base'] == 'impendance':
+                    base = BaseValues.Zbase                     
+                elif templates.parameter_properties[parameter]['base'] == 'inductance':
+                    base = BaseValues.Lbase                    
+                elif templates.parameter_properties[parameter]['base'] == 'capacitance':
+                    base = BaseValues.Cbase
+                else:
+                    raise ValueError('{} has an unknown base!'.format(parameter))
+                    
+                temp_dict.update({parameter:self.circuit_parameters[self.parameter_ID][parameter+'_actual']/base})
+                       
+            self.__dict__.update(temp_dict) #Convert dictionary to attributes
+            
+            #self.Rf = self.Rf_actual/BaseValues.Zbase        # VSC Filter resistance    
+            #self.Lf = self.Lf_actual/BaseValues.Lbase        # VSC Filter inductance
+            #self.C = self.C_actual/BaseValues.Cbase          #DC link capacitor capacitance            
+            
+            #Actual values - derived
             self.Zf_actual =  self.Rf_actual + 1j*self.Lf_actual*BaseValues.wbase
-
-            self.Rf = self.Rf_actual/BaseValues.Zbase        # VSC Filter resistance 
-            self.Lf = self.Lf_actual/BaseValues.Lbase        # VSC Filter inductance
-            self.Xf = (self.Lf_actual*BaseValues.wbase)/BaseValues.Zbase # VSC Filter reactance
-            self.C = self.C_actual/BaseValues.Cbase          #DC link capacitor capacitance
-            self.Zf = self.Zf_actual/BaseValues.Zbase
-
-            #Interconnection to PCC - HV side
-            #Actual values
-            self.Z1_actual = self.circuit_parameters[self.parameter_ID]['Z1_actual']
-            self.R1_actual = self.Z1_actual.real
+            self.Z1_actual = self.R1_actual + 1j*self.X1_actual  #Interconnection to PCC - HV side
             self.L1_actual = self.Z1_actual.imag/(2*math.pi*60.0)
 
             #Per-unit values
+            self.Zf = self.Zf_actual/BaseValues.Zbase
+            self.Xf = (self.Lf_actual*BaseValues.wbase)/BaseValues.Zbase # VSC Filter reactance
             self.R1 = self.R1_actual/BaseValues.Zbase  #Line/transformer resistance
             self.L1 = self.L1_actual/BaseValues.Lbase  #Line/transformer inductance
             self.Z1 =self.Z1_actual/BaseValues.Zbase    #Line/transformer impedance
@@ -402,18 +444,18 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     def initialize_controller_gains(self):
         """Initialize controller settings."""
         
-        if self.parameter_ID in self.controller_gains:
-            
+        if self.parameter_ID in self.controller_gains:            
+            self.__dict__.update(self.controller_gains[self.parameter_ID]) #Convert dictionary to attributes
             #Current controller gains
-            self.Kp_GCC = self.controller_gains[self.parameter_ID]['Kp_GCC'] #Current controller Proportional constant
-            self.Ki_GCC = self.controller_gains[self.parameter_ID]['Ki_GCC']  #Current controller Integral constant
-            self.wp =  self.controller_gains[self.parameter_ID]['wp']      #First order filter gain for GCC
+            #self.Kp_GCC = self.controller_gains[self.parameter_ID]['Kp_GCC'] #Current controller Proportional constant
+            #self.Ki_GCC = self.controller_gains[self.parameter_ID]['Ki_GCC']  #Current controller Integral constant
+            #self.wp =  self.controller_gains[self.parameter_ID]['wp']      #First order filter gain for GCC
 
             #Power (active and reactive) controller gains
-            self.Kp_DC = self.controller_gains[self.parameter_ID]['Kp_DC']   #Active power controller Proportional constant
-            self.Ki_DC = self.controller_gains[self.parameter_ID]['Ki_DC'] #Active power controller Integral constant
-            self.Kp_Q = self.controller_gains[self.parameter_ID]['Kp_Q']  #Reactive power controller Proportional constant
-            self.Ki_Q = self.controller_gains[self.parameter_ID]['Ki_Q']   #Reactive power controller Integral constant   
+            #self.Kp_DC = self.controller_gains[self.parameter_ID]['Kp_DC']   #Active power controller Proportional constant
+            #self.Ki_DC = self.controller_gains[self.parameter_ID]['Ki_DC'] #Active power controller Integral constant
+            #self.Kp_Q = self.controller_gains[self.parameter_ID]['Kp_Q']  #Reactive power controller Proportional constant
+            #self.Ki_Q = self.controller_gains[self.parameter_ID]['Ki_Q']   #Reactive power controller Integral constant   
             
         else:
             raise ValueError('Controller gains not available for parameter ID: {}!'.format(self.parameter_ID))    
@@ -425,6 +467,9 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.varInd={}
         n=0
         
+        state_list = templates.DER_design_template[type(self).__name__]['initial_states'].keys()
+        
+        """
         if type(self).__name__ == 'SolarPV_DER_SinglePhase':
             state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
                           'Vdc','xDC','xQ','xPLL','wte']
@@ -434,7 +479,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
                           'ibR','ibI','xbR','xbI','ubR','ubI',
                           'icR','icI','xcR','xcI','ucR','ucI',
                           'Vdc','xDC','xQ','xPLL','wte']            
-            
+        """    
         for entry in state_list:
             self.varInd[entry]=n
             n+=1
@@ -478,25 +523,29 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     def check_circuit_parameters(self):
         """Method to check whether inverter circuit parameter's are feasible."""
         
-        _del_I1max = 0.1*self.Iarated
-        _Lf_min = self.Vdcrated/(16*self.fswitching*_del_I1max)
-        _del_I1max_actual = self.Vdcrated/(16*self.fswitching*self.Lf_actual)
-        if _del_I1max_actual > _del_I1max:   #Check if ripple current is less than 10 %
-            self.logger.debug('{}:Filter inductance {:.4f} H is acceptable since AC side current ripple is {:.2f}% (< 10%)'.format(self.name,_Lf_min,_del_I1max_actual/self.Iarated))
-        else:
-            self.logger.debug('{}:Warning:Filter inductance {:.4f} H results in AC side current ripple of {:.2f}% (> 10%)'.format(self.name,_Lf_min,_del_I1max_actual/self.Iarated))
+        model_type = type(self).__name__
         
-        _I_ripple = (0.25*self.Vdcrated)/(self.Lf_actual*self.fswitching)  #Maximum ripple voltage (p-p) at DC link
-        _V_ripple = self.Vdcrated/(32*self.Lf_actual*self.C_actual*(self.fswitching**2))  #Maximum ripple voltage (p-p) at DC link
-        _V_ripple_percentage = (_V_ripple/self.Vdcrated)*100
-        if _V_ripple_percentage <= 1.0:   #Check if voltage ripple on DC link is less than 1%
-            self.logger.debug('{}:DC link capacitance of {:.4f} F is acceptable since voltage ripple is only {:.2f}% (< 1%)'.format(self.name,self.C_actual,_V_ripple_percentage))
+        if 'Lf_actual' in templates.DER_design_template[model_type]['circuit_parameters']:
+            del_I1max = 0.1*self.Iarated
+            Lf_min = self.Vdcrated/(16*self.fswitching*del_I1max)
+            del_I1max_actual = self.Vdcrated/(16*self.fswitching*self.Lf_actual)
+            if del_I1max_actual > del_I1max:   #Check if ripple current is less than 10 %
+                self.logger.debug('{}:Filter inductance {:.4f} H is acceptable since AC side current ripple is {:.2f}% (< 10%)'.format(self.name,Lf_min,del_I1max_actual/self.Iarated))
+            else:
+                self.logger.debug('{}:Warning:Filter inductance {:.4f} H results in AC side current ripple of {:.2f}% (> 10%)'.format(self.name,Lf_min,del_I1max_actual/self.Iarated))
         
-        else:
-            _V_ripple_ideal = self.Vdcrated*0.01  #1% ripple is acceptable
-            _C = self.Vdcrated/(32*self.Lf_actual*_V_ripple_ideal*(self.fswitching**2))
-            self.logger.debug('{}:Warning:DC link capacitance of {:.4f} F results in DC link voltage ripple of {:.2}% (> 1%)!Please use at least {} F.'.format(self.name,self.C_actual,_V_ripple_percentage,_C))
-            #warnings.warn('Warning:DC link capacitance of {} F results in DC link voltage ripple of {:.3}% (> 1%)!Please use at least {} F.'.format(self.C_actual,_V_ripple_percentage,_C))               
+        if 'C_actual' in templates.DER_design_template[model_type]['circuit_parameters']:
+            I_ripple = (0.25*self.Vdcrated)/(self.Lf_actual*self.fswitching)  #Maximum ripple voltage (p-p) at DC link
+            V_ripple = self.Vdcrated/(32*self.Lf_actual*self.C_actual*(self.fswitching**2))  #Maximum ripple voltage (p-p) at DC link
+            V_ripple_percentage = (V_ripple/self.Vdcrated)*100
+            if V_ripple_percentage <= 1.0:   #Check if voltage ripple on DC link is less than 1%
+                self.logger.debug('{}:DC link capacitance of {:.4f} F is acceptable since voltage ripple is only {:.2f}% (< 1%)'.format(self.name,self.C_actual,V_ripple_percentage))
+        
+            else:
+                V_ripple_ideal = self.Vdcrated*0.01  #1% ripple is acceptable
+                C = self.Vdcrated/(32*self.Lf_actual*V_ripple_ideal*(self.fswitching**2))
+                self.logger.debug('{}:Warning:DC link capacitance of {:.4f} F results in DC link voltage ripple of {:.2}% (> 1%)!Please use at least {} F.'.format(self.name,self.C_actual,V_ripple_percentage,C))
+                #warnings.warn('Warning:DC link capacitance of {} F results in DC link voltage ripple of {:.3}% (> 1%)!Please use at least {} F.'.format(self.C_actual,_V_ripple_percentage,_C))               
         
     def power_error_calc(self,x):
         """Function for power."""

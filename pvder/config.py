@@ -45,6 +45,7 @@ DEFAULT_STEADYSTATE_SOLVER = 'SLSQP'
 
 
 #Default DER parameters
+"""
 DEFAULT_Z1_actual= 0.0019 + 1j*0.0561
 DEFAULT_basic_specs = {"Sinsol0":1.0}
 DEFAULT_module_parameters = {'Np':2,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 650.0,'Vdcmpp_max': 800.0}
@@ -59,6 +60,7 @@ DEFAULT_initial_values = {"iaR0":0,"iaI0":0.0,"xaR0":0.0,"xaI0":0.0,"uaR0":0.0,"
                           "xDC0":0.0,"xQ0":0.0,"xPLL0":0.0,"wte0":6.28}
 
 #Default VRT config
+"""
 default_RT_config =  {'LVRT':{'0':{'V_threshold':0.5,
                                     't_threshold':1.0,
                                     'mode':'mandatory_operation',

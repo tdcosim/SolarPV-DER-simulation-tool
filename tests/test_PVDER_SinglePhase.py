@@ -85,8 +85,8 @@ class TestPVDER(unittest.TestCase):
         self.assertEqual(PVDER.inverter_ratings[source_ID]['Srated'],PVDER.inverter_ratings[new_ID]['Srated'])
         self.assertEqual(PVDER.circuit_parameters[source_ID]['Rf_actual'],PVDER.circuit_parameters[new_ID]['Rf_actual'])
         
-        PVDER.update_parameter_dict(parameter_ID = new_ID,parameter_type = 'module_parameters',parameter_dict = new_module_parameters)
-        PVDER.update_parameter_dict(parameter_ID = new_ID,parameter_type = 'circuit_parameters',parameter_dict = new_circuit_parameters)        
+        PVDER.update_parameter_dict(parameter_ID = new_ID,DER_component = 'module_parameters',parameter_dict = new_module_parameters)
+        PVDER.update_parameter_dict(parameter_ID = new_ID,DER_component = 'circuit_parameters',parameter_dict = new_circuit_parameters)        
                          
         self.assertEqual(PVDER.module_parameters[new_ID]['Np'],new_module_parameters['Np']) 
         self.assertEqual(PVDER.circuit_parameters[new_ID]['C_actual'],new_circuit_parameters['C_actual'])        

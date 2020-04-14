@@ -100,6 +100,11 @@ class PVDER_ModelUtilities(BaseValues):
         
         return self.Kp_GCC*self.uc + self.xc #PI controller equation
     
+    def convert2complex(self,uR,uI):
+        """Convert to complex."""
+    
+        return uR+1j*uI
+    
     def get_DER_config(self,config_file,DER_id):
         """Check DER ID in config file."""
         
@@ -130,10 +135,10 @@ class PVDER_ModelUtilities(BaseValues):
         
         return self.xDC + self.Kp_DC*(self.Vdc_ref - self.Vdc) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)) #PI controller equation
     
-    def ia_ref_constantVdc_calc(self):
+    def ia_ref_activepower_control(self):
         """Phase A current reference for constant Vdc"""
         
-        return self.xDC + self.Kp_DC*(self.Ppv -  self.S.real) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)) #PI controller equation
+        return self.xP + self.Kp_P*(self.Ppv -  self.S.real) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)) #PI controller equation
       
     def ib_ref_calc(self):
         """Phase B current reference"""
@@ -353,6 +358,8 @@ class PVDER_ModelUtilities(BaseValues):
         if parameter_type not in {'module_parameters','inverter_ratings','controller_gains','circuit_parameters','all'}:
             raise ValueError('Unknown quantity: ' + str(parameter_type))
         
+        model_type = type(self).__name__
+        
         print('Parameters for DER with ID:{}'.format(self.parameter_ID))
         if parameter_type ==  'module_parameters' or parameter_type ==  'all':
             print('Np:{},Ns:{}'.format(self.Np,self.Ns))
@@ -367,10 +374,16 @@ class PVDER_ModelUtilities(BaseValues):
             print('Cdc:{:.9f} F\nLf:{:.6f} H\nRf:{:.3f} Ohm'.format(self.C*self.Cbase,self.Lf*self.Lbase,self.Rf*self.Zbase))
         
         if parameter_type == 'controller_gains' or parameter_type ==  'all':
-            print('Current controller:\nKp_GCC:{:.3f}, Ki_GCC:{:.3f}, wp:{:.3f}'.format(self.Kp_GCC,self.Ki_GCC,self.wp))
-            print('DC link voltage controller:\nKp_DC:{:.3f}, Ki_DC:{:.3f}'.format(self.Kp_DC,self.Ki_DC))
-            print('Reactive power controller:\nKp_Q:{:.3f}, Ki_Q:{:.3f}'.format(self.Kp_Q,self.Ki_Q))
-            print('PLL controller:\nKp_PLL:{:.3f}, Ki_PLL:{:.3f}'.format(self.Kp_PLL,self.Ki_PLL))     
+            for controller,properties in templates.controller_properties.items():
+                if set(properties['gains']).issubset(set(templates.DER_design_template[model_type]['controller_gains'].keys())):
+                    print(properties['description'],':')
+                    for gain_type in properties['gains']:
+                        print('{}:{:.3f}'.format(gain_type,eval('self.'+gain_type)))
+            
+            #print('Current controller:\nKp_GCC:{:.3f}, Ki_GCC:{:.3f}, wp:{:.3f}'.format(self.Kp_GCC,self.Ki_GCC,self.wp))
+            #print('DC link voltage controller:\nKp_DC:{:.3f}, Ki_DC:{:.3f}'.format(self.Kp_DC,self.Ki_DC))
+            #print('Reactive power controller:\nKp_Q:{:.3f}, Ki_Q:{:.3f}'.format(self.Kp_Q,self.Ki_Q))
+            #print('PLL controller:\nKp_PLL:{:.3f}, Ki_PLL:{:.3f}'.format(self.Kp_PLL,self.Ki_PLL))     
 
     def validate_model(self,PRINT_ERROR = True):
         """Compare error between RMS quantities and Phasor quantities."""
@@ -380,13 +393,13 @@ class PVDER_ModelUtilities(BaseValues):
         self.Qf_phasor = self.S_calc().imag-self.S_PCC_calc().imag  #Reactive power consumed by filter inductor 
         
         #Caculation with RMS quantities        
-        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
-            _phases = 1
-        elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
-            _phases = 3
+        #if type(self).__name__ == 'SolarPV_DER_SinglePhase':
+        #    _phases = 1
+        #elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        #    _phases = 3
         
-        self.Pf_RMS = _phases*((self.Irms)**2)*self.Rf   #Active power consumed by filter resistor
-        self.Qf_RMS = _phases*((self.Irms)**2)*self.Xf   #Reactive power consumed by filter inductor 
+        self.Pf_RMS = self.n_phases*((self.Irms)**2)*self.Rf   #Active power consumed by filter resistor
+        self.Qf_RMS = self.n_phases*((self.Irms)**2)*self.Xf   #Reactive power consumed by filter inductor 
         
         #Calculation with phasor quantities
         self.Pt_phasor = self.S_calc().real   #Active power output at inverter terminal
@@ -559,31 +572,31 @@ class PVDER_ModelUtilities(BaseValues):
         
         self.logger.info('{}:Created and initialized new parameter dicitonary {} with source dictionary {}.'.format(self.name,parameter_ID,source_parameter_ID))
     
-    def update_parameter_dict(self,parameter_ID,parameter_type,parameter_dict):
+    def update_parameter_dict(self,parameter_ID,DER_component,parameter_dict):
         """Update parameters."""
                 
-        if parameter_type not in templates.DER_design_template:
-            raise ValueError('Unknown parameter type: ' + str(parameter_type))
+        if DER_component not in templates.DER_design_template[type(self).__name__]:
+            raise ValueError('Unknown parameter type: ' + str(DER_component))
         
         for parameter in parameter_dict.keys():
             
-            if parameter_type == 'module_parameters':            
+            if DER_component == 'module_parameters':            
                 self.module_parameters[parameter_ID][parameter] = parameter_dict[parameter]        
                       
-            elif parameter_type == 'inverter_ratings':        
+            elif DER_component == 'inverter_ratings':        
                 self.inverter_ratings[parameter_ID][parameter] = parameter_dict[parameter]
             
-            elif parameter_type == 'circuit_parameters':        
+            elif DER_component == 'circuit_parameters':        
                 self.circuit_parameters[parameter_ID][parameter] = parameter_dict[parameter]
                 
-            elif parameter_type == 'controller_parameters':        
-                self.controller_parameters[parameter_ID][parameter] = parameter_dict[parameter]
+            elif DER_component == 'controller_gains':        
+                self.controller_gains[parameter_ID][parameter] = parameter_dict[parameter]
             
-            elif parameter_type == 'steadystate_values':        
+            elif DER_component == 'steadystate_values':        
                 self.steadystate_values[parameter_ID][parameter] = parameter_dict[parameter]
             
             else:
-                print('{} is invalid parameter!'.format(parameter_type))
+                print('{} is invalid parameter!'.format(DER_component))
                 
             self.logger.debug('{}:Updating {} in parameter dicitonary {} with {}!'.format(self.name,parameter,parameter_ID,parameter_dict[parameter]))
         

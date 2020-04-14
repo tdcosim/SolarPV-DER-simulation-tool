@@ -39,12 +39,13 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
     winv = we = 2.0*math.pi*60.0 #Frequency of fundamental waveform
     fswitching  = 10e3 #Inverter switching frequency (not used by model)
     
-    DER_argument_template = templates.DER_argument_template    
+      
     
     def setup_DER(self,configFile,**kwargs):
-        """Setup pvder instance"""
+        """Setup pvder instance"""        
         
         self.parameter_ID = self.get_DER_id(**kwargs)
+        self.create_template()
         
         DER_config = self.get_DER_config(configFile,self.parameter_ID)
         DER_arguments = self.get_DER_arguments(DER_config,**kwargs)       
@@ -53,10 +54,17 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         self.initialize_logger(DER_arguments['verbosity'])  #Set logging level - {DEBUG,INFO,WARNING,ERROR}       
         
         self.update_DER_config(DER_config,DER_arguments,self.parameter_ID)
-        self.check_basic_specs(DER_config,self.parameter_ID)
+        self.check_basic_specs()
         
         return DER_arguments   
     
+    def create_template(self):
+        """Create templates for DER model."""
+        
+        self.DER_design_template = templates.DER_design_template[type(self).__name__]
+        self.DER_argument_template = specifications.DER_argument_template
+        
+        self.DER_config =  dict((key, {}) for key in self.DER_design_template.keys())            
     
     def get_DER_id(self,**kwargs):
         """Create a parameter ID from inverter rated power output.        
@@ -141,24 +149,27 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         self.steady_state_initialization = DER_arguments['steadyStateInitialization']
         self.allow_unbalanced_m = DER_arguments['allowUnbalancedM'] 
     
-    def check_basic_specs(self,DER_config,DER_id):
-        """Check DER config."""
+    def check_basic_specs(self):
+        """Check basic specs in DER config."""
         
         model_name = type(self).__name__
         
-        if model_name in specifications.DER_basic_spec:
-        
-            if 'n_phases' in DER_config['basic_specs']:
-                n_phases = DER_config['basic_specs']['n_phases']
-                if not n_phases == specifications.DER_basic_spec[model_name]['n_phases']:
-                    raise ValueError('{}:DER configuration with ID:{} has {} phases which is invalid for {} DER model!'.format(self.name,DER_id,n_phases,model_name))
+        if model_name in templates.DER_design_template:
+            n_phases = self.DER_config['basic_specs']['n_phases']
+            if not n_phases == templates.DER_design_template[model_name]['basic_specs']['n_phases']:
+                raise ValueError('{}:DER configuration with ID:{} has {} phases which is invalid for {} DER model!'.format(self.name,self.parameter_ID,n_phases,model_name))
             
-            if 'n_ODE' in DER_config['basic_specs']:
-                n_ODE = DER_config['basic_specs']['n_ODE']
-                if not n_ODE == specifications.DER_basic_spec[model_name]['n_ODE']:
-                    raise ValueError('{}:DER configuration with ID:{} has {} ODE equations which is invalid for {} DER model!'.format(self.name,DER_id,n_ODE,model_name))
+            n_ODE = self.DER_config['basic_specs']['n_ODE']
+            if not n_ODE == templates.DER_design_template[model_name]['basic_specs']['n_ODE']:
+                raise ValueError('{}:DER configuration with ID:{} has {} ODE equations which is invalid for {} DER model!'.format(self.name,self.parameter_ID,n_ODE,model_name))
+            
+            if not n_ODE == len(templates.DER_design_template[model_name]['initial_states']):
+                raise ValueError('{}:DER configuration with ID:{} needs {} states, but only {} states were found for {} DER model!'.
+                                 format(self.name,self.parameter_ID,n_ODE,len(templates.DER_design_template[model_name]['initial_states']),model_name))
+                      
         else:
             raise ValueError('{}:{} is an invalid DER model class'.format(self.name,model_name))     
+            
             
     def read_config(self,configFile):
         """Load config json file and return dictionary."""
