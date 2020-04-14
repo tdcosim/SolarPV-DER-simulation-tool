@@ -378,12 +378,7 @@ class PVDER_ModelUtilities(BaseValues):
                 if set(properties['gains']).issubset(set(templates.DER_design_template[model_type]['controller_gains'].keys())):
                     print(properties['description'],':')
                     for gain_type in properties['gains']:
-                        print('{}:{:.3f}'.format(gain_type,eval('self.'+gain_type)))
-            
-            #print('Current controller:\nKp_GCC:{:.3f}, Ki_GCC:{:.3f}, wp:{:.3f}'.format(self.Kp_GCC,self.Ki_GCC,self.wp))
-            #print('DC link voltage controller:\nKp_DC:{:.3f}, Ki_DC:{:.3f}'.format(self.Kp_DC,self.Ki_DC))
-            #print('Reactive power controller:\nKp_Q:{:.3f}, Ki_Q:{:.3f}'.format(self.Kp_Q,self.Ki_Q))
-            #print('PLL controller:\nKp_PLL:{:.3f}, Ki_PLL:{:.3f}'.format(self.Kp_PLL,self.Ki_PLL))     
+                        print('{}:{:.3f}'.format(gain_type,eval('self.'+gain_type)))                           
 
     def validate_model(self,PRINT_ERROR = True):
         """Compare error between RMS quantities and Phasor quantities."""
@@ -391,13 +386,7 @@ class PVDER_ModelUtilities(BaseValues):
         #Calculation with phasor quantities
         self.Pf_phasor = self.S_calc().real-self.S_PCC_calc().real  #Active power consumed by filter resistor
         self.Qf_phasor = self.S_calc().imag-self.S_PCC_calc().imag  #Reactive power consumed by filter inductor 
-        
-        #Caculation with RMS quantities        
-        #if type(self).__name__ == 'SolarPV_DER_SinglePhase':
-        #    _phases = 1
-        #elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
-        #    _phases = 3
-        
+               
         self.Pf_RMS = self.n_phases*((self.Irms)**2)*self.Rf   #Active power consumed by filter resistor
         self.Qf_RMS = self.n_phases*((self.Irms)**2)*self.Xf   #Reactive power consumed by filter inductor 
         

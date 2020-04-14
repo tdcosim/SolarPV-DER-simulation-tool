@@ -14,6 +14,37 @@ parameter_properties = {"Rf":{'base':'impendance','type':(int,float)},
                         "Srated":{'base':'power','type':(int,float)}
                        }
 
+state_properties = {"iaR":{'physical_type':'real'},
+                    "iaI":{'physical_type':'imag'},
+                    "ibR":{'physical_type':'real'},
+                    "ibI":{'physical_type':'imag'},
+                    "icR":{'physical_type':'real'},
+                    "icI":{'physical_type':'imag'},
+                    
+                    "xaR":{'physical_type':'real'},
+                    "xaI":{'physical_type':'imag'},
+                    "xbR":{'physical_type':'real'},
+                    "xbI":{'physical_type':'imag'},
+                    "xcR":{'physical_type':'real'},
+                    "xcI":{'physical_type':'imag'},
+                    
+                    "uaR":{'physical_type':'real'},
+                    "uaI":{'physical_type':'imag'},
+                    "ubR":{'physical_type':'real'},
+                    "ubI":{'physical_type':'imag'},
+                    "ucR":{'physical_type':'real'},
+                    "ucI":{'physical_type':'imag'}, 
+                    
+                    "Vdc":{'physical_type':'real'},
+                    
+                    "xDC":{'physical_type':'real'},
+                    "xP":{'physical_type':'real'},
+                    "xQ":{'physical_type':'real'},
+                    
+                    "xPLL":{'physical_type':'real'},
+                    "wte":{'physical_type':'real'}
+                   }
+
 controller_properties = {"current_controller":{"gains":["Kp_GCC","Ki_GCC","wp"],"description":"Current controller"},
                          "dc_link_voltage_controller": {"gains":["Kp_DC","Ki_DC"],"description":"DC link voltage controller"},
                          "active_power_controller": {"gains":["Kp_P","Ki_P"],"description":"Active power controller"},

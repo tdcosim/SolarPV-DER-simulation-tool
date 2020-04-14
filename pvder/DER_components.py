@@ -44,6 +44,8 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
     def setup_DER(self,configFile,**kwargs):
         """Setup pvder instance"""        
         
+        self.DER_model_type = type(self).__name__        
+        
         self.parameter_ID = self.get_DER_id(**kwargs)
         self.create_template()
         
@@ -61,7 +63,7 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
     def create_template(self):
         """Create templates for DER model."""
         
-        self.DER_design_template = templates.DER_design_template[type(self).__name__]
+        self.DER_design_template = templates.DER_design_template[self.DER_model_type]
         self.DER_argument_template = specifications.DER_argument_template
         
         self.DER_config =  dict((key, {}) for key in self.DER_design_template.keys())            

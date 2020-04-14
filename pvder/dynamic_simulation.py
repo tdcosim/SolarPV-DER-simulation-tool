@@ -45,12 +45,9 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
           tStop: A scalar specifying the end time for simulation.
           tInc: A scalar specifying the time step for simulation.
           LOOP_MODE: A boolean specifying whether simulation is run in loop.
-        """
-        #if LOOP_MODE:
-        #    assert not PV_model.standAlone, 'Loop mode can only be true if PV-DER model is stand alone.'
-        
-        #Increment count to keep track of number of simulation instances
-        DynamicSimulation.count = DynamicSimulation.count + 1
+        """ 
+       
+        DynamicSimulation.count = DynamicSimulation.count + 1 #Increment count to keep track of number of simulation instances
         self.name_instance(identifier) #Generate a name for the instance
         
         self.initialize_logger(logging_level=verbosity) #Set logging level - {DEBUG,INFO,WARNING,ERROR}  
@@ -88,19 +85,12 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             self.reset_stored_trajectories()
         
         self.initialize_y0_t()
-    
-    #@property
-    #def y0(self):
-    #    """ Combine all initial conditions."""
-
-    #    y0 = self.PV_model.y0
-        
-    #    return y0
-   
+  
     @property
     def y0(self):
         """ Combine all initial conditions from solution."""
-               
+        
+        #y0 = self.PV_model.y0        
         if self.DER_model_type == 'SolarPV_DER_ThreePhase':
             y0 = [self.iaR_t[-1], self.iaI_t[-1], self.xaR_t[-1], self.xaI_t[-1], self.uaR_t[-1],self.uaI_t[-1],\
                     self.ibR_t[-1], self.ibI_t[-1], self.xbR_t[-1], self.xbI_t[-1], self.ubR_t[-1],self.ubI_t[-1],\

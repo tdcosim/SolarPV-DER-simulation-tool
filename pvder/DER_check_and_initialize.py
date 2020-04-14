@@ -126,12 +126,10 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.logger.info('{}:PV-DER parameters updated with parameters from  parameter dictionary {}!'.format(self.name,self.parameter_ID))
     
     def initialize_basic_specs(self):
-        """Initialize number of ODEs and phases"""
+        """Initialize number of ODEs and phases"""  
         
-        model_name = type(self).__name__
-        
-        self.n_ODE = templates.DER_design_template[model_name]['basic_specs']['n_ODE'] #23  #Number of ODE's
-        self.n_phases = templates.DER_design_template[model_name]['basic_specs']['n_phases'] #3 #Number of phases    
+        self.n_ODE = templates.DER_design_template[self.DER_model_type]['basic_specs']['n_ODE'] #23  #Number of ODE's
+        self.n_phases = templates.DER_design_template[self.DER_model_type]['basic_specs']['n_phases'] #3 #Number of phases    
         self.t_stable = self.DER_config['basic_specs']['t_stable'] #0.5  #Time delay before activating logic for MPP, Volt-VAR control,  LVRT/LFRT 
         self.m_steady_state = self.DER_config['basic_specs']['m_steady_state'] #0.96 #Expected duty cycle at steady state 
     
@@ -193,6 +191,8 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         states_dict = dict((key, 0.0) for key in self.DER_design_template['initial_states'].keys()) 
         
         for state in states_dict:
+            if state not in templates.state_properties:
+                raise ValueError('{}:{} is not a valid state!'.format(self.name,state))
             if state in DER_arguments: #Check if state exists in arguments
                 states_dict[state] = DER_arguments[state]
                 source = 'DER arguments'
@@ -255,27 +255,20 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         """Initialize quantities other than states."""
         
         self.__dict__.update(states_dict)        
+        self.update_complex_states()        
+    
+    def update_complex_states(self):
+        """Initialize quantities other than states."""
         
-        if 'iaR' in states_dict:
-            self.ia = self.convert2complex(self.iaR,self.iaI)
-        if 'ibR' in states_dict:
-            self.ib = self.convert2complex(self.ibR,self.ibI)
-        if 'icR' in states_dict:
-            self.ic = self.convert2complex(self.icR,self.icI)
-        
-        if 'xaR' in states_dict:
-            self.xa = self.convert2complex(self.xaR,self.xaI)
-        if 'xbR' in states_dict:
-            self.xb = self.convert2complex(self.xbR,self.xbI)
-        if 'xbR' in states_dict:
-            self.xc = self.convert2complex(self.xcR,self.xcI)
-        
-        if 'uaR' in states_dict:
-            self.ua = self.convert2complex(self.uaR,self.uaI)
-        if 'ubR' in states_dict:
-            self.ub = self.convert2complex(self.ubR,self.ubI)
-        if 'ucR' in states_dict:
-            self.uc = self.convert2complex(self.ucR,self.ucI)
+        for state,properties in templates.state_properties.items():
+            if properties['physical_type'] == 'imag':
+                if hasattr(self,state):
+                    real_part = state.strip('I')+'R'
+                    if hasattr(self,real_part):
+                        self.__dict__.update({state.strip('I'):
+                                              complex(eval('self.'+real_part),eval('self.'+state))})   
+                    else:
+                        raise ValueError('{}:Could not find real part for state {}!'.format(self.name,state))
     
     def initialize_derived_quantities(self):
         """Initialize quantities other than states."""
@@ -363,13 +356,8 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     def initialize_Iac(self):
         """Initialize AC side currents."""
         
-        self.Iarated = (self.Sinverter_rated/(self.n_phases*(self.Varated/math.sqrt(2))))*math.sqrt(2)  
-        
-        #if type(self).__name__ == 'SolarPV_DER_SinglePhase':
-        #    self.Iarated = (self.Sinverter_rated/(self.Varated/math.sqrt(2)))*math.sqrt(2)
-        #elif type(self).__name__ == 'SolarPV_DER_ThreePhase' or type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
-            #self.Iarated = (self.Sinverter_rated/(3*(self.Varated/math.sqrt(2))))*math.sqrt(2)            
-        
+        self.Iarated = (self.Sinverter_rated/(self.n_phases*(self.Varated/math.sqrt(2))))*math.sqrt(2)
+         
         self.Ioverload = self.inverter_ratings[self.parameter_ID]['Ioverload']  #Inverter current overload rating (Max 10s)            
         self.iref_limit = (self.Iarated/self.Ibase)*self.Ioverload #Maximum current reference
         
