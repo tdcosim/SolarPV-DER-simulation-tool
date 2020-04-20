@@ -647,7 +647,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             
             self.xb_t = self.xbR_t+1j*self.xbI_t
             self.xc_t = self.xcR_t+1j*self.xcI_t
-            print(len(self.ua_t),len(self.ub_t),len(self.uc_t))
+            #print(len(self.ua_t),len(self.ub_t),len(self.uc_t))
             assert len(self.ua_t) == len(self.ub_t) == len(self.uc_t) == len(self.xa_t) == len(self.xb_t) == len(self.xc_t) != None, "States must be available from simulation."
             
         #Time series PCC voltage
