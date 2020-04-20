@@ -11,7 +11,7 @@ from scipy.optimize import fsolve, minimize
 from pvder.utility_classes import Logging
 from pvder.grid_components import BaseValues
 from pvder import utility_functions
-from pvder import config,templates,specifications
+from pvder import defaults,templates,specifications
 
 PHASE_DIFFERENCE_120 = 120.0*(math.pi/180.0)
 
@@ -26,7 +26,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     steadystate_values= {}        
     
     solver_spec = specifications.steadystate_solver_spec
-    steadystate_solver = config.DEFAULT_STEADYSTATE_SOLVER
+    steadystate_solver = defaults.STEADYSTATE_SOLVER
     
     def creation_message(self):
         """Message after PV-DER instance was created."""        
@@ -77,7 +77,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
                 raise ValueError('Found {} to have type {} - expected type:(int,float)!'.format(DER_parameter,type(DER_config[DER_component][DER_parameter])))
         
         elif DER_parameter in self.DER_design_template[DER_component]:  #Check if parameter exists in default DER config
-            self.logger.info('{}: Parameter {} not found for ID:{} - updating with default value from template.'.format(self.name,DER_parameter,DER_id)) 
+            self.logger.debug('{}: Parameter {} in {} not found for ID:{} - updating with default value from template.'.format(self.name,DER_parameter,DER_component,DER_id)) 
             self.DER_config[DER_component].update({DER_parameter:self.DER_design_template[DER_component][DER_parameter]})
             parameters.update({DER_parameter:self.DER_design_template[DER_component][DER_parameter]})
             source = 'DER default values'        
@@ -130,8 +130,12 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         
         self.n_ODE = templates.DER_design_template[self.DER_model_type]['basic_specs']['n_ODE'] #23  #Number of ODE's
         self.n_phases = templates.DER_design_template[self.DER_model_type]['basic_specs']['n_phases'] #3 #Number of phases    
-        self.t_stable = self.DER_config['basic_specs']['t_stable'] #0.5  #Time delay before activating logic for MPP, Volt-VAR control,  LVRT/LFRT 
-        self.m_steady_state = self.DER_config['basic_specs']['m_steady_state'] #0.96 #Expected duty cycle at steady state 
+    
+    def initialize_basic_options(self):
+        """Initialize basic options"""  
+        
+        self.t_stable = self.DER_config['basic_options']['t_stable'] #0.5  #Time delay before activating logic for MPP, Volt-VAR control,  LVRT/LFRT 
+        self.m_steady_state = self.DER_config['basic_options']['m_steady_state'] #0.96 #Expected duty cycle at steady state 
     
     def initialize_grid_measurements(self,DER_arguments):
         """Initialize inverter states.
@@ -256,6 +260,18 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         
         self.__dict__.update(states_dict)        
         self.update_complex_states()        
+        
+        if self.DER_config['basic_specs']['n_phases'] ==3:
+           if not self.DER_config['basic_specs']['unbalanced']:
+               for quantity in templates.phase_properties:
+                   for phase in self.DER_config['basic_specs']['phases']:                       
+                       if phase == 'a':
+                           if not hasattr(self,quantity+phase): #check if phase a exists
+                               raise ValueError('{}:{} error!'.format(self.name,quantity+phase))
+                       if phase == 'b':
+                           self.__dict__.update({quantity+phase: utility_functions.Ub_calc(eval('self.'+quantity+'a'))})
+                       elif phase == 'c':
+                           self.__dict__.update({quantity+phase: utility_functions.Uc_calc(eval('self.'+quantity+'a'))})
     
     def update_complex_states(self):
         """Initialize quantities other than states."""
@@ -509,11 +525,9 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             raise ValueError('The minimum DC link voltage {:.1f} V is not sufficient for the inverter to generate the nominal voltage at PCC - LV side {:.1f} V (L-G peak). Increase minimum DC link voltage to {:.1f} V.'.format(self.Vdcmpp_min,self.Varated,math.ceil((self.Varated/self.m_steady_state)*2)))
             
     def check_circuit_parameters(self):
-        """Method to check whether inverter circuit parameter's are feasible."""
+        """Method to check whether inverter circuit parameter's are feasible."""        
         
-        model_type = type(self).__name__
-        
-        if 'Lf_actual' in templates.DER_design_template[model_type]['circuit_parameters']:
+        if 'Lf_actual' in templates.DER_design_template[self.DER_model_type]['circuit_parameters']:
             del_I1max = 0.1*self.Iarated
             Lf_min = self.Vdcrated/(16*self.fswitching*del_I1max)
             del_I1max_actual = self.Vdcrated/(16*self.fswitching*self.Lf_actual)
@@ -522,7 +536,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             else:
                 self.logger.debug('{}:Warning:Filter inductance {:.4f} H results in AC side current ripple of {:.2f}% (> 10%)'.format(self.name,Lf_min,del_I1max_actual/self.Iarated))
         
-        if 'C_actual' in templates.DER_design_template[model_type]['circuit_parameters']:
+        if 'C_actual' in templates.DER_design_template[self.DER_model_type]['circuit_parameters']:
             I_ripple = (0.25*self.Vdcrated)/(self.Lf_actual*self.fswitching)  #Maximum ripple voltage (p-p) at DC link
             V_ripple = self.Vdcrated/(32*self.Lf_actual*self.C_actual*(self.fswitching**2))  #Maximum ripple voltage (p-p) at DC link
             V_ripple_percentage = (V_ripple/self.Vdcrated)*100
@@ -548,38 +562,45 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         ia = self.ia = iaR + 1j*iaI
         
         vta = ma*(self.Vdc/2)
-        va = self.va_calc()
+        va = self.va = self.va_calc()
         
         St = (vta*ia.conjugate())/2
         S_PCC = (va*ia.conjugate())/2
 
         #Sloss_filter = ((abs(ia)/math.sqrt(2))**2)*self.Zf 
     
-        if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        #if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        if self.n_phases == 3:
+            if self.DER_model_type == 'SolarPV_DER_ThreePhase':
+                if not self.allow_unbalanced_m:
+                    mb = utility_functions.Ub_calc(ma)
+                    mc = utility_functions.Uc_calc(ma)
+                
+                    ib = self.ib = utility_functions.Ub_calc(ia)
+                    ic = self.ic = utility_functions.Uc_calc(ia)            
+                elif self.allow_unbalanced_m:
+                    mbR = x[4]
+                    mbI = x[5]
+                    ibR = x[6]
+                    ibI = x[7]
+                    
+                    mcR = x[8]
+                    mcI = x[9]
+                    icR = x[10]
+                    icI = x[11]
+
+                    mb = mbR + 1j*mbI
+                    mc = mcR + 1j*mcI                
+
+                    ib = self.ib = ibR + 1j*ibI
+                    ic = self.ic = icR + 1j*icI
             
-            if not self.allow_unbalanced_m:
+            elif self.DER_model_type == 'SolarPVDERThreePhaseBalanced':
                 mb = utility_functions.Ub_calc(ma)
                 mc = utility_functions.Uc_calc(ma)
                 
                 ib = self.ib = utility_functions.Ub_calc(ia)
                 ic = self.ic = utility_functions.Uc_calc(ia)
-            
-            elif self.allow_unbalanced_m:
-                mbR = x[4]
-                mbI = x[5]
-                ibR = x[6]
-                ibI = x[7]
-
-                mcR = x[8]
-                mcI = x[9]
-                icR = x[10]
-                icI = x[11]
-
-                mb = mbR + 1j*mbI
-                mc = mcR + 1j*mcI                
-
-                ib = self.ib = ibR + 1j*ibI
-                ic = self.ic = icR + 1j*icI
             
             vtb = mb*(self.Vdc/2)
             vtc = mc*(self.Vdc/2)
@@ -603,7 +624,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         #Q_error_filter_expected =  (St.imag - Qloss_filter_expected)**2 
         
         
-        if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        if self.n_phases ==3:
             del_1 = utility_functions.relative_phase_calc(ma,mb)
             del_2 = utility_functions.relative_phase_calc(ma,mc)
             del_3 = utility_functions.relative_phase_calc(mb,mc)
@@ -664,7 +685,6 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             
         x0 = np.array(x0)
         
-        disp = bool(self.verbosity == 'DEBUG')
         self.solver_spec[self.steadystate_solver].update({'disp':bool(self.verbosity == 'DEBUG')})                   
         result = minimize(self.power_error_calc, x0,
                           method=self.steadystate_solver,options=self.solver_spec[self.steadystate_solver])
@@ -686,21 +706,31 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.xPLL = 0.0
         self.wte = 2*math.pi
         
-        if type(self).__name__ == 'SolarPV_DER_ThreePhase':
-            
-            if not self.allow_unbalanced_m:
-                mb0 = utility_functions.Ub_calc(ma0)
-                mc0 = utility_functions.Uc_calc(ma0)
+        #if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        if self.n_phases == 3:
+            if self.DER_model_type == 'SolarPV_DER_ThreePhase':
+                if not self.allow_unbalanced_m:
+                    mb0 = utility_functions.Ub_calc(ma0)
+                    mc0 = utility_functions.Uc_calc(ma0)
                 
-                self.ib = utility_functions.Ub_calc(self.ia)
-                self.ic = utility_functions.Uc_calc(self.ia)            
+                    self.ib = utility_functions.Ub_calc(self.ia)
+                    self.ic = utility_functions.Uc_calc(self.ia)            
             
+                else:
+                    mb0 = result.x[4] + 1j*result.x[5]
+                    mc0 = result.x[8] + 1j*result.x[9]
+                    self.ib = result.x[6] + 1j*result.x[7]
+                    self.ic = result.x[10] + 1j*result.x[11]                
+            
+            elif self.DER_model_type == 'SolarPVDERThreePhaseBalanced':
+                    mb0 = utility_functions.Ub_calc(ma0)
+                    mc0 = utility_functions.Uc_calc(ma0)
+                
+                    self.ib = utility_functions.Ub_calc(self.ia)
+                    self.ic = utility_functions.Uc_calc(self.ia)            
             else:
-                mb0 = result.x[4] + 1j*result.x[5]
-                mc0 = result.x[8] + 1j*result.x[9]
-                self.ib = result.x[6] + 1j*result.x[7]
-                self.ic = result.x[10] + 1j*result.x[11]                
-            
+                raise ValueError('{}:{} is an invalid model type!'.format(self.DER_model_type))
+                
             self.xb = mb0
             self.xc = mc0
             
@@ -722,10 +752,10 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.logger.debug('{}:Steady state values for operating point defined by Ppv:{:.2f} W, Vdc:{:.2f} V, va:{:.2f} V found at:'.format(self.name,self.Ppv*self.Sbase,self.Vdc*self.Vdcbase,self.va*self.Vbase))
             
         if self.verbosity == 'DEBUG':
-            self.show_PV_DER_states(quantity='power')
-            self.show_PV_DER_states(quantity='duty cycle')
-            self.show_PV_DER_states(quantity='voltage')
-            self.show_PV_DER_states(quantity='current')
+            self.show_PVDER_states(quantity='power')
+            self.show_PVDER_states(quantity='duty cycle')
+            self.show_PVDER_states(quantity='voltage')
+            self.show_PVDER_states(quantity='current')
             
     def check_jacobian(self,t=0.0):
         """Compare analytical and numerical Jacobian of the ODE model."""

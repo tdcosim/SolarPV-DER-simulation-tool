@@ -8,41 +8,35 @@ FIGURE_HEIGHT = 8
 FIGURE_DPI = 1200
 
 #Logging
-DEFAULT_LOGGING_LEVEL = 'INFO'
+LOGGING_LEVEL = 'INFO'
 
 #Model options
+Ioverload = 1.3 #Inverter overload
 
-#Changing these impacts the how the parameter dictionaries for DER models are initialized
-DEFAULT_PARAMETER_ID_1PH = '10'
-DEFAULT_PARAMETER_ID_3PH = '50'
-
-DEFAULT_Ioverload = 1.3
+#Events
+Tactual = 298.15 #PV module temperature in K
+Zload1_actual = 10e6+0j #Load at PCC
 
 #Smart inverter feature options
-DEFAULT_Vthreshold_high_limit = 1.5 #percentage
-DEFAULT_tthreshold_high_limit = 100.0 #seconds
+Vthreshold_high_limit = 1.5 #percentage
+tthreshold_high_limit = 100.0 #seconds
 
-DEFAULT_tdisconnect_low_limit = 1/120.0 #seconds #Minimum time required to initiate DER disconnection (output cessation)
-DEFAULT_treconnect_low_limit = 0.4 #seconds #Minimum time required to initiate DER reconnection (output restoration)
-
-DEFAULT_freconnect_LF = 58.8
-DEFAULT_freconnect_HF = 61.2
+tdisconnect_low_limit = 1/120.0 #seconds #Minimum time required to initiate DER disconnection (output cessation)
+treconnect_low_limit = 0.4 #seconds #Minimum time required to initiate DER reconnection (output restoration)
 
 #DC link voltage control
 DEFAULT_del_Vdc_ref = 2.0
 DEFAULT_del_t_Vdc_ref = 0.5
 
-
 #Frequency estimation
-DEFAULT_USE_FREQUENCY_ESTIMATE = False
+use_frequency_estimate = False
 
 #Solver options
 DEFAULT_DELTA_T = 0.001 #Simulation time step
-DEFAULT_max_steps = 1000 #Max steps to be used by solver before producing error
+max_steps = 1000 #Max steps to be used by solver before producing error
 
 #Steady state solver options
-DEFAULT_STEADYSTATE_SOLVER = 'SLSQP'
-
+STEADYSTATE_SOLVER = 'SLSQP'
 
 #Default DER parameters
 """
@@ -61,7 +55,7 @@ DEFAULT_initial_values = {"iaR0":0,"iaI0":0.0,"xaR0":0.0,"xaI0":0.0,"uaR0":0.0,"
 
 #Default VRT config
 """
-default_RT_config =  {'LVRT':{'0':{'V_threshold':0.5,
+RT_config =  {'LVRT':{'0':{'V_threshold':0.5,
                                     't_threshold':1.0,
                                     'mode':'mandatory_operation',
                                     't_start':0.0,

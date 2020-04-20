@@ -6,7 +6,7 @@ import six
 import math
 
 from pvder import utility_functions
-from pvder import config,templates
+from pvder import defaults,templates
 
 class PVDER_SmartFeatures():
     """Class for describing smart inverter inverter features of PV-DER."""
@@ -18,16 +18,14 @@ class PVDER_SmartFeatures():
     VOLT_WATT_ENABLE = False
     VOLT_WATT_FLAG = False    
     
-    V_threshold_high_limit = config.DEFAULT_Vthreshold_high_limit #percentage
-    t_threshold_high_limit = config.DEFAULT_tthreshold_high_limit #seconds
-    t_disconnect_low_limit = config.DEFAULT_tdisconnect_low_limit #seconds #Minimum time to initiate DER disconnection (output cessation)
-    t_reconnect_low_limit = config.DEFAULT_treconnect_low_limit #seconds #Minimum time to initiate DER reconnection (output restoration)
-      
-    RT_config_template =templates.RT_config_template
-
-    default_RT_config =  config.default_RT_config
+    V_threshold_high_limit = defaults.Vthreshold_high_limit #percentage
+    t_threshold_high_limit = defaults.tthreshold_high_limit #seconds
+    t_disconnect_low_limit = defaults.tdisconnect_low_limit #seconds #Minimum time to initiate DER disconnection (output cessation)
+    t_reconnect_low_limit = defaults.treconnect_low_limit #seconds #Minimum time to initiate DER reconnection (output restoration)
    
-    RT_config =  dict((key, {}) for key in RT_config_template.keys()) 
+    default_RT_config =  defaults.RT_config
+   
+    RT_config =  dict((key, {}) for key in templates.RT_config_template.keys()) 
     #Temporitly using earlier settings for FRT
     default_RT_config.update({'F_LF1':57.0,'F_LF2':58.8,
                            't_LF1_limit':1/60,'t_LF2_limit':299.0,
@@ -515,7 +513,7 @@ class PVDER_SmartFeatures():
     def update_RT_config(self,derConfig):
         """Check whether the config file is good."""        
                    
-        for item in self.RT_config_template.keys():
+        for item in templates.RT_config_template.keys():
             if item in derConfig:
                 self.RT_config[item] = derConfig[item]
             elif item in self.DER_config:

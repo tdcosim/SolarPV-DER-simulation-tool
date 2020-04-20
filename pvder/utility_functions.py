@@ -76,12 +76,15 @@ def Urms_calc_1phase(ua):
 def Ub_calc(Ua):
     """Convert phase A quantity to Phase B."""
     
-    return Ua*pow(math.e,1j*(-(2/3)*math.pi))  #Shift by -120 degrees
+    return Ua*np.power(np.e,1j*(-(2/3)*np.pi))
+    #return Ua*pow(math.e,1j*(-(2/3)*math.pi))  #Shift by -120 degrees
+    
 #@jit(nopython=True)    
 def Uc_calc(Ua):
     """Convert phase A quantity to Phase C."""
     
-    return Ua*pow(math.e,1j*((2/3)*math.pi))  #Shift by -120 degrees
+    return Ua*np.power(np.e,1j*((2/3)*np.pi))
+    #return Ua*pow(math.e,1j*((2/3)*math.pi))  #Shift by -120 degrees
 
 def relative_phase_calc(Uph1,Uph2,DEGREES=False):
     """Calculate relative phase between phasors between 0 to 2pi or 0 to 360 degrees."""

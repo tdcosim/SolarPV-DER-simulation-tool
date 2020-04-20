@@ -5,10 +5,10 @@
 def show_DER_status(pvder_object):
         """Show DER states."""     
         
-        pvder_object.show_PV_DER_states(quantity='power')
-        pvder_object.show_PV_DER_states(quantity='current')
-        pvder_object.show_PV_DER_states(quantity='voltage')                
-        pvder_object.show_PV_DER_states(quantity='duty cycle')
+        pvder_object.show_PVDER_states(quantity='power')
+        pvder_object.show_PVDER_states(quantity='current')
+        pvder_object.show_PVDER_states(quantity='voltage')                
+        pvder_object.show_PVDER_states(quantity='duty cycle')
         pvder_object.show_RT_settings(settings_type='LVRT')
         pvder_object.show_RT_settings(settings_type='HVRT')   
     

@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
 from pvder.utility_classes import Logging
-from pvder import config
+from pvder import defaults
 
 class SimulationResults(Logging):
     """ Utility class for simulation results."""
@@ -22,10 +22,10 @@ class SimulationResults(Logging):
     count = 0
     SAVE_PLOT_JPEG = False
     SAVE_PLOT_SVG = False
-    figure_DPI = config.FIGURE_DPI
+    figure_DPI = defaults.FIGURE_DPI
     
-    parameters= {"figure":{"height": config.FIGURE_HEIGHT,
-                           "width": config.FIGURE_WIDTH
+    parameters= {"figure":{"height": defaults.FIGURE_HEIGHT,
+                           "width": defaults.FIGURE_WIDTH
                           }
                 }
     
@@ -354,7 +354,7 @@ class SimulationResults(Logging):
 class SimulationUtilities():
     """ Utility class for dynamic simulations."""
     
-    max_steps = config.DEFAULT_max_steps #Max steps to be used by solver before producing error
+    max_steps = defaults.max_steps #Max steps to be used by solver before producing error
     solver_list = ['odeint','ode-vode-bdf']
     
     def call_ODE_solver(self,derivatives,jacobian,y,t):

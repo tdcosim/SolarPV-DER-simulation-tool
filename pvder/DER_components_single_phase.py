@@ -1,22 +1,20 @@
 """Single phase PV-DER code."""
 
 from __future__ import division
-
+import numpy as np
+import math
+import cmath
+import scipy
 import six
 import pdb
 import warnings
 import logging
 
-import numpy as np
-import math
-import cmath
-import scipy
-from scipy.optimize import fsolve, minimize
-
 from pvder.DER_components import SolarPVDER,PVModule
+from pvder.grid_components import BaseValues
 
 from pvder import utility_functions
-from pvder import config
+from pvder import defaults,templates
 
 class SolarPV_DER_SinglePhase(PVModule,SolarPVDER):
     """
@@ -56,12 +54,12 @@ class SolarPV_DER_SinglePhase(PVModule,SolarPVDER):
         
         SolarPV_DER_SinglePhase.count = SolarPV_DER_SinglePhase.count+1 #Increment count to keep track of number of PV-DER model instances
                       
-        DER_arguments = self.setup_DER(configFile,**kwargs)
+        DER_arguments = self.setup_DER(events,configFile,**kwargs)
                                
         if six.PY3:
-            super().__init__(events,self.DER_config['inverter_ratings']['Srated'])  #Initialize PV module class (base class)
+            super().__init__(self.DER_config['basic_options']['Sinsol'])  #Initialize PV module class (base class)
         elif six.PY2:
-            super(SolarPV_DER_SinglePhase,self).__init__(events,self.DER_config['inverter_ratings']['Srated']   )
+            super(SolarPV_DER_SinglePhase,self).__init__(self.DER_config['basic_options']['Sinsol'])
         
         self.initialize_DER(DER_arguments)
         self.creation_message()

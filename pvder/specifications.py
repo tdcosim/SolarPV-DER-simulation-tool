@@ -16,7 +16,7 @@ if six.PY3:
 elif six.PY2:
     string_type = (str,unicode)
            
-DER_argument_template = {'derId':{'default_value':None,'type':string_type},
+DER_argument_spec = {'derId':{'default_value':None,'type':string_type},
                          'powerRating':{'default_value':None,'type':(int,float)},
                          'VrmsRating':{'default_value':None,'type':(int,float)},'Vdcrated':{'default_value':None,'type':(int,float)},
                          'gridModel':{'default_value':None,'type':Grid},
