@@ -31,7 +31,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     def creation_message(self):
         """Message after PV-DER instance was created."""        
        
-        self.logger.info('{}:Instance created with DER parameter ID: {}; Specifications - Srated:{} kVA, Vrms:{:.1f} V ,Steady state:{},LVRT Enable:{},HVRT Enable:{}'.format(self.name,self.parameter_ID,self.Sinverter_rated/1e3,self.Vrms_rated,self.steady_state_initialization,self.LVRT_ENABLE,self.HVRT_ENABLE))
+        self.logger.info('{}:Instance created with DER parameter ID: {}; Specifications - Srated:{:.1f} kVA, Ppv:{:.1f} kW, Vrms:{:.1f} V, Steady state:{},LVRT Enable:{},HVRT Enable:{}'.format(self.name,self.parameter_ID,self.Sinverter_rated/1e3,(self.Ppv*BaseValues.Sbase)/1e3,self.Vrms_rated,self.steady_state_initialization,self.LVRT_ENABLE,self.HVRT_ENABLE))
         
     def update_DER_config(self,DER_config,DER_arguments,DER_id):
         """Update PV-DER design."""  
