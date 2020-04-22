@@ -10,6 +10,8 @@ Created on Wed Mar 25 09:36:27 2020
 
 import numpy as np
 import math
+import scipy
+from scipy.optimize import fsolve, minimize
 
 from pvder.DER_check_and_initialize import PVDER_SetupUtilities
 from pvder.DER_features import PVDER_SmartFeatures
@@ -17,9 +19,9 @@ from pvder.DER_utilities import PVDER_ModelUtilities
 from pvder.grid_components import BaseValues
 
 from pvder import utility_functions
-from pvder import config,templates,specifications
+from pvder import defaults,templates,specifications
 
-logger = utility_functions.get_logger(config.DEFAULT_LOGGING_LEVEL)
+logger = utility_functions.get_logger(defaults.LOGGING_LEVEL)
 
 class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,BaseValues):
     """
@@ -39,12 +41,16 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
     winv = we = 2.0*math.pi*60.0 #Frequency of fundamental waveform
     fswitching  = 10e3 #Inverter switching frequency (not used by model)
     
-    DER_argument_template = templates.DER_argument_template    
+    #DER_argument_template = specifications.DER_argument_spec    
     
-    def setup_DER(self,configFile,**kwargs):
+    def setup_DER(self,events,configFile,**kwargs):
         """Setup pvder instance"""
         
+        self.events = events
+        self.DER_model_type = type(self).__name__ 
+        
         self.parameter_ID = self.get_DER_id(**kwargs)
+        self.create_template()
         
         DER_config = self.get_DER_config(configFile,self.parameter_ID)
         DER_arguments = self.get_DER_arguments(DER_config,**kwargs)       
@@ -53,10 +59,15 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         self.initialize_logger(DER_arguments['verbosity'])  #Set logging level - {DEBUG,INFO,WARNING,ERROR}       
         
         self.update_DER_config(DER_config,DER_arguments,self.parameter_ID)
-        self.check_basic_specs(DER_config,self.parameter_ID)
+        self.check_basic_specs()
         
         return DER_arguments   
     
+    def create_template(self):
+        """Create templates for DER model."""
+
+        self.DER_design_template = templates.DER_design_template[self.DER_model_type]
+        self.DER_config =  dict((key, {}) for key in self.DER_design_template.keys())
     
     def get_DER_id(self,**kwargs):
         """Create a parameter ID from inverter rated power output.        
@@ -87,22 +98,22 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         found_arguments = kwargs.keys() #Arguments which were passed
         used_arguments =[]
         
-        for key, value in self.DER_argument_template.items():
+        for key, value in specifications.DER_argument_spec .items():
             
             if key in kwargs.keys():
-                if isinstance(kwargs[key],self.DER_argument_template[key]['type']):
+                if isinstance(kwargs[key],specifications.DER_argument_spec [key]['type']):
                    DER_arguments.update({key:kwargs[key]})
                    used_arguments.append(key)
                 else:
-                    raise ValueError('Found {} to have type:{} - Valid type:{}'.format(key,type(kwargs[key]),self.DER_argument_template[key]['type']))
+                    raise ValueError('Found {} to have type:{} - Valid type:{}'.format(key,type(kwargs[key]),specifications.DER_argument_spec [key]['type']))
             elif key in DER_config: #Check if key available in config file
-                if isinstance(kwargs[key],self.DER_argument_template[key]['type']):
+                if isinstance(kwargs[key],specifications.DER_argument_spec [key]['type']):
                     DER_arguments.update({key:DER_config[key]})
                 else:
-                    raise ValueError('Found {} to have type:{} - Valid type:{}'.format(key,type(DER_config[key]),self.DER_argument_template[key]['type']))
+                    raise ValueError('Found {} to have type:{} - Valid type:{}'.format(key,type(DER_config[key]),specifications.DER_argument_spec [key]['type']))
             
-            elif self.DER_argument_template[key]['default_value'] is not None:
-                DER_arguments.update({key:self.DER_argument_template[key]['default_value']})
+            elif specifications.DER_argument_spec [key]['default_value'] is not None:
+                DER_arguments.update({key:specifications.DER_argument_spec [key]['default_value']})
                 
         logger.debug('Used arguments:{}\nInvalid arguments:{}'.format(used_arguments,list(set(found_arguments).difference(set(used_arguments)))))       
         
@@ -112,6 +123,8 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         """Initialize flags"""
         
         self.initialize_basic_specs()        
+        self.initialize_basic_options()
+        
         self.initialize_flags(DER_arguments)
         self.attach_grid_model(DER_arguments)
         
@@ -141,24 +154,27 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         self.steady_state_initialization = DER_arguments['steadyStateInitialization']
         self.allow_unbalanced_m = DER_arguments['allowUnbalancedM'] 
     
-    def check_basic_specs(self,DER_config,DER_id):
-        """Check DER config."""
-        
-        model_name = type(self).__name__
-        
-        if model_name in specifications.DER_basic_spec:
-        
-            if 'n_phases' in DER_config['basic_specs']:
-                n_phases = DER_config['basic_specs']['n_phases']
-                if not n_phases == specifications.DER_basic_spec[model_name]['n_phases']:
-                    raise ValueError('{}:DER configuration with ID:{} has {} phases which is invalid for {} DER model!'.format(self.name,DER_id,n_phases,model_name))
+    def check_basic_specs(self):
+        """Check basic specs in DER config."""
+                
+        if self.DER_model_type in templates.DER_design_template:
+            n_phases = self.DER_config['basic_specs']['n_phases']
+            if not n_phases == templates.DER_design_template[self.DER_model_type]['basic_specs']['n_phases']:
+                raise ValueError('{}:DER configuration with ID:{} has {} phases which is invalid for {} DER model!'.format(self.name,self.parameter_ID,n_phases,self.DER_model_type))
             
-            if 'n_ODE' in DER_config['basic_specs']:
-                n_ODE = DER_config['basic_specs']['n_ODE']
-                if not n_ODE == specifications.DER_basic_spec[model_name]['n_ODE']:
-                    raise ValueError('{}:DER configuration with ID:{} has {} ODE equations which is invalid for {} DER model!'.format(self.name,DER_id,n_ODE,model_name))
+            if not n_phases == len(templates.DER_design_template[self.DER_model_type]['basic_specs']['phases']):
+                raise ValueError('{}:DER configuration with ID:{} has {} phases buf following phases were found {}!'.format(self.name,self.parameter_ID,n_phases,len(templates.DER_design_template[self.DER_model_type]['basic_specs']['phases'])))
+            
+            n_ODE = self.DER_config['basic_specs']['n_ODE']
+            if not n_ODE == templates.DER_design_template[self.DER_model_type]['basic_specs']['n_ODE']:
+                raise ValueError('{}:DER configuration with ID:{} has {} ODE equations which is invalid for {} DER model!'.format(self.name,self.parameter_ID,n_ODE,self.DER_model_type))
+            
+            if not n_ODE == len(templates.DER_design_template[self.DER_model_type]['initial_states']):
+                raise ValueError('{}:DER configuration with ID:{} needs {} states, but only {} states were found for {} DER model!'.
+                                 format(self.name,self.parameter_ID,n_ODE,len(templates.DER_design_template[self.DER_model_type]['initial_states']),self.DER_model_type))
+                      
         else:
-            raise ValueError('{}:{} is an invalid DER model class'.format(self.name,model_name))     
+            raise ValueError('{}:{} is an invalid DER model class'.format(self.name,self.DER_model_type)) 
             
     def read_config(self,configFile):
         """Load config json file and return dictionary."""
@@ -194,35 +210,31 @@ class PVModule(object):
     k = 1.38e-23        #Boltzmann's constant
     A = 1.92      #p-n junction ideality factor
     
+    """
     module_parameters = {'1':{'Np':2,'Ns':500,'Vdcmpp0':250.0,'Vdcmpp_min': 225.0,'Vdcmpp_max': 300.0},
                          '10':{'Np':2,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 650.0,'Vdcmpp_max': 800.0},
                          '50':{'Np':11,'Ns':735,'Vdcmpp0':550.0,'Vdcmpp_min': 520.0,'Vdcmpp_max': 650.0},
                          '250':{'Np':45,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 750.0,'Vdcmpp_max': 1000.0}}
     
     module_parameters_list = module_parameters.keys()
-    
-    def __init__(self,events,Sinverter_rated):
+    """
+    def __init__(self,Sinsol):
         """Creates an instance of `PV_Module`.
         
         Args:
-           events (SimulationEvents): An instance of `SimulationEvents`.
-           Sinverter_rated (float): A scalar specifying the rated power of the DER in Watts.
-        
-        Raises:
-          ValueError: If parameters corresponding to `Sinverter_rated` are not available.
-        
+           Sinsol (float): Solar insolation in percentage.                
         """
-        
-        self.events = events
-                
-        self.logger.debug('Creating PV module instance for {} DER with rating:{} kVA'.format(type(self).__name__.replace('SolarPV_DER_',''),str(int(Sinverter_rated/1e3))))
+                        
+        self.logger.debug('Creating PV module instance for {} DER with rating:{} kVA'.format(self.DER_model_type.replace('SolarPV_DER_',''),str(int(self.DER_config['inverter_ratings']['Srated']/1e3))))
         self.initialize_module_parameters()
+        
+        self.Sinsol = Sinsol #PV module initial conditions
+        self.Tactual = defaults.Tactual
         
         #Fit polynomial
         if self.MPPT_ENABLE and self.USE_POLYNOMIAL_MPP:
             self.fit_MPP_poly()
         
-        self.Sinsol,self.Tactual= self.events.solar_events(t=0.0) #PV module initial conditions
         
         self.Iph = self.Iph_calc()
     

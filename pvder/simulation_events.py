@@ -12,21 +12,21 @@ import cmath
 
 from pvder.utility_classes import Logging
 from pvder import utility_functions
-from pvder import config
+from pvder import defaults
 
 class SimulationEvents(Logging):
     """ Utility class for events."""
     
     count = 0
-    Tactual_default = 298.15
-    Zload1_actual_default = 10e6+0j
+    Tactual_default = defaults.Tactual # 298.15
+    Zload1_actual_default =  defaults.Zload1_actual #10e6+0j
     
     _events_spec = {'insolation':{'default':100.0,'min':25.0,'max':100.0},
                     'voltage':{'default':1.0,'min':0.1,'max':1.15},  #Voltage magnitude is a fraction and not per unit value
                     'voltage_angle':{'default':0.0,'min':0.0,'max':2*math.pi},  #Voltage angle in radians
                     'frequency':{'default':60.0,'min':56.0,'max':62.0}}  #Time delay between events
     
-    del_t_event = config.DEFAULT_DELTA_T
+    del_t_event = defaults.DEFAULT_DELTA_T
     override_angle = True
     
     def __init__(self,events_spec = None,SOLAR_EVENT_ENABLE = True,GRID_EVENT_ENABLE = True, LOAD_EVENT_ENABLE = True,verbosity='INFO',identifier=''):

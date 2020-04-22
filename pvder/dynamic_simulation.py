@@ -10,64 +10,18 @@ import pdb
 import six
 import logging
 
-####from graphviz import Digraph
 from pvder.utility_classes import Logging
 from pvder.grid_components import Grid
 from pvder.simulation_utilities import SimulationUtilities
 from pvder import utility_functions
-from pvder import config
-
-class ModelUtilities():
-    """Class for model wide utilities."""
-    
-    def __init__(self,PV_model,simulation,grid_model=None):
-        self.PV_model = PV_model
-        
-        self.simulation = simulation
-        if self.PV_model.standAlone and grid_model is not None:
-            self.grid_model = grid_model
-        elif self.PV_model.standAlone and grid_model is None:
-            raise ValueError('`Grid` instance need to provided in stand alone mode for creating `GridSimulation` instance!')
-    
-    def draw_model(self,display_value_type='per_unit'):
-        """Draw and render the model using graphs."""
-        
-        assert display_value_type in ['per_unit','actual'],'Display can only be in per unit or actual values'
-        
-        self.display_value_type =display_value_type
-        if self.display_value_type  == 'per_unit': 
-            _C = self.PV_model.C
-            _Lf = self.PV_model.Lf
-            _Rf = self.PV_model.Rf
-            _Z1 = self.PV_model.Z1
-            _Z2 = self.grid_model.Z2
-        else: 
-            _C = self.PV_model.C_actual
-            _Lf = self.PV_model.Lf_actual
-            _Rf = self.PV_model.Rf_actual
-            _Z1 = self.PV_model.Z1_actual
-            _Z2 = self.grid_model.Z2_actual
-        
-        
-        dot = Digraph(comment='PV_DER and grid_model.')
-        dot.node('Base','Vbase={},Sbase={},Zbase={:.4f},Lbase={:.4f},Cbase={:.4f}'.format(self.grid_model.Vbase,self.grid_model.Sbase,self.grid_model.Zbase,self.grid_model.Lbase,self.grid_model.Cbase),shape='rectangle')
-        dot.node('Value_type','{}'.format(self.display_value_type))
-        dot.node('DER','{}\nC={:.5f},Lf={:.5f},Rf= {:.4f}'.format(self.PV_model.name,_C,_Lf,_Rf),shape='box')
-        dot.node('Transformer','{}\nZl = {:.5f}'.format(self.PV_model.transformer_name,_Z1),shape='rectangle')
-        dot.node('Transmission_Line','{}\nZt = {:.5f}'.format(self.grid_model.transmission_name,_Z2),shape='rectangle')
-        dot.node('Grid',self.grid_model.name)
-       
-        dot.edge('DER', 'Transformer')
-        dot.edge('Transformer', 'Transmission_Line')
-        dot.edge('Transmission_Line', 'Grid')
-        dot.render('model_graphs/model.gv', view=True)
+from pvder import defaults
 
 class DynamicSimulation(Grid,SimulationUtilities,Logging):
     """ Utility class for running simulations."""
     
     count = 0
     tStart = 0.0
-    tInc = config.DEFAULT_DELTA_T
+    tInc = defaults.DEFAULT_DELTA_T
     #jacFlag = False
     DEBUG_SOLVER = False
     DEBUG_SIMULATION = False
@@ -102,6 +56,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.tStop = tStop       
         self.t = self.t_calc()
         self.PV_model = PV_model
+        self.DER_model_type = type(self.PV_model).__name__
         self.simulation_events = events
         self.simulation_events.del_t_event = self.tInc
         
@@ -113,6 +68,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.LOOP_MODE = LOOP_MODE
         self.COLLECT_SOLUTION = COLLECT_SOLUTION
         self.jacFlag = jacFlag
+        self.check_jac_availability()
         
         if self.PV_model.standAlone and grid_model is not None:
             self.grid_model = grid_model
@@ -162,6 +118,13 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         #if (self.tStop - self.tStart) <= self.tInc:
         #    self.tStop =  self.tStart  + 1e-6 #+ self.tInc
         return np.arange(self.tStart, self.tStop + self.tInc, self.tInc)
+    
+    def check_jac_availability(self):
+        """Check if Jacobian matrix is available."""        
+
+        if self.jacFlag:
+            if not self.DER_model_type in self.jac_list:
+                raise ValueError('{}:Jacobian matrix is not available for DER model:{}'.format(self.name,self.DER_model_type))
     
     def initialize_y0_t(self):
         """Initialize y0_t."""
