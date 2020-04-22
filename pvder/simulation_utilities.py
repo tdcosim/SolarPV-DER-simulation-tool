@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
 from pvder.utility_classes import Logging
-from pvder import config
+from pvder import defaults
 
 class SimulationResults(Logging):
     """ Utility class for simulation results."""
@@ -22,10 +22,10 @@ class SimulationResults(Logging):
     count = 0
     SAVE_PLOT_JPEG = False
     SAVE_PLOT_SVG = False
-    figure_DPI = config.FIGURE_DPI
+    figure_DPI = defaults.FIGURE_DPI
     
-    parameters= {"figure":{"height": config.FIGURE_HEIGHT,
-                           "width": config.FIGURE_WIDTH
+    parameters= {"figure":{"height": defaults.FIGURE_HEIGHT,
+                           "width": defaults.FIGURE_WIDTH
                           }
                 }
     
@@ -354,7 +354,7 @@ class SimulationResults(Logging):
 class SimulationUtilities():
     """ Utility class for dynamic simulations."""
     
-    max_steps = config.DEFAULT_max_steps #Max steps to be used by solver before producing error
+    max_steps = defaults.max_steps #Max steps to be used by solver before producing error
     solver_list = ['odeint','ode-vode-bdf']
     
     def call_ODE_solver(self,derivatives,jacobian,y,t):
@@ -465,8 +465,17 @@ class SimulationUtilities():
                                                   'failure_code':infodict_mused[failure_time_point],
                                                   'S':self.PV_model.S*self.PV_model.Sbase})
                  
-            raise ValueError('{}:ODE solver failed at {:.6f} s for {} with failure code:{}!\n___States at failure___\nVdc:{:.4f},Vta:{:.4f},Vpcca:{:.4f}\nia:{:.4f}\nPpv:{:.4f},S:{:.4f},\nma:{:.4f},xDC:{:.4f},xQ:{:.4f}'
-.format(self.name,t[failure_time_point],self.PV_model.name,infodict_mused[failure_time_point],self.PV_model.Vdc*self.PV_model.Vdcbase,self.PV_model.vta*self.PV_model.Vbase,self.PV_model.va*self.PV_model.Vbase,self.PV_model.ia*self.PV_model.Ibase,self.PV_model.Ppv*self.PV_model.Sbase,self.PV_model.S*self.PV_model.Sbase,self.PV_model.ma,self.PV_model.xDC,self.PV_model.xQ))
+            error_message = '{}:ODE solver failed at {:.6f} s for {} with failure code:{}!'.format(self.name,t[failure_time_point],self.PV_model.name,infodict_mused[failure_time_point])
+            
+            states_at_failure = '\n___States at failure___\nVdc:{:.4f},Vta:{:.4f},Vpcca:{:.4f}\nia:{:.4f}\nPpv:{:.4f},S:{:.4f},\nma:{:.4f}'.format(self.PV_model.Vdc*self.PV_model.Vdcbase,
+                                                                                                                                                   self.PV_model.vta*self.PV_model.Vbase,self.PV_model.va*self.PV_model.Vbase,self.PV_model.ia*self.PV_model.Ibase,self.PV_model.Ppv*self.PV_model.Sbase,self.PV_model.S*self.PV_model.Sbase,self.PV_model.ma)
+            primary_controller_states = '\nxa:{:.4f},ua:{:.4f}'.format(self.PV_model.xa,self.PV_model.ua) 
+            
+            if self.DER_model_type == 'SolarPVDER_SinglePhaseConstantVdc':      
+                secondary_controller_states = '\nxP:{:.4f},xQ:{:.4f}'.format(self.PV_model.xP,self.PV_model.xQ)
+            else:      
+                secondary_controller_states = '\nxDC:{:.4f},xQ:{:.4f}'.format(self.PV_model.xDC,self.PV_model.xQ)
+            raise ValueError(error_message+states_at_failure+primary_controller_states+secondary_controller_states)
         
         else:
             if self.DEBUG_SOLVER:

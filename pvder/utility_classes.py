@@ -8,6 +8,8 @@ import six
 import logging
 import pprint
 
+from pvder import templates
+
 class Logging(object):
     """ Utility class for common methods."""
     
@@ -20,10 +22,10 @@ class Logging(object):
         
         self.ID = self.count  #ID is same as current instance count
         
-        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
-            self.name = 'PVDER-1ph_'+str(self.ID)  #Object name
-        elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
-            self.name = 'PVDER-3ph_'+str(self.ID)  #Object name
+        model_name = type(self).__name__
+        
+        if model_name in templates.DER_design_template:
+            self.name = model_name + '_' + str(self.ID) #Object name            
         elif type(self).__name__ == 'DynamicSimulation':
             self.name = 'sim_'+str(self.ID)  #Object name
         elif type(self).__name__ == 'SimulationEvents':
