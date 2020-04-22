@@ -17,7 +17,7 @@ from pvder.DER_utilities import PVDER_ModelUtilities
 from pvder.grid_components import BaseValues
 
 from pvder import utility_functions
-from pvder import config,templates
+from pvder import defaults,templates
 
 class SolarPV_DER_ThreePhase(PVModule,SolarPVDER):
     """
@@ -55,12 +55,12 @@ class SolarPV_DER_ThreePhase(PVModule,SolarPVDER):
         """
                 
         SolarPV_DER_ThreePhase.count = SolarPV_DER_ThreePhase.count+1 #Increment count to keep track of number of PV-DER model instances
-        DER_arguments = self.setup_DER(configFile,**kwargs)        
+        DER_arguments = self.setup_DER(events,configFile,**kwargs)         
         
         if six.PY3:
-            super().__init__(events,self.DER_config['inverter_ratings']['Srated'] )  #Initialize PV module class (base class)
+            super().__init__(self.DER_config['basic_options']['Sinsol'])  #Initialize PV module class (base class)
         elif six.PY2:
-            super(SolarPV_DER_ThreePhase,self).__init__(events,self.DER_config['inverter_ratings']['Srated'] )
+            super(SolarPV_DER_ThreePhase,self).__init__(self.DER_config['basic_options']['Sinsol'])
         
         self.initialize_DER(DER_arguments)         
         self.creation_message()        

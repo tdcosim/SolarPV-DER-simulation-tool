@@ -14,7 +14,7 @@ import numpy as np
 from pvder.utility_classes import Logging
 from pvder.grid_components import BaseValues
 from pvder import utility_functions
-from pvder import config, templates
+from pvder import defaults, templates
 
 class PVDER_ModelUtilities(BaseValues):
     """
@@ -44,12 +44,12 @@ class PVDER_ModelUtilities(BaseValues):
     Vdc_ref_list = []
     Vdc_ref_total = len(Vdc_ref_list) #Get total events
     Vdc_ref_counter = 0
-    del_Vdc_ref = config.DEFAULT_del_Vdc_ref
-    del_t_Vdc_ref = config.DEFAULT_del_t_Vdc_ref
+    del_Vdc_ref = defaults.DEFAULT_del_Vdc_ref
+    del_t_Vdc_ref = defaults.DEFAULT_del_t_Vdc_ref
     
     #Grid frequency estimate variables
-    use_frequency_estimate = config.DEFAULT_USE_FREQUENCY_ESTIMATE
-    _del_t_frequency_estimate =  config.DEFAULT_DELTA_T
+    use_frequency_estimate = defaults.use_frequency_estimate
+    _del_t_frequency_estimate =  defaults.DEFAULT_DELTA_T
     _t_estimate_frequency_previous = 0.0  
     _westimate = 2*math.pi*60.0
         
@@ -130,11 +130,12 @@ class PVDER_ModelUtilities(BaseValues):
         
         return self.xDC + self.Kp_DC*(self.Vdc_ref - self.Vdc) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)) #PI controller equation
     
-    def ia_ref_constantVdc_calc(self):
-        """Phase A current reference for constant Vdc"""
-        
-        return self.xDC + self.Kp_DC*(self.Ppv -  self.S.real) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)) #PI controller equation
-      
+    def ia_ref_activepower_control(self):
+        """Phase A current reference for constant Vdc"""	        """Phase A current reference for constant Vdc"""
+
+
+        return self.xDC + self.Kp_DC*(self.Ppv -  self.S.real) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)) #PI controller equation	        return self.xP + self.Kp_P*(self.Ppv -  self.S.real) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)) #PI controller equation  
+    
     def ib_ref_calc(self):
         """Phase B current reference"""
         
@@ -319,18 +320,18 @@ class PVDER_ModelUtilities(BaseValues):
         
         if quantity ==  'voltage':
             print('Vdc:{:.2f}\nVta:{:.2f} V'.format(self.Vdc*self.Vbase,self.vta*self.Vbase))
-            if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            if self.n_phases == 3:
                 print('Vtb:{:.2f} V,Vtb:{:.2f} V\nVtn:{:.2f} V'.format(self.vtb*self.Vbase,self.vtc*self.Vbase,(self.vta+self.vtb+self.vtc)*self.Vbase))
             
             print('Va:{:.2f} V'.format(self.va*self.Vbase))
-            if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            if self.n_phases == 3:
                 print('Vb:{:.2f} V,Vc:{:.2f} V\nVn:{:.2f} V'.format(self.vb*self.Vbase,self.vc*self.Vbase,(self.vta+self.vtb+self.vtc)*self.Vbase))
             
             print('Vtrms:{:.2f} V\nVpccrms:{:.2f} V'.format(self.Vtrms*self.Vbase,self.Vrms*self.Vbase))
         
         elif quantity ==  'current':
             print('ia:{:.2f} A'.format(self.ia*self.Ibase))
-            if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            if self.n_phases == 3:
                 print('ib:{:.2f} A,ic:{:.2f} A\nIn:{:.2f} A'.format(self.ib*self.Ibase,self.ic*self.Ibase,(self.ia+self.ib+self.ic)*self.Ibase))
             print('Irms:{:.2f} V'.format(self.Irms*self.Ibase))
              
@@ -339,7 +340,7 @@ class PVDER_ModelUtilities(BaseValues):
         
         elif quantity ==  'duty cycle':
             print('ma:{:.2f}'.format(self.ma))
-            if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            if self.n_phases == 3:
                 print('mb:{:.2f},mc:{:.2f}\nm0:{:.2f}'.format(self.mb,self.mc,(self.ma+self.mb+self.mc)))
     
     def show_PV_DER_parameters(self,parameter_type='inverter_ratings'):
@@ -353,7 +354,7 @@ class PVDER_ModelUtilities(BaseValues):
         if parameter_type not in {'module_parameters','inverter_ratings','controller_gains','circuit_parameters','all'}:
             raise ValueError('Unknown quantity: ' + str(parameter_type))
         
-        print('Parameters for DER with ID:{}'.format(self.parameter_ID))
+        print('----Parameters for DER with ID:{}----'.format(self.parameter_ID))
         if parameter_type ==  'module_parameters' or parameter_type ==  'all':
             print('Np:{},Ns:{}'.format(self.Np,self.Ns))
             print('Vdcmpp0:{:.3f} V\nVdcmpp_min:{:.3f} V\nVdcmpp_max:{:.3f} V'.format(self.Vdcmpp0,self.Vdcmpp_min,self.Vdcmpp_max))
@@ -367,10 +368,11 @@ class PVDER_ModelUtilities(BaseValues):
             print('Cdc:{:.9f} F\nLf:{:.6f} H\nRf:{:.3f} Ohm'.format(self.C*self.Cbase,self.Lf*self.Lbase,self.Rf*self.Zbase))
         
         if parameter_type == 'controller_gains' or parameter_type ==  'all':
-            print('Current controller:\nKp_GCC:{:.3f}, Ki_GCC:{:.3f}, wp:{:.3f}'.format(self.Kp_GCC,self.Ki_GCC,self.wp))
-            print('DC link voltage controller:\nKp_DC:{:.3f}, Ki_DC:{:.3f}'.format(self.Kp_DC,self.Ki_DC))
-            print('Reactive power controller:\nKp_Q:{:.3f}, Ki_Q:{:.3f}'.format(self.Kp_Q,self.Ki_Q))
-            print('PLL controller:\nKp_PLL:{:.3f}, Ki_PLL:{:.3f}'.format(self.Kp_PLL,self.Ki_PLL))     
+            for controller,properties in templates.controller_properties.items():
+                if set(properties['gains']).issubset(set(templates.DER_design_template[self.DER_model_type]['controller_gains'].keys())):
+                    print(properties['description'],':')
+                    for gain_type in properties['gains']:
+                        print('{}:{:.3f}'.format(gain_type,eval('self.'+gain_type)))
 
     def validate_model(self,PRINT_ERROR = True):
         """Compare error between RMS quantities and Phasor quantities."""
@@ -380,13 +382,8 @@ class PVDER_ModelUtilities(BaseValues):
         self.Qf_phasor = self.S_calc().imag-self.S_PCC_calc().imag  #Reactive power consumed by filter inductor 
         
         #Caculation with RMS quantities        
-        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
-            _phases = 1
-        elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
-            _phases = 3
-        
-        self.Pf_RMS = _phases*((self.Irms)**2)*self.Rf   #Active power consumed by filter resistor
-        self.Qf_RMS = _phases*((self.Irms)**2)*self.Xf   #Reactive power consumed by filter inductor 
+        self.Pf_RMS = self.n_phases*((self.Irms)**2)*self.Rf   #Active power consumed by filter resistor
+        self.Qf_RMS = self.n_phases*((self.Irms)**2)*self.Xf   #Reactive power consumed by filter inductor 
         
         #Calculation with phasor quantities
         self.Pt_phasor = self.S_calc().real   #Active power output at inverter terminal
