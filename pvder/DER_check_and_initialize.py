@@ -33,7 +33,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
        
         self.logger.info('{}:Instance created with DER parameter ID: {}; Specifications - Srated:{:.1f} kVA, Ppv:{:.1f} kW, Vrms:{:.1f} V, Steady state:{},LVRT Enable:{},HVRT Enable:{}'.format(self.name,self.parameter_ID,self.Sinverter_rated/1e3,(self.Ppv*BaseValues.Sbase)/1e3,self.Vrms_rated,self.steady_state_initialization,self.LVRT_ENABLE,self.HVRT_ENABLE))
         
-    def update_DER_config(self,DER_config,DER_arguments,DER_id):
+    def update_DER_config(self,DER_config,DER_parent_config,DER_arguments,DER_id,DER_parent_id):
         """Update PV-DER design."""  
         
         self.check_DER_config(DER_config,DER_id)
@@ -47,7 +47,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
                 self.DER_config[DER_component] = DER_arguments['derConfig'][DER_component]
             else:
                 for DER_parameter in self.DER_design_template[DER_component]:
-                    _ = self.update_DER_parameter(DER_config,DER_arguments,DER_id,DER_component,DER_parameter)
+                    _ = self.update_DER_parameter(DER_config,DER_parent_config,DER_arguments,DER_id,DER_parent_id,DER_component,DER_parameter)
 
         self.basic_specs = {DER_id:self.DER_config['basic_specs']}
         self.module_parameters = {DER_id:self.DER_config['module_parameters']}
@@ -58,7 +58,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.controller_gains = {DER_id:self.DER_config['controller_gains']}
         self.steadystate_values = {DER_id:self.DER_config['steadystate_values']}   
         
-    def update_DER_parameter(self,DER_config,DER_arguments,DER_id,DER_component,DER_parameter):
+    def update_DER_parameter(self,DER_config,DER_parent_config,DER_arguments,DER_id,DER_parent_id,DER_component,DER_parameter):
         """Update DER config using both config file and arguments."""
         
         parameters ={}
@@ -77,6 +77,15 @@ class PVDER_SetupUtilities(BaseValues,Logging):
                 source = 'DER config'
             else:
                 raise ValueError('Found {} to have type {} - expected type:(int,float)!'.format(DER_parameter,type(DER_config[DER_component][DER_parameter])))
+        
+        elif DER_parameter in DER_parent_config[DER_component]: #Check if parameter exists in parent config file
+            if isinstance(DER_parent_config[DER_component][DER_parameter],(int, float)):
+                self.logger.debug('{}:Parameter {} in {} found for ID:{} from parent config {} - with value {}.'.format(self.name,DER_parameter,DER_component,DER_id,DER_parent_id,DER_parent_config[DER_component][DER_parameter])) 
+                self.DER_config[DER_component].update({DER_parameter:DER_parent_config[DER_component][DER_parameter]})
+                parameters.update({DER_parameter:DER_parent_config[DER_component][DER_parameter]})
+                source = 'DER parent config'
+            else:
+                raise ValueError('Found {} to have type {} - expected type:(int,float)!'.format(DER_parameter,type(DER_parent_config[DER_component][DER_parameter])))
         
         elif DER_parameter in self.DER_design_template[DER_component]:  #Check if parameter exists in default DER config
             self.logger.debug('{}:Parameter {} in {} not found for ID:{} - updating with default value {}.'.format(self.name,DER_parameter,DER_component,DER_id,self.DER_design_template[DER_component][DER_parameter])) 
@@ -99,7 +108,8 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         if not bool(missing_keys):
             self.logger.debug('{}:DER configuration with ID {} contained all required keys.'.format(self.name,DER_id))        
         else:
-            raise KeyError('{}:DER configuration with ID:{} did not contain the required config keys:{}!'.format(self.name, DER_id,missing_keys))              
+            if not DER_config['parent_config']:
+               raise KeyError('{}:DER configuration with ID:{} did not contain the required config keys:{}!'.format(self.name, DER_id,missing_keys))              
     
     def check_config_file(self,config_file,config_dict):
         """Check whether DER config file contains necessary fields."""

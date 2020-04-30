@@ -22,7 +22,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
     count = 0
     tStart = 0.0
     tInc = defaults.DEFAULT_DELTA_T
-    #jacFlag = False
+    
     DEBUG_SOLVER = False
     DEBUG_SIMULATION = False
     DEBUG_CONTROLLERS = False
@@ -30,6 +30,8 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
     DEBUG_CURRENTS = False
     DEBUG_POWER = False
     DEBUG_PLL = False
+    
+    jac_list = ['SolarPV_DER_ThreePhase','SolarPV_DER_SinglePhase']
         
     def __init__(self,PV_model,events,grid_model = None,tStop = 0.5,
                  LOOP_MODE = False,COLLECT_SOLUTION = True,jacFlag = False,
@@ -44,11 +46,8 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
           tInc: A scalar specifying the time step for simulation.
           LOOP_MODE: A boolean specifying whether simulation is run in loop.
         """
-        #if LOOP_MODE:
-        #    assert not PV_model.standAlone, 'Loop mode can only be true if PV-DER model is stand alone.'
-        
-        #Increment count to keep track of number of simulation instances
-        DynamicSimulation.count = DynamicSimulation.count + 1
+                       
+        DynamicSimulation.count = DynamicSimulation.count + 1 #Increment count to keep track of number of simulation instances
         self.name_instance(identifier) #Generate a name for the instance
         
         self.initialize_logger(logging_level=verbosity) #Set logging level - {DEBUG,INFO,WARNING,ERROR}  
