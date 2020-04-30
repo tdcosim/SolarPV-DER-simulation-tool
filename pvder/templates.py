@@ -58,7 +58,8 @@ controller_properties = {"current_controller":{"gains":["Kp_GCC","Ki_GCC","wp"],
                          }
 
 DER_design_template = {"SolarPV_DER_SinglePhase":
-                       {"basic_specs":{'phases':('a'),'n_phases':1,'n_ODE':11},
+                       {"parent_config":"",
+                        "basic_specs":{'phases':('a'),'n_phases':1,'n_ODE':11},
                         "basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0},
                        "module_parameters":{"Np":2,"Ns":1000,"Vdcmpp0":750.0,"Vdcmpp_min": 650.0,"Vdcmpp_max": 800.0},
                        "inverter_ratings":{"Srated":10e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0},
@@ -72,7 +73,8 @@ DER_design_template = {"SolarPV_DER_SinglePhase":
                        },
                        
                        "SolarPV_DER_ThreePhase":
-                       {"basic_specs":{'phases':('a','b','c'),'n_phases':3,'n_ODE':23,'unbalanced':True},
+                       {"parent_config":"",
+                        "basic_specs":{'phases':('a','b','c'),'n_phases':3,'n_ODE':23,'unbalanced':True},
                         "basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0},
                         "module_parameters":{"Np":11,"Ns":735,"Vdcmpp0":550.0,"Vdcmpp_min": 525.0,"Vdcmpp_max": 650.0}, 
                         "inverter_ratings":{"Srated":50e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0},
@@ -86,7 +88,8 @@ DER_design_template = {"SolarPV_DER_SinglePhase":
                        },
                        
                        "SolarPVDERThreePhaseBalanced":
-                       {"basic_specs":{'phases':('a','b','c'),'n_phases':3,'n_ODE':11,'unbalanced':False},
+                       {"parent_config":"",
+                        "basic_specs":{'phases':('a','b','c'),'n_phases':3,'n_ODE':11,'unbalanced':False},
                         "basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0},
                        "module_parameters":{"Np":11,"Ns":735,"Vdcmpp0":550.0,"Vdcmpp_min": 525.0,"Vdcmpp_max": 650.0}, 
                        "inverter_ratings":{"Srated":50e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0},
@@ -100,7 +103,8 @@ DER_design_template = {"SolarPV_DER_SinglePhase":
                         },
                        
                        "SolarPVDER_SinglePhaseConstantVdc":
-                       {"basic_specs":{'phases':('a'),'n_phases':1,'n_ODE':10},
+                       {"parent_config":"",
+                        "basic_specs":{'phases':('a'),'n_phases':1,'n_ODE':10},
                         "basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,'use_Pref':False},
                        "module_parameters":{"Np":2,"Ns":1000,"Vdcmpp0":750.0,"Vdcmpp_min": 650.0,"Vdcmpp_max": 800.0},
                        "inverter_ratings":{"Srated":10e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0},

@@ -98,31 +98,7 @@ class PVDER_ModelUtilities(BaseValues):
         
         """
         
-        return self.Kp_GCC*self.uc + self.xc #PI controller equation
-    
-    def get_DER_config(self,config_file,DER_id):
-        """Check DER ID in config file."""
-        
-        config_dict = self.read_config(config_file) #Get bounds dict
-        
-        available_ids = list(config_dict.keys())
-        if DER_id in available_ids:
-            print('DER configuration with ID:{} was found in {}'.format(DER_id,config_file))
-        else:
-            raise KeyError('DER configuration with ID:{} could not be found in {}! - Available IDs are:{}'.format(DER_id,config_file,available_ids))
-        
-        return config_dict[DER_id]
-    
-    def get_pvderconfig(self,pvderConfig):
-        """Check DER ID in config file."""
-        
-        if pvderConfig is not None:
-            if not isinstance(pvderConfig,dict):
-                raise ValueError('Expected pvderConfig to be a dictionary but got {}'.format(type(pvderConfig)))
-        else:
-            pvderConfig = {}    
-        
-        return pvderConfig
+        return self.Kp_GCC*self.uc + self.xc #PI controller equation    
     
     #Controller outer loop equations (Current set-point)    
     def ia_ref_calc(self):
@@ -131,10 +107,9 @@ class PVDER_ModelUtilities(BaseValues):
         return self.xDC + self.Kp_DC*(self.Vdc_ref - self.Vdc) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)) #PI controller equation
     
     def ia_ref_activepower_control(self):
-        """Phase A current reference for constant Vdc"""	        """Phase A current reference for constant Vdc"""
+        """Phase A current reference for constant Vdc"""
 
-
-        return self.xDC + self.Kp_DC*(self.Ppv -  self.S.real) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)) #PI controller equation	        return self.xP + self.Kp_P*(self.Ppv -  self.S.real) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)) #PI controller equation  
+        return self.xP + self.Kp_P*(self.Ppv -  self.S.real) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)) #PI controller equation  
     
     def ib_ref_calc(self):
         """Phase B current reference"""
@@ -537,9 +512,9 @@ class PVDER_ModelUtilities(BaseValues):
         """Return default parameter ID."""
         
         if type(self).__name__ == 'SolarPV_DER_SinglePhase':
-            default_ID = config.DEFAULT_PARAMETER_ID_1PH  
+            default_ID = '10'  
         elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
-            default_ID = config.DEFAULT_PARAMETER_ID_3PH 
+            default_ID = '50'  
         
         return default_ID
     
@@ -559,7 +534,7 @@ class PVDER_ModelUtilities(BaseValues):
     def update_parameter_dict(self,parameter_ID,parameter_type,parameter_dict):
         """Update parameters."""
                 
-        if parameter_type not in templates.DER_design_template:
+        if parameter_type not in templates.DER_design_template[self.DER_model_type]:
             raise ValueError('Unknown parameter type: ' + str(parameter_type))
         
         for parameter in parameter_dict.keys():
@@ -573,8 +548,8 @@ class PVDER_ModelUtilities(BaseValues):
             elif parameter_type == 'circuit_parameters':        
                 self.circuit_parameters[parameter_ID][parameter] = parameter_dict[parameter]
                 
-            elif parameter_type == 'controller_parameters':        
-                self.controller_parameters[parameter_ID][parameter] = parameter_dict[parameter]
+            elif parameter_type == 'controller_gains':        
+                self.controller_gains[parameter_ID][parameter] = parameter_dict[parameter]
             
             elif parameter_type == 'steadystate_values':        
                 self.steadystate_values[parameter_ID][parameter] = parameter_dict[parameter]
@@ -595,7 +570,7 @@ class PVDER_ModelUtilities(BaseValues):
         utility_functions.print_dictionary_keys(self.module_parameters,'module_parameters')
         utility_functions.print_dictionary_keys(self.inverter_ratings,'inverter_ratings')
         utility_functions.print_dictionary_keys(self.circuit_parameters,'circuit_parameters')
-        utility_functions.print_dictionary_keys(self.controller_parameters,'controller_parameters')
+        utility_functions.print_dictionary_keys(self.controller_gains,'controller_gains')
         utility_functions.print_dictionary_keys(self.steadystate_values,'steadystate_values')
     
     def show_parameter_types(self):
@@ -609,7 +584,7 @@ class PVDER_ModelUtilities(BaseValues):
         utility_functions.print_dictionary_keys(self.module_parameters[key1],'module_parameters')
         utility_functions.print_dictionary_keys(self.inverter_ratings[key2],'inverter_ratings')
         utility_functions.print_dictionary_keys(self.circuit_parameters[key2],'circuit_parameters')
-        utility_functions.print_dictionary_keys(self.controller_parameters[key2],'controller_parameters')
+        utility_functions.print_dictionary_keys(self.controller_gains[key2],'controller_gains')
         utility_functions.print_dictionary_keys(self.steadystate_values[key2],'steadystate_values')
     
     def get_parameter_dictionary(self,parameter_type,parameter_ID,SHOW_DICTIONARY=True):
@@ -638,8 +613,8 @@ class PVDER_ModelUtilities(BaseValues):
         if parameter_type == 'circuit_parameters' or parameter_type == 'all':
             parameter_dict.update(self.circuit_parameters[parameter_ID])                
                 
-        if parameter_type == 'controller_parameters' or parameter_type == 'all':
-            parameter_dict.update(self.controller_parameters[parameter_ID])
+        if parameter_type == 'controller_gains' or parameter_type == 'all':
+            parameter_dict.update(self.controller_gains[parameter_ID])
             
         if parameter_type == 'steadystate_values' or parameter_type == 'all':
             parameter_dict.update(self.steadystate_values[parameter_ID])
@@ -693,7 +668,7 @@ class PVDER_ModelUtilities(BaseValues):
             self.update_parameter_dict(parameter_ID = dict_name,parameter_type='module_parameters',parameter_dict = parameter_dict)
             self.update_parameter_dict(parameter_ID = dict_name,parameter_type='inverter_ratings',parameter_dict = parameter_dict)
             self.update_parameter_dict(parameter_ID = dict_name,parameter_type='circuit_parameters',parameter_dict = parameter_dict)
-            self.update_parameter_dict(parameter_ID = dict_name,parameter_type='controller_parameters',parameter_dict = parameter_dict)
+            self.update_parameter_dict(parameter_ID = dict_name,parameter_type='controller_gains',parameter_dict = parameter_dict)
             self.update_parameter_dict(parameter_ID = dict_name,parameter_type='steadystate_values',parameter_dict = parameter_dict)
             
             self.logger.info('{}:Succesfully loaded parameters from {} into DER parameter dictionary with parameter ID {}.'.format(self.name,file_name,dict_name))

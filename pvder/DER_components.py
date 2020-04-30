@@ -53,22 +53,64 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         self.create_template()
         
         DER_config = self.get_DER_config(configFile,self.parameter_ID)
-        DER_arguments = self.get_DER_arguments(DER_config,**kwargs)       
+        DER_arguments = self.get_DER_arguments(DER_config,**kwargs)    
         
         self.name_instance(DER_arguments['identifier']) #Generate a name for the instance  
         self.initialize_logger(DER_arguments['verbosity'])  #Set logging level - {DEBUG,INFO,WARNING,ERROR}       
         
-        self.update_DER_config(DER_config,DER_arguments,self.parameter_ID)
+        self.DER_parent_ID = self.get_DER_parent_id(DER_config)
+        DER_parent_config = self.get_DER_parent_config(configFile,self.DER_parent_ID)
+        
+        for DER_component in self.DER_design_template:
+           if DER_component not in DER_config:
+              DER_config.update({DER_component:{}})
+           if DER_component not in DER_parent_config:
+              DER_parent_config.update({DER_component:{}})
+        
+        self.update_DER_config(DER_config,DER_parent_config,DER_arguments,self.parameter_ID,self.DER_parent_ID)
         self.check_basic_specs()
         
         return DER_arguments   
+    
+    def get_DER_parent_id(self,DER_config):
+        """Check if user has specified a parent configuration."""
+        
+        if 'parent_config' in DER_config:
+            DER_parent_id = DER_config['parent_config']
+        else:
+            DER_parent_id = ''
+        
+        return DER_parent_id
+    
+    def get_DER_parent_config(self,configFile,derParentId):
+        """Check if user has specified a parent configuration."""
+        
+        if derParentId:
+           DER_parent_config = self.get_DER_config(configFile,derParentId)    
+        else:
+           DER_parent_config = {}    
+        
+        return DER_parent_config    
+    
+    def get_DER_config(self,configFile,derId):
+        """Check DER ID in config file."""
+        
+        config_dict = self.read_config(configFile) #Read configuration dictionary
+        
+        available_ids = list(config_dict.keys())
+        if derId in available_ids:
+            print('DER configuration with ID:{} was found in {}'.format(derId,configFile))
+        else:
+            raise KeyError('DER configuration with ID:{} could not be found in {}! - Available IDs are:{}'.format(derId,configFile,available_ids))
+        
+        return config_dict[derId]
     
     def create_template(self):
         """Create templates for DER model."""
 
         self.DER_design_template = templates.DER_design_template[self.DER_model_type]
         self.DER_config =  dict((key, {}) for key in self.DER_design_template.keys())
-    
+        
     def get_DER_id(self,**kwargs):
         """Create a parameter ID from inverter rated power output.        
         
