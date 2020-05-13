@@ -57,6 +57,9 @@ controller_properties = {"current_controller":{"gains":["Kp_GCC","Ki_GCC","wp"],
                          "pll_controller": {"gains":["Kp_PLL","Ki_PLL"],"description":"PLL controller"}
                          }
 
+single_phase_models = ["SolarPV_DER_SinglePhase","SolarPVDER_SinglePhaseConstantVdc"]
+three_phase_models = ["SolarPV_DER_ThreePhase","SolarPVDER_ThreePhaseConstantVdc"]
+
 DER_design_template = {"SolarPV_DER_SinglePhase":
                        {"parent_config":"",
                         "basic_specs":{'phases':('a'),'n_phases':1,'n_ODE':11},
@@ -114,11 +117,27 @@ DER_design_template = {"SolarPV_DER_SinglePhase":
                        "initial_states":{"iaR":0,"iaI":0.0,"xaR":0.0,"xaI":0.0,"uaR":0.0,"uaI":0.0,
                                          "xP":0.0,"xQ":0.0,
                                          "xPLL":0.0,"wte":6.28}
+                       },
+                       
+                       "SolarPVDER_ThreePhaseConstantVdc":
+                       {"parent_config":"",
+                        "basic_specs":{'phases':('a','b','c'),'n_phases':3,'n_ODE':22,'unbalanced':True},
+                        "basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0},
+                        "module_parameters":{"Np":11,"Ns":735,"Vdcmpp0":550.0,"Vdcmpp_min": 525.0,"Vdcmpp_max": 650.0}, 
+                        "inverter_ratings":{"Srated":50e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0},
+                       "circuit_parameters":{"Rf_actual":0.002,"Lf_actual":25.0e-6,"R1_actual":0.0019,"X1_actual":0.0561},
+                       "controller_gains":{"Kp_GCC":6000.0,"Ki_GCC":2000.0,"Kp_P":500.0,"Ki_P":50.0,"Kp_Q":0.2,"Ki_Q":10.0,"wp": 20e4},
+                       "steadystate_values":{"maR0":0.89,"maI0":0.0,"iaR0":1.0,"iaI0":0.001},
+                       "initial_states":{"iaR":0,"iaI":0.0,"xaR":0.0,"xaI":0.0,"uaR":0.0,"uaI":0.0,
+                                         "ibR":0,"ibI":0.0,"xbR":0.0,"xbI":0.0,"ubR":0.0,"ubI":0.0,
+                                         "icR":0,"icI":0.0,"xcR":0.0,"xcI":0.0,"ucR":0.0,"ucI":0.0,
+                                         "xP":0.0,"xQ":0.0,
+                                         "xPLL":0.0,"wte":6.28}
                        }
                        }
 
 #Voltage and frequency ride through settings from IEEE 1557-2018 Category III (Table 16, page 48) 
-#V1 to V2 - zone 2,V1 < - zone 1 
+#V1 to V2 - zone 2,V1 < - zone 1  SolarPVDER_ThreePhaseConstantVdc
     
 RT_config_template = {'LVRT':{'0':['V_threshold','t_threshold','mode','t_start','threshold_breach']},
                       'HVRT':{'0':['V_threshold','t_threshold','mode','t_start','threshold_breach']},

@@ -215,14 +215,24 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             ua0 = DER_arguments['ua']
         else:
             ua0 = self.DER_config['initial_states']['uaR'] + 1j*self.DER_config['initial_states']['uaI']
-        if 'xDC' in DER_arguments:
-            xDC0 = DER_arguments['xDC']
-        else:
-            xDC0 = self.DER_config['initial_states']['xDC']
-        if 'xQ' in DER_arguments:
-            xQ0 = DER_arguments['xQ']
-        else:
-            xQ0 = self.DER_config['initial_states']['xQ']
+        
+        if 'xDC' in templates.DER_design_template[self.DER_model_type]['initial_states']:
+            if 'xDC' in DER_arguments:
+                xDC0 = DER_arguments['xDC']
+            else:
+                xDC0 = self.DER_config['initial_states']['xDC']
+        
+        if 'xP' in templates.DER_design_template[self.DER_model_type]['initial_states']:
+            if 'xP' in DER_arguments:
+                xP0 = DER_arguments['xP']
+            else:
+                xP0 = self.DER_config['initial_states']['xP']
+                
+        if 'xQ' in templates.DER_design_template[self.DER_model_type]['initial_states']:
+            if 'xQ' in DER_arguments:
+                xQ0 = DER_arguments['xQ']
+            else:
+                xQ0 = self.DER_config['initial_states']['xQ']
         
         xPLL0 = self.DER_config['initial_states']['xPLL']
         wte0 = self.DER_config['initial_states']['wte']        
@@ -240,15 +250,18 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             self.xa = xa0
             self.ua = ua0
             
-            #DC link voltage and reactive power controller
-            self.xDC = xDC0
-            self.xQ = xQ0
-
-            #PLL
-            self.xPLL = xPLL0
+            if 'xDC' in templates.DER_design_template[self.DER_model_type]['initial_states']:
+               self.xDC = xDC0 #DC link voltage controller
+            if 'xP' in templates.DER_design_template[self.DER_model_type]['initial_states']:
+               self.xP = xP0   #Active power controller 
+            if 'xQ' in templates.DER_design_template[self.DER_model_type]['initial_states']:
+               self.xQ = xQ0   #Reactive power controller
+            
+            self.xPLL = xPLL0 #PLL
             self.wte = wte0
 
-            if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            #if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            if self.DER_model_type in templates.three_phase_models:
                 ib0 = utility_functions.Ub_calc(ia0)
                 xb0 = utility_functions.Ub_calc(xa0)
                 ub0 = utility_functions.Ub_calc(ua0)
@@ -355,10 +368,6 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         """Initialize AC side currents."""
         
         self.Iarated = (self.Sinverter_rated/(self.n_phases*(self.Varated/math.sqrt(2))))*math.sqrt(2)
-        #if type(self).__name__ == 'SolarPV_DER_SinglePhase':
-        #    self.Iarated = (self.Sinverter_rated/(self.Varated/math.sqrt(2)))*math.sqrt(2)
-        #elif type(self).__name__ == 'SolarPV_DER_ThreePhase' or type(self).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
-        #    self.Iarated = (self.Sinverter_rated/(3*(self.Varated/math.sqrt(2))))*math.sqrt(2)            
         
         self.Ioverload = self.inverter_ratings[self.parameter_ID]['Ioverload']  #Inverter current overload rating (Max 10s)            
         self.iref_limit = (self.Iarated/self.Ibase)*self.Ioverload #Maximum current reference
@@ -371,15 +380,20 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             if self.standAlone:
                 self.a = self.grid_model.Vgridrated/self.Varated  #Transformer turns ratio
 
-            self.Rf_actual =  self.circuit_parameters[self.parameter_ID]['Rf_actual'] #Filter resistance
-            self.Lf_actual = self.circuit_parameters[self.parameter_ID]['Lf_actual']  #Filter inductance
-            self.C_actual =  self.circuit_parameters[self.parameter_ID]['C_actual']   #DC link capacitance
+            if 'Rf_actual' in templates.DER_design_template[self.DER_model_type]['circuit_parameters']:
+                self.Rf_actual =  self.circuit_parameters[self.parameter_ID]['Rf_actual'] #Filter resistance
+                self.Rf = self.Rf_actual/BaseValues.Zbase        # VSC Filter resistance 
+           
+            if 'Lf_actual' in templates.DER_design_template[self.DER_model_type]['circuit_parameters']:
+                self.Lf_actual = self.circuit_parameters[self.parameter_ID]['Lf_actual']  #Filter inductance
+                self.Lf = self.Lf_actual/BaseValues.Lbase        # VSC Filter inductance
+                self.Xf = (self.Lf_actual*BaseValues.wbase)/BaseValues.Zbase # VSC Filter reactance            
+            
+            if 'C_actual' in templates.DER_design_template[self.DER_model_type]['circuit_parameters']:
+                self.C_actual =  self.circuit_parameters[self.parameter_ID]['C_actual']   #DC link capacitance
+                self.C = self.C_actual/BaseValues.Cbase          #DC link capacitor capacitance
+            
             self.Zf_actual =  self.Rf_actual + 1j*self.Lf_actual*BaseValues.wbase
-
-            self.Rf = self.Rf_actual/BaseValues.Zbase        # VSC Filter resistance 
-            self.Lf = self.Lf_actual/BaseValues.Lbase        # VSC Filter inductance
-            self.Xf = (self.Lf_actual*BaseValues.wbase)/BaseValues.Zbase # VSC Filter reactance
-            self.C = self.C_actual/BaseValues.Cbase          #DC link capacitor capacitance
             self.Zf = self.Zf_actual/BaseValues.Zbase
 
             #Interconnection to PCC - HV side
@@ -426,10 +440,20 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             self.wp =  self.controller_gains[self.parameter_ID]['wp']      #First order filter gain for GCC
 
             #Power (active and reactive) controller gains
-            self.Kp_DC = self.controller_gains[self.parameter_ID]['Kp_DC']   #Active power controller Proportional constant
-            self.Ki_DC = self.controller_gains[self.parameter_ID]['Ki_DC'] #Active power controller Integral constant
-            self.Kp_Q = self.controller_gains[self.parameter_ID]['Kp_Q']  #Reactive power controller Proportional constant
-            self.Ki_Q = self.controller_gains[self.parameter_ID]['Ki_Q']   #Reactive power controller Integral constant   
+            if 'Kp_DC' in templates.DER_design_template[self.DER_model_type]['controller_gains']:
+                self.Kp_DC = self.controller_gains[self.parameter_ID]['Kp_DC']   #Active power controller Proportional constant
+            if 'Kp_DC' in templates.DER_design_template[self.DER_model_type]['controller_gains']:
+                self.Ki_DC = self.controller_gains[self.parameter_ID]['Ki_DC'] #Active power controller Integral constant
+            
+            if 'Kp_P' in templates.DER_design_template[self.DER_model_type]['controller_gains']:
+                self.Kp_P = self.controller_gains[self.parameter_ID]['Kp_P']  #Active power controller Proportional constant
+            if 'Ki_P' in templates.DER_design_template[self.DER_model_type]['controller_gains']:
+                self.Ki_P = self.controller_gains[self.parameter_ID]['Ki_P']   #Active power controller Integral constant   
+            
+            if 'Kp_Q' in templates.DER_design_template[self.DER_model_type]['controller_gains']:
+                self.Kp_Q = self.controller_gains[self.parameter_ID]['Kp_Q']  #Reactive power controller Proportional constant
+            if 'Ki_Q' in templates.DER_design_template[self.DER_model_type]['controller_gains']:
+                self.Ki_Q = self.controller_gains[self.parameter_ID]['Ki_Q']   #Reactive power controller Integral constant   
             
         else:
             raise ValueError('Controller gains not available for parameter ID: {}!'.format(self.parameter_ID))    
@@ -450,7 +474,19 @@ class PVDER_SetupUtilities(BaseValues,Logging):
                           'ibR','ibI','xbR','xbI','ubR','ubI',
                           'icR','icI','xcR','xcI','ucR','ucI',
                           'Vdc','xDC','xQ','xPLL','wte']            
-            
+        
+        elif type(self).__name__ == 'SolarPVDER_SinglePhaseConstantVdc':
+            state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
+                          'xP','xQ',
+                          'xPLL','wte']
+        
+        elif type(self).__name__ == 'SolarPVDER_ThreePhaseConstantVdc':
+            state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
+                          'ibR','ibI','xbR','xbI','ubR','ubI',
+                          'icR','icI','xcR','xcI','ucR','ucI',
+                          'xP','xQ',
+                          'xPLL','wte']            
+        
         for entry in state_list:
             self.varInd[entry]=n
             n+=1
@@ -494,25 +530,26 @@ class PVDER_SetupUtilities(BaseValues,Logging):
     def check_circuit_parameters(self):
         """Method to check whether inverter circuit parameter's are feasible."""
         
-        _del_I1max = 0.1*self.Iarated
-        _Lf_min = self.Vdcrated/(16*self.fswitching*_del_I1max)
-        _del_I1max_actual = self.Vdcrated/(16*self.fswitching*self.Lf_actual)
-        if _del_I1max_actual > _del_I1max:   #Check if ripple current is less than 10 %
-            self.logger.debug('{}:Filter inductance {:.4f} H is acceptable since AC side current ripple is {:.2f}% (< 10%)'.format(self.name,_Lf_min,_del_I1max_actual/self.Iarated))
+        del_I1max = 0.1*self.Iarated
+        Lf_min = self.Vdcrated/(16*self.fswitching*del_I1max)
+        del_I1max_actual = self.Vdcrated/(16*self.fswitching*self.Lf_actual)
+        if del_I1max_actual > del_I1max:   #Check if ripple current is less than 10 %
+            self.logger.debug('{}:Filter inductance {:.4f} H is acceptable since AC side current ripple is {:.2f}% (< 10%)'.format(self.name,Lf_min,del_I1max_actual/self.Iarated))
         else:
-            self.logger.debug('{}:Warning:Filter inductance {:.4f} H results in AC side current ripple of {:.2f}% (> 10%)'.format(self.name,_Lf_min,_del_I1max_actual/self.Iarated))
+            self.logger.debug('{}:Warning:Filter inductance {:.4f} H results in AC side current ripple of {:.2f}% (> 10%)'.format(self.name,Lf_min,del_I1max_actual/self.Iarated))
         
-        _I_ripple = (0.25*self.Vdcrated)/(self.Lf_actual*self.fswitching)  #Maximum ripple voltage (p-p) at DC link
-        _V_ripple = self.Vdcrated/(32*self.Lf_actual*self.C_actual*(self.fswitching**2))  #Maximum ripple voltage (p-p) at DC link
-        _V_ripple_percentage = (_V_ripple/self.Vdcrated)*100
-        if _V_ripple_percentage <= 1.0:   #Check if voltage ripple on DC link is less than 1%
-            self.logger.debug('{}:DC link capacitance of {:.4f} F is acceptable since voltage ripple is only {:.2f}% (< 1%)'.format(self.name,self.C_actual,_V_ripple_percentage))
+        if hasattr(self,'C_actual'):
+            I_ripple = (0.25*self.Vdcrated)/(self.Lf_actual*self.fswitching)  #Maximum ripple voltage (p-p) at DC link
+            V_ripple = self.Vdcrated/(32*self.Lf_actual*self.C_actual*(self.fswitching**2))  #Maximum ripple voltage (p-p) at DC link
+            V_ripple_percentage = (V_ripple/self.Vdcrated)*100
+            if V_ripple_percentage <= 1.0:   #Check if voltage ripple on DC link is less than 1%
+               self.logger.debug('{}:DC link capacitance of {:.4f} F is acceptable since voltage ripple is only {:.2f}% (< 1%)'.format(self.name,self.C_actual,V_ripple_percentage))
         
-        else:
-            _V_ripple_ideal = self.Vdcrated*0.01  #1% ripple is acceptable
-            _C = self.Vdcrated/(32*self.Lf_actual*_V_ripple_ideal*(self.fswitching**2))
-            self.logger.debug('{}:Warning:DC link capacitance of {:.4f} F results in DC link voltage ripple of {:.2}% (> 1%)!Please use at least {} F.'.format(self.name,self.C_actual,_V_ripple_percentage,_C))
-            #warnings.warn('Warning:DC link capacitance of {} F results in DC link voltage ripple of {:.3}% (> 1%)!Please use at least {} F.'.format(self.C_actual,_V_ripple_percentage,_C))               
+            else:
+               V_ripple_ideal = self.Vdcrated*0.01  #1% ripple is acceptable
+               C = self.Vdcrated/(32*self.Lf_actual*V_ripple_ideal*(self.fswitching**2))
+               self.logger.debug('{}:Warning:DC link capacitance of {:.4f} F results in DC link voltage ripple of {:.2}% (> 1%)!Please use at least {} F.'.format(self.name,self.C_actual,V_ripple_percentage,C))
+               #warnings.warn('Warning:DC link capacitance of {} F results in DC link voltage ripple of {:.3}% (> 1%)!Please use at least {} F.'.format(self.C_actual,_V_ripple_percentage,_C))               
         
     def power_error_calc(self,x):
         """Function for power."""
@@ -534,7 +571,8 @@ class PVDER_SetupUtilities(BaseValues,Logging):
 
         #Sloss_filter = ((abs(ia)/math.sqrt(2))**2)*self.Zf 
     
-        if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        #if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        if self.DER_model_type in templates.three_phase_models:
             
             if not self.allow_unbalanced_m:
                 mb = utility_functions.Ub_calc(ma)
@@ -582,7 +620,8 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         #Q_error_filter_expected =  (St.imag - Qloss_filter_expected)**2 
         
         
-        if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        #if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        if self.DER_model_type in templates.three_phase_models:
             del_1 = utility_functions.relative_phase_calc(ma,mb)
             del_2 = utility_functions.relative_phase_calc(ma,mc)
             del_3 = utility_functions.relative_phase_calc(mb,mc)
@@ -643,7 +682,6 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             
         x0 = np.array(x0)
         
-        disp = bool(self.verbosity == 'DEBUG')
         self.solver_spec[self.steadystate_solver].update({'disp':bool(self.verbosity == 'DEBUG')})                   
         result = minimize(self.power_error_calc, x0,
                           method=self.steadystate_solver,options=self.solver_spec[self.steadystate_solver])
@@ -659,13 +697,18 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.vta = self.vta_calc()
         self.va = self.va_calc()
         
-        self.xDC = self.ia.real
-        self.xQ = self.ia.imag
+        if 'xDC' in templates.DER_design_template[self.DER_model_type]['initial_states']:
+           self.xDC = self.ia.real
+        if 'xP' in templates.DER_design_template[self.DER_model_type]['initial_states']:
+           self.xP = self.ia.real
+        if 'xQ' in templates.DER_design_template[self.DER_model_type]['initial_states']:
+           self.xQ = self.ia.imag
         
         self.xPLL = 0.0
         self.wte = 2*math.pi
         
-        if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        #if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        if self.DER_model_type in templates.three_phase_models:
             
             if not self.allow_unbalanced_m:
                 mb0 = utility_functions.Ub_calc(ma0)
