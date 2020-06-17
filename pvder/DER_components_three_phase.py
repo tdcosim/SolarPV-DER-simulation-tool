@@ -19,13 +19,13 @@ from pvder.grid_components import BaseValues
 from pvder import utility_functions
 from pvder import defaults,templates
 
-class SolarPV_DER_ThreePhase(PVModule,SolarPVDER):
+class SolarPVDERThreePhase(PVModule,SolarPVDER):
     """
        Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
        control systems.
        
        Attributes:
-          count (int): Number of instances of `SolarPV_DER_ThreePhase`.
+          count (int): Number of instances of `SolarPVDERThreePhase`.
           n_ODE (int): Number of ODE's.
        
     """
@@ -54,13 +54,13 @@ class SolarPV_DER_ThreePhase(PVModule,SolarPVDER):
         
         """
                 
-        SolarPV_DER_ThreePhase.count = SolarPV_DER_ThreePhase.count+1 #Increment count to keep track of number of PV-DER model instances
+        SolarPVDERThreePhase.count = SolarPVDERThreePhase.count+1 #Increment count to keep track of number of PV-DER model instances
         DER_arguments = self.setup_DER(events,configFile,**kwargs)         
         
         if six.PY3:
             super().__init__(self.DER_config['basic_options']['Sinsol'])  #Initialize PV module class (base class)
         elif six.PY2:
-            super(SolarPV_DER_ThreePhase,self).__init__(self.DER_config['basic_options']['Sinsol'])
+            super(SolarPVDERThreePhase,self).__init__(self.DER_config['basic_options']['Sinsol'])
         
         self.initialize_DER(DER_arguments)         
         self.creation_message()        
@@ -230,9 +230,6 @@ class SolarPV_DER_ThreePhase(PVModule,SolarPVDER):
                                     icR + 1j*icI, xcR + 1j*xcI,ucR + 1j*ucI,\
                                     Vdc,xDC,xQ,\
                                     xPLL,wte)
-               
-        #self.xb = utility_functions.Ub_calc(self.xa)
-        #self.xc = utility_functions.Uc_calc(self.xa)
         
         self.update_Ppv(t)
         self.update_Zload1(t)        

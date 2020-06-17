@@ -31,11 +31,11 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
     DEBUG_POWER = False
     DEBUG_PLL = False
     
-    jac_list = ['SolarPV_DER_ThreePhase','SolarPV_DER_SinglePhase']
+    jac_list = ['SolarPVDERThreePhase','SolarPVDERSinglePhase']
         
-    def __init__(self,PV_model,events,grid_model = None,tStop = 0.5,
+    def __init__(self,PV_model,events,gridModel = None,tStop = 0.5,
                  LOOP_MODE = False,COLLECT_SOLUTION = True,jacFlag = False,
-                 verbosity ='INFO',solver_type ='odeint',identifier = None):
+                 verbosity ='INFO',solverType ='odeint',identifier = None):
         """Creates an instance of `GridSimulation`.
         
         Args:
@@ -59,7 +59,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.simulation_events = events
         self.simulation_events.del_t_event = self.tInc
         
-        self.initialize_solver(solver_type=solver_type)
+        self.initialize_solver(solver_type=solverType)
         
         self.SOLVER_CONVERGENCE = False
         self.convergence_failure_list =[]
@@ -69,9 +69,9 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.jacFlag = jacFlag
         self.check_jac_availability()
         
-        if self.PV_model.standAlone and grid_model is not None:
-            self.grid_model = grid_model
-        elif self.PV_model.standAlone and grid_model is None:
+        if self.PV_model.standAlone and gridModel is not None:
+            self.grid_model = gridModel
+        elif self.PV_model.standAlone and gridModel is None:
             raise ValueError('`Grid` instance need to provided in stand alone mode for creating `GridSimulation` instance!')
         
         #Remove existing simulation events
@@ -98,7 +98,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
     def y0(self):
         """ Combine all initial conditions from solution."""
         
-        if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+        if type(self.PV_model).__name__ == 'SolarPVDERThreePhase':
             y0 = [self.iaR_t[-1], self.iaI_t[-1], self.xaR_t[-1], self.xaI_t[-1], self.uaR_t[-1],self.uaI_t[-1],\
                   self.ibR_t[-1], self.ibI_t[-1], self.xbR_t[-1], self.xbI_t[-1], self.ubR_t[-1],self.ubI_t[-1],\
                   self.icR_t[-1], self.icI_t[-1], self.xcR_t[-1], self.xcI_t[-1], self.ucR_t[-1],self.ucI_t[-1],\
@@ -106,23 +106,30 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
                   self.xDC_t[-1],self.xQ_t[-1],
                   self.xPLL_t[-1],self.wte_t[-1]]    
         
-        elif type(self.PV_model).__name__ == 'SolarPV_DER_SinglePhase':
+        elif type(self.PV_model).__name__ == 'SolarPVDERSinglePhase':
             y0 =[self.iaR_t[-1], self.iaI_t[-1], self.xaR_t[-1], self.xaI_t[-1], self.uaR_t[-1],self.uaI_t[-1],\
                  self.Vdc_t[-1],
                  self.xDC_t[-1],self.xQ_t[-1],
                  self.xPLL_t[-1],self.wte_t[-1]]
         
-        elif type(self.PV_model).__name__ == 'SolarPVDER_SinglePhaseConstantVdc':
+        elif type(self.PV_model).__name__ == 'SolarPVDERSinglePhaseConstantVdc':
             y0 =[self.iaR_t[-1], self.iaI_t[-1], self.xaR_t[-1], self.xaI_t[-1], self.uaR_t[-1],self.uaI_t[-1],\
                  self.xP_t[-1],self.xQ_t[-1],
                  self.xPLL_t[-1],self.wte_t[-1]]
         
-        elif type(self.PV_model).__name__ == 'SolarPVDER_ThreePhaseConstantVdc':
+        elif type(self.PV_model).__name__ == 'SolarPVDERThreePhaseConstantVdc':
             y0 =[self.iaR_t[-1], self.iaI_t[-1], self.xaR_t[-1], self.xaI_t[-1], self.uaR_t[-1],self.uaI_t[-1],
                  self.ibR_t[-1], self.ibI_t[-1], self.xbR_t[-1], self.xbI_t[-1], self.ubR_t[-1],self.ubI_t[-1],
                  self.icR_t[-1], self.icI_t[-1], self.xcR_t[-1], self.xcI_t[-1], self.ucR_t[-1],self.ucI_t[-1],
                  self.xP_t[-1],self.xQ_t[-1],
                  self.xPLL_t[-1],self.wte_t[-1]]        
+        
+        elif self.DER_model_type == 'SolarPVDERThreePhaseBalanced':
+            y0 =[self.iaR_t[-1], self.iaI_t[-1], self.xaR_t[-1], self.xaI_t[-1], self.uaR_t[-1],self.uaI_t[-1],
+                 self.Vdc_t[-1],
+                 self.xDC_t[-1],self.xQ_t[-1],
+                 self.xPLL_t[-1],self.wte_t[-1]]
+        
         
         return y0
     
@@ -151,7 +158,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.uaR_t = np.array([self.PV_model.y0[4]])
         self.uaI_t = np.array([self.PV_model.y0[5]])
         
-        if type(self.PV_model).__name__ == 'SolarPV_DER_SinglePhase':            
+        if type(self.PV_model).__name__ == 'SolarPVDERSinglePhase':            
             self.Vdc_t = np.array([self.PV_model.y0[6]]) #DC link voltage variable
             
             self.xDC_t = np.array([self.PV_model.y0[7]]) #DC link voltage control variable
@@ -160,7 +167,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             self.xPLL_t = np.array([self.PV_model.y0[9]]) #PLL variables            
             self.wte_t = np.array([self.PV_model.y0[10]]) #Frequency integration to get angle
         
-        elif type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+        elif type(self.PV_model).__name__ == 'SolarPVDERThreePhase':
             self.ibR_t = np.array([self.PV_model.y0[6]])
             self.ibI_t = np.array([self.PV_model.y0[7]])
             self.xbR_t = np.array([self.PV_model.y0[8]])
@@ -183,7 +190,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             self.xPLL_t = np.array([self.PV_model.y0[21]])
             self.wte_t = np.array([self.PV_model.y0[22]])
             
-        elif type(self.PV_model).__name__ == 'SolarPVDER_ThreePhaseConstantVdc':
+        elif type(self.PV_model).__name__ == 'SolarPVDERThreePhaseConstantVdc':
             self.ibR_t = np.array([self.PV_model.y0[6]])
             self.ibI_t = np.array([self.PV_model.y0[7]])
             self.xbR_t = np.array([self.PV_model.y0[8]])
@@ -206,7 +213,43 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             self.xPLL_t = np.array([self.PV_model.y0[20]]) #PLL variables            
             self.wte_t = np.array([self.PV_model.y0[21]]) #Frequency integration to get angle
         
-        elif type(self.PV_model).__name__ == 'SolarPVDER_SinglePhaseConstantVdc':        
+        elif type(self.PV_model).__name__ == 'SolarPVDERThreePhaseBalanced':            
+            
+            ia_t = self.iaR_t+self.iaI_t*1j
+            xa_t = self.xaR_t+self.xaI_t*1j
+            ua_t = self.uaR_t+self.uaI_t*1j
+            
+            ib_t = utility_functions.Ub_calc(ia_t)
+            xb_t = utility_functions.Ub_calc(xa_t)
+            ub_t = utility_functions.Ub_calc(ua_t)
+            
+            ic_t = utility_functions.Uc_calc(ia_t)
+            xc_t = utility_functions.Uc_calc(xa_t)
+            uc_t = utility_functions.Uc_calc(ua_t)            
+            
+            self.ibR_t = ib_t.real 
+            self.ibI_t = ib_t.imag 
+            self.xbR_t = xb_t.real 
+            self.xbI_t = xb_t.imag 
+            self.ubR_t = ub_t.real
+            self.ubI_t = ub_t.imag 
+
+            self.icR_t = ic_t.real 
+            self.icI_t = ic_t.imag 
+            self.xcR_t = xc_t.real 
+            self.xcI_t = xc_t.imag 
+            self.ucR_t = uc_t.real 
+            self.ucI_t = uc_t.imag
+            
+            self.Vdc_t = np.array([self.PV_model.y0[6]]) #DC link voltage variable
+            
+            self.xDC_t = np.array([self.PV_model.y0[7]]) #DC link voltage control variable
+            self.xQ_t = np.array([self.PV_model.y0[8]]) #Reactive power control variable
+            
+            self.xPLL_t = np.array([self.PV_model.y0[9]]) #PLL variables            
+            self.wte_t = np.array([self.PV_model.y0[10]]) #Frequency integration to get angle
+        
+        elif type(self.PV_model).__name__ == 'SolarPVDERSinglePhaseConstantVdc':        
             self.Vdc_t = np.array([self.PV_model.Vdc]) #Voltage is constant
             
             self.xP_t = np.array([self.PV_model.y0[6]])  #Active power control variable
@@ -229,7 +272,6 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.ma_absolute_t = self._ma_absolute_t = np.array(abs(self.PV_model.ma))
         self.Varms_t  = self._Varms_t = np.array(abs(self.PV_model.va)/math.sqrt(2))
         
-        #if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase' or type(self.PV_model).__name__ == 'SolarPVDER_ThreePhaseConstantVdc':
         if type(self.PV_model).__name__ in templates.three_phase_models:
             self.mb_absolute_t = self._mb_absolute_t = np.array(abs(self.PV_model.mb))
             self.mc_absolute_t = self._mc_absolute_t = np.array(abs(self.PV_model.mc))
@@ -308,12 +350,10 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         self.vaHV_t = self.vag_t + (self.ia_t/self.PV_model.a)*self.grid_model.Z2 - (self.va_t/self.PV_model.a)*(self.grid_model.Z2/self.Zload1_t)
         
-        #if type(self.PV_model).__name__ == 'SolarPV_DER_SinglePhase':
         if type(self.PV_model).__name__ in templates.single_phase_models:    
             self.vbHV_t = self.vbg_t 
             self.vcHV_t = self.vcg_t 
             
-        #elif type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
         elif type(self.PV_model).__name__ in templates.three_phase_models:
             self.vbHV_t = self.vbg_t + (self.ib_t/self.PV_model.a)*self.grid_model.Z2 - (self.vb_t/self.PV_model.a)*(self.grid_model.Z2/self.Zload1_t)
             self.vcHV_t = self.vcg_t + (self.ic_t/self.PV_model.a)*self.grid_model.Z2 - (self.vc_t/self.PV_model.a)*(self.grid_model.Z2/self.Zload1_t)
@@ -327,7 +367,6 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         self.ma_absolute_t = utility_functions.Uabsolute_time_series(self.ma_t)
                 
-        #if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
         if type(self.PV_model).__name__ in templates.three_phase_models:
             self.mb_t =  utility_functions.m_time_series(self.ub_t,self.xb_t,self.PV_model.Kp_GCC)
             self.mc_t =  utility_functions.m_time_series(self.uc_t,self.xc_t,self.PV_model.Kp_GCC)
@@ -352,7 +391,6 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.vaR_t = self.va_t.real
         self.vaI_t = self.va_t.imag
         
-        #if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
         if type(self.PV_model).__name__ in templates.three_phase_models:
             if self.PV_model.standAlone:
                 self.vb_t = ((self.vbg_t+(self.ib_t/self.PV_model.a)*self.grid_model.Z2)/(self.PV_model.a) +self.ib_t*self.PV_model.Z1)*((self.Zload1_t*self.PV_model.a*self.PV_model.a)/((self.PV_model.a*self.PV_model.a*(self.PV_model.Z1+self.Zload1_t))+self.grid_model.Z2))
@@ -371,7 +409,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         """Calculate time series inverter terminal voltage."""
         
         self.vta_t =  utility_functions.Vinv_terminal_time_series(self.ma_t,self.Vdc_t)
-        #if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+       
         if type(self.PV_model).__name__ in templates.three_phase_models:
             self.vtb_t =  utility_functions.Vinv_terminal_time_series(self.mb_t,self.Vdc_t)
             self.vtc_t =  utility_functions.Vinv_terminal_time_series(self.mc_t,self.Vdc_t)
@@ -379,7 +417,6 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
     def time_series_RMS(self):
         """Calculate time series RMS quantities."""
         
-        #if type(self.PV_model).__name__ == 'SolarPV_DER_SinglePhase':
         if type(self.PV_model).__name__ in templates.single_phase_models:
             self.Vtrms_t = utility_functions.Urms_time_series(self.vta_t,self.vta_t,self.vta_t)
             self.Vrms_t = utility_functions.Urms_time_series(self.va_t,self.va_t,self.va_t)
@@ -387,7 +424,6 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             
             self.Varms_t = self.Vrms_t
     
-        #elif type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
         elif type(self.PV_model).__name__ in templates.three_phase_models:
             self.Vtrms_t = utility_functions.Urms_time_series(self.vta_t,self.vtb_t,self.vtc_t)
             self.Vrms_t = utility_functions.Urms_time_series(self.va_t,self.vb_t,self.vc_t)
@@ -468,13 +504,11 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             self.PV_model.wte = self.wte_t[i]
             self.PV_model.xPLL = self.xPLL_t[i]
             
-            #if type(self.PV_model).__name__ == 'SolarPV_DER_SinglePhase':
             if type(self.PV_model).__name__ in templates.single_phase_models:
                 self.PV_model.valpha = utility_functions.phasor_to_time_1phase(self.va_t[i],self.wgrid_t[i],t)
                 self.PV_model.vbeta =utility_functions.phasor_to_time_1phase(self.va_t[i]*pow(math.e,-1j*(math.pi/2)),self.wgrid_t[i],t)
                 self.PV_model.vd,self.PV_model.vq = utility_functions.alpha_beta_to_d_q(self.PV_model.valpha,self.PV_model.vbeta,self.PV_model.wte)
             
-            #elif type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
             elif type(self.PV_model).__name__ in templates.three_phase_models:
                 self.PV_model.vat = utility_functions.phasor_to_time_1phase(self.va_t[i],self.wgrid_t[i],t)
                 self.PV_model.vbt = utility_functions.phasor_to_time_1phase(self.vb_t[i],self.wgrid_t[i],t)
@@ -529,7 +563,6 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
     def time_series_S(self):
         """Calculate time series apparent power."""
         
-        #if type(self.PV_model).__name__ == 'SolarPV_DER_SinglePhase':
         if type(self.PV_model).__name__ in templates.single_phase_models:
             self.S_t = (1/2)*(self.vta_t*self.ia_t.conjugate())
             self.S_PCC_t = (1/2)*(self.va_t*self.ia_t.conjugate())            
@@ -538,7 +571,6 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
                 self.S_G_t = (1/2)*(-(self.ia_t - (self.va_t/self.Zload1_t))/self.PV_model.a).conjugate()*self.vag_t
                 self.S_load1_t = (1/2)*(self.va_t*(-(self.va_t/self.Zload1_t)).conjugate())
         
-        #elif type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
         elif type(self.PV_model).__name__ in templates.three_phase_models:
             self.S_t = (1/2)*(self.vta_t*self.ia_t.conjugate() + self.vtb_t*self.ib_t.conjugate() + self.vtc_t*self.ic_t.conjugate())
             self.S_PCC_t = (1/2)*(self.va_t*self.ia_t.conjugate()+self.vb_t*self.ib_t.conjugate()+self.vc_t*self.ic_t.conjugate())
@@ -559,7 +591,6 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             self.phi_aHV_t = np.angle(self.vaHV_t) 
             self.phi_ag_t = np.angle(self.vag_t)        
         
-        #if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
         if type(self.PV_model).__name__ in templates.three_phase_models:
             self.phi_bt_t = np.angle(self.vtb_t)
             self.phi_ct_t = np.angle(self.vtc_t)
@@ -602,7 +633,6 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self._ma_absolute_t = np.append(self._ma_absolute_t,self.ma_absolute_t[1:])
         self._Varms_t = np.append(self._Varms_t,self.Varms_t[1:])
         
-        #if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
         if type(self.PV_model).__name__ in templates.three_phase_models:
             self._mb_absolute_t = np.append(self._mb_absolute_t,self.mb_absolute_t[1:])
             self._mc_absolute_t = np.append(self._mc_absolute_t,self.mc_absolute_t[1:])
@@ -645,7 +675,6 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.xa_t = self.xaR_t+1j*self.xaI_t
         assert len(self.ua_t) == len(self.xa_t) != None, "States must be available from simulation."
                 
-        #if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
         if type(self.PV_model).__name__ in templates.three_phase_models:
             self.ib_t = self.ibR_t + 1j*self.ibI_t
             self.ic_t = self.icR_t + 1j*self.icI_t
@@ -694,7 +723,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.uaR_t = solution[:,4]
         self.uaI_t = solution[:,5]              
         
-        if type(self.PV_model).__name__ == 'SolarPV_DER_SinglePhase':
+        if type(self.PV_model).__name__ == 'SolarPVDERSinglePhase':
             #DC link voltage variables
             self.Vdc_t = solution[:,6]
             self.xDC_t = solution[:,7]
@@ -704,7 +733,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             #Frequency integration to get angle
             self.wte_t = solution[:,10]
 
-        elif type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+        elif type(self.PV_model).__name__ == 'SolarPVDERThreePhase':
             
             #Phase b states
             self.ibR_t = solution[:,6]
@@ -741,7 +770,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             self.xPLL_t = solution[:,8] #PLL variables            
             self.wte_t = solution[:,9] #Frequency integration to get angle
         
-        elif type(self.PV_model).__name__ == 'SolarPVDER_ThreePhaseConstantVdc':
+        elif type(self.PV_model).__name__ == 'SolarPVDERThreePhaseConstantVdc':
            #Phase b states
             self.ibR_t = solution[:,6]
             self.ibI_t = solution[:,7]
@@ -765,6 +794,43 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
             
             self.xPLL_t = solution[:,20] #PLL variables            
             self.wte_t = solution[:,21] #Frequency integration to get angle
+            
+        elif type(self.PV_model).__name__ == 'SolarPVDERThreePhaseBalanced':
+            
+            ia_t = self.iaR_t+self.iaI_t*1j
+            xa_t = self.xaR_t+self.xaI_t*1j
+            ua_t = self.uaR_t+self.uaI_t*1j
+            
+            ib_t = utility_functions.Ub_calc(ia_t)
+            xb_t = utility_functions.Ub_calc(xa_t)
+            ub_t = utility_functions.Ub_calc(ua_t)
+            
+            ic_t = utility_functions.Uc_calc(ia_t)
+            xc_t = utility_functions.Uc_calc(xa_t)
+            uc_t = utility_functions.Uc_calc(ua_t)            
+            
+            self.ibR_t = ib_t.real 
+            self.ibI_t = ib_t.imag 
+            self.xbR_t = xb_t.real 
+            self.xbI_t = xb_t.imag 
+            self.ubR_t = ub_t.real
+            self.ubI_t = ub_t.imag 
+
+            self.icR_t = ic_t.real 
+            self.icI_t = ic_t.imag 
+            self.xcR_t = xc_t.real 
+            self.xcI_t = xc_t.imag 
+            self.ucR_t = uc_t.real 
+            self.ucI_t = uc_t.imag
+            
+            #DC link voltage variables
+            self.Vdc_t = solution[:,6]
+            self.xDC_t = solution[:,7]
+            self.xQ_t = solution[:,8]
+            #PLL variables
+            self.xPLL_t = solution[:,9]
+            #Frequency integration to get angle
+            self.wte_t = solution[:,10]
     
     def invert_arrays(self):
         """Inverter arrays before usage by plots."""
@@ -780,7 +846,6 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         self.ma_absolute_t = self._ma_absolute_t
         self.Varms_t = self._Varms_t
         
-        #if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
         if type(self.PV_model).__name__ in templates.three_phase_models:
             self.mb_absolute_t = self._mb_absolute_t
             self.mc_absolute_t = self._mc_absolute_t
@@ -866,10 +931,10 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
         
         self.PV_model.gridVoltagePhaseA = gridVoltagePhaseA
         
-        if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+        if type(self.PV_model).__name__ == 'SolarPVDERThreePhase':
             self.PV_model.gridVoltagePhaseB = gridVoltagePhaseB
             self.PV_model.gridVoltagePhaseC = gridVoltagePhaseC
-        elif type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhaseBalanced':
+        elif type(self.PV_model).__name__ == 'SolarPVDERThreePhaseBalanced':
             self.PV_model.gridVoltagePhaseB = utility_functions.Ub_calc(gridVoltagePhaseA)
             self.PV_model.gridVoltagePhaseC = utility_functions.Uc_calc(gridVoltagePhaseA)
     
@@ -890,7 +955,6 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
                                  'Ppv_t':self.Ppv_t,'S_t':self.S_t,'S_PCC_t':self.S_PCC_t
                                 }
         
-        #if type(self.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
         if type(self.PV_model).__name__ in templates.three_phase_models:
             
             trajectory_dictionary.update({'ib_t':self.ib_t,'ic_t':self.ic_t,'mb_t':self.mb_t,'mc_t':self.mc_t,

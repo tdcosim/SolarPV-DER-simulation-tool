@@ -16,13 +16,13 @@ from pvder.grid_components import BaseValues
 from pvder import utility_functions
 from pvder import defaults,templates
 
-class SolarPVDER_SinglePhaseConstantVdc(PVModule,SolarPVDER):    
+class SolarPVDERSinglePhaseConstantVdc(PVModule,SolarPVDER):    
     """
     Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
     control systems.
     
     Attributes:
-          count (int): Number of instances of `SolarPVDER_SinglePhaseConstantVdc`.
+          count (int): Number of instances of `SolarPVDERSinglePhaseConstantVdc`.
           n_ODE (int): Number of ODE's.
     
     """
@@ -52,14 +52,14 @@ class SolarPVDER_SinglePhaseConstantVdc(PVModule,SolarPVDER):
         
         """
         
-        SolarPVDER_SinglePhaseConstantVdc.count = SolarPVDER_SinglePhaseConstantVdc.count+1 #Increment count to keep track of number of PV-DER model instances
+        SolarPVDERSinglePhaseConstantVdc.count = SolarPVDERSinglePhaseConstantVdc.count+1 #Increment count to keep track of number of PV-DER model instances
                       
         DER_arguments = self.setup_DER(events,configFile,**kwargs)
                                
         if six.PY3:
             super().__init__(self.DER_config['basic_options']['Sinsol'])  #Initialize PV module class (base class)
         elif six.PY2:
-            super(SolarPVDER_SinglePhaseConstantVdc,self).__init__(self.DER_config['basic_options']['Sinsol'])
+            super(SolarPVDERSinglePhaseConstantVdc,self).__init__(self.DER_config['basic_options']['Sinsol'])
         
         self.initialize_DER(DER_arguments)
         self.creation_message()

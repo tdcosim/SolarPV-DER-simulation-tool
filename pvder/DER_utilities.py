@@ -14,7 +14,7 @@ import numpy as np
 from pvder.utility_classes import Logging
 from pvder.grid_components import BaseValues
 from pvder import utility_functions
-from pvder import defaults, templates
+from pvder import defaults, templates, properties
 
 class PVDER_ModelUtilities(BaseValues):
     """
@@ -357,10 +357,10 @@ class PVDER_ModelUtilities(BaseValues):
             print('Cdc:{:.9f} F\nLf:{:.6f} H\nRf:{:.3f} Ohm'.format(self.C*self.Cbase,self.Lf*self.Lbase,self.Rf*self.Zbase))
         
         if parameter_type == 'controller_gains' or parameter_type ==  'all':
-            for controller,properties in templates.controller_properties.items():
-                if set(properties['gains']).issubset(set(templates.DER_design_template[self.DER_model_type]['controller_gains'].keys())):
-                    print(properties['description'],':')
-                    for gain_type in properties['gains']:
+            for controller,properties_config in properties.controller_properties.items():
+                if set(properties_config['gains']).issubset(set(templates.DER_design_template[self.DER_model_type]['controller_gains'].keys())):
+                    print(properties_config['description'],':')
+                    for gain_type in properties_config['gains']:
                         print('{}:{:.3f}'.format(gain_type,eval('self.'+gain_type)))
 
     def validate_model(self,PRINT_ERROR = True):

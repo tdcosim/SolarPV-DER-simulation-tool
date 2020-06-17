@@ -11,7 +11,7 @@ from scipy.optimize import fsolve, minimize
 from pvder.utility_classes import Logging
 from pvder.grid_components import BaseValues
 from pvder import utility_functions
-from pvder import defaults,templates,specifications
+from pvder import defaults,templates,specifications,properties
 
 PHASE_DIFFERENCE_120 = 120.0*(math.pi/180.0)
 
@@ -62,33 +62,36 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         """Update DER config using both config file and arguments."""
         
         parameters ={}
-        
+        DER_parameter_type = properties.parameter_properties[DER_parameter]['type']
         if DER_parameter in DER_arguments: #Check if parameter exists in DER key word arguments
-            self.logger.debug('{}:Parameter {} in {} found in arguments with value {}.'.format(self.name,DER_parameter,DER_component,DER_arguments[DER_parameter])) 
-            self.DER_config[DER_component].update({DER_parameter:DER_arguments[DER_parameter]})
-            parameters.update({DER_parameter:DER_arguments[DER_parameter]})
-            source = 'DER arguments'
-            
-        elif DER_parameter in DER_config[DER_component]: #Check if parameter exists in config file
-            if isinstance(DER_config[DER_component][DER_parameter],(int,float)):
-                self.logger.debug('{}:Parameter {} in {} found for ID:{} - with value {}.'.format(self.name,DER_parameter,DER_component,DER_id,DER_config[DER_component][DER_parameter])) 
+            if isinstance(DER_arguments[DER_parameter],DER_parameter_type):
+                self.logger.debug('{}:Parameter {} in {} for ID:{} - updating from DER arguments with value {}.'.format(self.name,DER_parameter,DER_component,DER_id,DER_arguments[DER_parameter])) 
+                self.DER_config[DER_component].update({DER_parameter:DER_arguments[DER_parameter]})
+                parameters.update({DER_parameter:DER_arguments[DER_parameter]})
+                source = 'DER arguments'
+            else:
+                raise ValueError('Found {} to have type {} - expected type:{}!'.format(DER_parameter,type(DER_arguments[DER_parameter]),DER_parameter_type))
+        
+        elif DER_parameter in DER_config[DER_component]: #Check if parameter exists in config file            
+            if isinstance(DER_config[DER_component][DER_parameter],DER_parameter_type):
+                self.logger.debug('{}:Parameter {} in {} for ID:{} - updating from DER config {} with value {}.'.format(self.name,DER_parameter,DER_component,DER_id,DER_id,DER_config[DER_component][DER_parameter])) 
                 self.DER_config[DER_component].update({DER_parameter:DER_config[DER_component][DER_parameter]})
                 parameters.update({DER_parameter:DER_config[DER_component][DER_parameter]})
                 source = 'DER config'
             else:
-                raise ValueError('Found {} to have type {} - expected type:(int,float)!'.format(DER_parameter,type(DER_config[DER_component][DER_parameter])))
+                raise ValueError('Found {} to have type {} - expected type:{}!'.format(DER_parameter,type(DER_config[DER_component][DER_parameter]),DER_parameter_type))
         
-        elif DER_parameter in DER_parent_config[DER_component]: #Check if parameter exists in parent config file
-            if isinstance(DER_parent_config[DER_component][DER_parameter],(int, float)):
-                self.logger.debug('{}:Parameter {} in {} found for ID:{} from parent config {} - with value {}.'.format(self.name,DER_parameter,DER_component,DER_id,DER_parent_id,DER_parent_config[DER_component][DER_parameter])) 
+        elif DER_parameter in DER_parent_config[DER_component]: #Check if parameter exists in parent config file            
+            if isinstance(DER_parent_config[DER_component][DER_parameter],DER_parameter_type):
+                self.logger.debug('{}:Parameter {} in {} for ID:{} - updating from parent DER config {} with value {}.'.format(self.name,DER_parameter,DER_component,DER_id,DER_parent_id,DER_parent_config[DER_component][DER_parameter])) 
                 self.DER_config[DER_component].update({DER_parameter:DER_parent_config[DER_component][DER_parameter]})
                 parameters.update({DER_parameter:DER_parent_config[DER_component][DER_parameter]})
                 source = 'DER parent config'
             else:
-                raise ValueError('Found {} to have type {} - expected type:(int,float)!'.format(DER_parameter,type(DER_parent_config[DER_component][DER_parameter])))
+                raise ValueError('Found {} to have type {} - expected type:{{}}!'.format(DER_parameter,type(DER_parent_config[DER_component][DER_parameter]),DER_parameter_type))
         
         elif DER_parameter in self.DER_design_template[DER_component]:  #Check if parameter exists in default DER config
-            self.logger.debug('{}:Parameter {} in {} not found for ID:{} - updating with default value {}.'.format(self.name,DER_parameter,DER_component,DER_id,self.DER_design_template[DER_component][DER_parameter])) 
+            self.logger.debug('{}:Parameter {} in {} for ID:{} - updating from DER template with value {}.'.format(self.name,DER_parameter,DER_component,DER_id,self.DER_design_template[DER_component][DER_parameter])) 
             self.DER_config[DER_component].update({DER_parameter:self.DER_design_template[DER_component][DER_parameter]})
             parameters.update({DER_parameter:self.DER_design_template[DER_component][DER_parameter]})
             source = 'DER default values'
@@ -105,6 +108,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         available_keys = sorted(list(DER_config.keys()))
         required_keys = sorted(self.DER_design_template.keys())
         missing_keys = set(required_keys)-set(available_keys)
+                
         if not bool(missing_keys):
             self.logger.debug('{}:DER configuration with ID {} contained all required keys.'.format(self.name,DER_id))        
         else:
@@ -164,16 +168,14 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             else:
                 raise ValueError('Grid voltage source Frequency need to be supplied if model is not stand alone!')
             
-            model_name = type(self).__name__            
-            
-            if templates.DER_design_template[model_name]['basic_specs']['n_phases'] >=1: #Check if model has one phase
+            if templates.DER_design_template[self.DER_model_type]['basic_specs']['n_phases'] >=1: #Check if model has one phase
                 if 'gridVoltagePhaseA' in DER_arguments:
                     self.gridVoltagePhaseA = DER_arguments['gridVoltagePhaseA']/self.Vbase
                 else:
                     raise ValueError('Grid voltage source phase A need to be supplied if model is not stand alone!')
                
-            if templates.DER_design_template[model_name]['basic_specs']['n_phases'] >=2: #Check if model has 2 phases
-                if templates.DER_design_template[model_name]['basic_specs']['unbalanced']: #Check if model is unbalanced
+            if templates.DER_design_template[self.DER_model_type]['basic_specs']['n_phases'] >=2: #Check if model has 2 phases
+                if templates.DER_design_template[self.DER_model_type]['basic_specs']['unbalanced']: #Check if model is unbalanced
                     if 'gridVoltagePhaseB' in DER_arguments:
                         self.gridVoltagePhaseB = DER_arguments['gridVoltagePhaseB']/self.Vbase
                     else:
@@ -181,8 +183,8 @@ class PVDER_SetupUtilities(BaseValues,Logging):
                 else:
                     self.gridVoltagePhaseB = utility_functions.Ub_calc(self.gridVoltagePhaseA)
                     
-            if templates.DER_design_template[model_name]['basic_specs']['n_phases'] >=3: #Check if model has 3 phases
-                if templates.DER_design_template[model_name]['basic_specs']['unbalanced']: #Check if model is unbalanced
+            if templates.DER_design_template[self.DER_model_type]['basic_specs']['n_phases'] >=3: #Check if model has 3 phases
+                if templates.DER_design_template[self.DER_model_type]['basic_specs']['unbalanced']: #Check if model is unbalanced
                     if 'gridVoltagePhaseC' in DER_arguments:
                         self.gridVoltagePhaseC = DER_arguments['gridVoltagePhaseC']/self.Vbase
                     else:
@@ -190,7 +192,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
                 else:
                     self.gridVoltagePhaseC = utility_functions.Uc_calc(self.gridVoltagePhaseA)
             
-            if templates.DER_design_template[model_name]['basic_specs']['n_phases'] >=4: #Check if model has 3 phases
+            if templates.DER_design_template[self.DER_model_type]['basic_specs']['n_phases'] >=4: #Check if model has 3 phases
                 raise ValueError('Model has more than 3 phases!')
                 
     def initialize_states(self,DER_arguments):
@@ -241,8 +243,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.Ppv = self.Ppv_calc(self.Vdc_actual) #PV module power output    
         
          #Initialize all states with steady state values at current operating point
-        if self.steady_state_initialization:
-            #ia0,xa0,ua0,ib0,xb0,ub0,ic0,xc0,uc0,Vdc0,xDC0,xQ0,xPLL0,wte0
+        if self.steady_state_initialization:            
             self.steady_state_calc()
         else:
             #Phase a
@@ -259,8 +260,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             
             self.xPLL = xPLL0 #PLL
             self.wte = wte0
-
-            #if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            
             if self.DER_model_type in templates.three_phase_models:
                 ib0 = utility_functions.Ub_calc(ia0)
                 xb0 = utility_functions.Ub_calc(xa0)
@@ -465,27 +465,33 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.varInd={}
         n=0
         
-        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
+        if self.DER_model_type == 'SolarPVDERSinglePhase':
             state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
                           'Vdc','xDC','xQ','xPLL','wte']
         
-        elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        elif self.DER_model_type == 'SolarPVDERThreePhase':
             state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
                           'ibR','ibI','xbR','xbI','ubR','ubI',
                           'icR','icI','xcR','xcI','ucR','ucI',
                           'Vdc','xDC','xQ','xPLL','wte']            
         
-        elif type(self).__name__ == 'SolarPVDER_SinglePhaseConstantVdc':
+        elif self.DER_model_type == 'SolarPVDERSinglePhaseConstantVdc':
             state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
                           'xP','xQ',
                           'xPLL','wte']
         
-        elif type(self).__name__ == 'SolarPVDER_ThreePhaseConstantVdc':
+        elif self.DER_model_type == 'SolarPVDERThreePhaseConstantVdc':
             state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
                           'ibR','ibI','xbR','xbI','ubR','ubI',
                           'icR','icI','xcR','xcI','ucR','ucI',
                           'xP','xQ',
                           'xPLL','wte']            
+        elif self.DER_model_type == 'SolarPVDERThreePhaseBalanced':
+            state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
+                          'Vdc',
+                          'xDC','xQ',
+                          'xPLL','wte']
+        
         
         for entry in state_list:
             self.varInd[entry]=n
@@ -570,8 +576,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         S_PCC = (va*ia.conjugate())/2
 
         #Sloss_filter = ((abs(ia)/math.sqrt(2))**2)*self.Zf 
-    
-        #if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+            
         if self.DER_model_type in templates.three_phase_models:
             
             if not self.allow_unbalanced_m:
@@ -618,9 +623,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         #P_PCC_error = ((S_PCC.real + Sloss_filter.real)   - self.Ppv)**2         
         #S_error = (abs(St -(S_PCC+Sloss_filter)))**2
         #Q_error_filter_expected =  (St.imag - Qloss_filter_expected)**2 
-        
-        
-        #if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+                
         if self.DER_model_type in templates.three_phase_models:
             del_1 = utility_functions.relative_phase_calc(ma,mb)
             del_2 = utility_functions.relative_phase_calc(ma,mc)
@@ -689,25 +692,25 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         if not result.success:
             raise ValueError('Steady state solution did not converge! Change operating point or disable steady state flag and try again.')
         
-        ma0 = result.x[0] + 1j*result.x[1]
-        
-        self.ia = result.x[2] + 1j*result.x[3]
-        self.ua = 0.0+0.0j
-        self.xa = ma0
-        self.vta = self.vta_calc()
-        self.va = self.va_calc()
-        
         if 'xDC' in templates.DER_design_template[self.DER_model_type]['initial_states']:
            self.xDC = self.ia.real
         if 'xP' in templates.DER_design_template[self.DER_model_type]['initial_states']:
            self.xP = self.ia.real
         if 'xQ' in templates.DER_design_template[self.DER_model_type]['initial_states']:
            self.xQ = self.ia.imag
+        if 'xPLL' in templates.DER_design_template[self.DER_model_type]['initial_states']:
+           self.xPLL = 0.0
+        if 'wte' in templates.DER_design_template[self.DER_model_type]['initial_states']:
+           self.wte = 2*math.pi
+       
+        if self.DER_model_type in templates.single_phase_models or self.DER_model_type in templates.three_phase_models:
+            ma0 = result.x[0] + 1j*result.x[1]
+            self.ia = result.x[2] + 1j*result.x[3]
+            self.xa = ma0
+            self.ua = 0.0+0.0j            
+            self.vta = self.vta_calc()
+            self.va = self.va_calc()
         
-        self.xPLL = 0.0
-        self.wte = 2*math.pi
-        
-        #if type(self).__name__ == 'SolarPV_DER_ThreePhase':
         if self.DER_model_type in templates.three_phase_models:
             
             if not self.allow_unbalanced_m:
@@ -733,7 +736,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             self.vtc = self.vtc_calc()
             
             self.vb = self.vb_calc()
-            self.vc = self.vc_calc()
+            self.vc = self.vc_calc()       
         
         self.S =  self.S_calc()
         self.S_PCC = self.S_PCC_calc()
