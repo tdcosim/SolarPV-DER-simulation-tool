@@ -339,7 +339,7 @@ class SimulationResults(Logging):
     def compare_with_external(self,external_time_values,external_plot_values,external_plot_legends,plot_type='power'):
         """Compare with external simulation."""
         
-        assert external_plot_values != None, 'There should be external values to plot'
+        assert external_plot_values is not None, 'There should be external values to plot'
         assert len(external_plot_values) == len(external_plot_legends),'Legends should be equal to number of plots'
         
         time,internal_plot_values,internal_legends,plot_title,y_labels = self.group_quantities_for_plotting(plot_type)
