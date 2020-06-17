@@ -9,7 +9,7 @@ import math
 
 import matplotlib.pyplot as plt
 
-from pvder.DER_components_single_phase import SolarPV_DER_SinglePhase
+from pvder.DER_components_single_phase import SolarPVDERSinglePhase
 from pvder.grid_components import Grid
 from pvder.dynamic_simulation import DynamicSimulation
 from pvder.simulation_events import SimulationEvents
@@ -60,10 +60,10 @@ class TestPVDER(unittest.TestCase):
                         
         events = SimulationEvents()
         
-        PVDER = SolarPV_DER_SinglePhase(events = events,configFile=config_file,
+        PVDER = SolarPVDERSinglePhase(events = events,configFile=config_file,
                                        **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})
     
-        self.assertIsInstance(PVDER, SolarPV_DER_SinglePhase)
+        self.assertIsInstance(PVDER, SolarPVDERSinglePhase)
         self.assertTrue(PVDER.steady_state_initialization)      
         
     def test_parameter_dict(self):
@@ -76,7 +76,7 @@ class TestPVDER(unittest.TestCase):
                 
         events = SimulationEvents()
         
-        PVDER = SolarPV_DER_SinglePhase(events = events,configFile=config_file,
+        PVDER = SolarPVDERSinglePhase(events = events,configFile=config_file,
                                        **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})
     
         PVDER.initialize_parameter_dict(parameter_ID = new_ID,source_parameter_ID = source_ID)
@@ -95,7 +95,7 @@ class TestPVDER(unittest.TestCase):
         """Test PV-DER Jacobian."""          
                         
         events = SimulationEvents()
-        PVDER = SolarPV_DER_SinglePhase(events = events,configFile=config_file,
+        PVDER = SolarPVDERSinglePhase(events = events,configFile=config_file,
                                        **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})
             
         jac_CHECK,Jn,Ja = PVDER.check_jacobian()

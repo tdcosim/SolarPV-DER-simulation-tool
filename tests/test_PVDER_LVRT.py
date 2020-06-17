@@ -7,8 +7,8 @@ import argparse
 import matplotlib.pyplot as plt
 import unittest
 
-from pvder.DER_components_single_phase import SolarPV_DER_SinglePhase
-from pvder.DER_components_three_phase import SolarPV_DER_ThreePhase
+from pvder.DER_components_single_phase import SolarPVDERSinglePhase
+from pvder.DER_components_three_phase import SolarPVDERThreePhase
 from pvder.grid_components import Grid
 from pvder.dynamic_simulation import DynamicSimulation
 from pvder.simulation_events import SimulationEvents
@@ -113,13 +113,13 @@ class TestPVDER(unittest.TestCase):
             self.grid_list.append(Grid(events=self.events_list[-1]))
         
             if SinglePhase:
-                self.DER_model_list.append(SolarPV_DER_SinglePhase(events=self.events_list[-1],configFile=config_file,
+                self.DER_model_list.append(SolarPVDERSinglePhase(events=self.events_list[-1],configFile=config_file,
                                                                    **{"gridModel":self.grid_list[-1],"identifier":scenario,**flag_arguments,**ratings_arguments}))
             else:
-                self.DER_model_list.append(SolarPV_DER_ThreePhase(events=self.events_list[-1],configFile=config_file,
+                self.DER_model_list.append(SolarPVDERThreePhase(events=self.events_list[-1],configFile=config_file,
                                                                   **{"gridModel":self.grid_list[-1],"identifier":scenario,**flag_arguments,**ratings_arguments}))
 
-            self.sim_list.append(DynamicSimulation(grid_model=self.grid_list[-1],PV_model=self.DER_model_list[-1],events = self.events_list[-1],LOOP_MODE=False,COLLECT_SOLUTION=True))
+            self.sim_list.append(DynamicSimulation(gridModel=self.grid_list[-1],PV_model=self.DER_model_list[-1],events = self.events_list[-1],LOOP_MODE=False,COLLECT_SOLUTION=True))
             self.sim_list[-1].jacFlag = False      #Provide analytical Jacobian to ODE solver
             self.sim_list[-1].DEBUG_SOLVER = False #Check whether solver is failing to converge at any step
             

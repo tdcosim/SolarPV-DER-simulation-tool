@@ -9,7 +9,7 @@ import math
 
 import matplotlib.pyplot as plt
 
-from pvder.DER_components_three_phase import SolarPV_DER_ThreePhase
+from pvder.DER_components_three_phase import SolarPVDERThreePhase
 from pvder.grid_components import Grid
 from pvder.dynamic_simulation import DynamicSimulation
 from pvder.simulation_events import SimulationEvents
@@ -64,10 +64,10 @@ class TestPVDER(unittest.TestCase):
                         
         events = SimulationEvents()
                         
-        PVDER = SolarPV_DER_ThreePhase(events = events,configFile=config_file,
+        PVDER = SolarPVDERThreePhase(events = events,configFile=config_file,
                                        **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})
     
-        sim = DynamicSimulation(PV_model=PVDER,events = events,jacFlag = True,verbosity = 'DEBUG',solver_type='odeint')
+        sim = DynamicSimulation(PV_model=PVDER,events = events,jacFlag = True,verbosity = 'DEBUG',solverType='odeint')
         
         self.assertIsInstance(sim, DynamicSimulation)
         self.assertTrue(sim.jacFlag)      
@@ -77,11 +77,11 @@ class TestPVDER(unittest.TestCase):
         
         events = SimulationEvents()
                 
-        PVDER = SolarPV_DER_ThreePhase(events = events,configFile=config_file,
+        PVDER = SolarPVDERThreePhase(events = events,configFile=config_file,
                                        **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})
     
         sim = DynamicSimulation(PV_model=PVDER,events = events,
-                                jacFlag = True,verbosity = 'DEBUG',solver_type='odeint')
+                                jacFlag = True,verbosity = 'DEBUG',solverType='odeint')
         
         sim.tStop = 10.0
         sim.tInc = 1/120.

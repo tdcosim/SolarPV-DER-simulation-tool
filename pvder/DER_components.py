@@ -53,6 +53,7 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         self.create_template()
         
         DER_config = self.get_DER_config(configFile,self.parameter_ID)
+        
         DER_arguments = self.get_DER_arguments(DER_config,**kwargs)    
         
         self.name_instance(DER_arguments['identifier']) #Generate a name for the instance  
@@ -67,11 +68,13 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
            if DER_component not in DER_parent_config:
               DER_parent_config.update({DER_component:{}})
         
+        self.check_model_type(DER_config,DER_parent_config)
         self.update_DER_config(DER_config,DER_parent_config,DER_arguments,self.parameter_ID,self.DER_parent_ID)
         self.check_basic_specs()
         
         return DER_arguments   
     
+         
     def get_DER_parent_id(self,DER_config):
         """Check if user has specified a parent configuration."""
         
@@ -85,7 +88,9 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
     def get_DER_parent_config(self,configFile,derParentId):
         """Check if user has specified a parent configuration."""
         
+        
         if derParentId:
+           self.logger.info('{}:Reading parent DER config:{} for DER config:{}'.format(self.name,derParentId,self.parameter_ID)) 
            DER_parent_config = self.get_DER_config(configFile,derParentId)    
         else:
            DER_parent_config = {}    
@@ -196,10 +201,24 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         self.steady_state_initialization = DER_arguments['steadyStateInitialization']
         self.allow_unbalanced_m = DER_arguments['allowUnbalancedM'] 
     
+    def check_model_type(self,DER_config,DER_parent_config):
+        """Check basic specs in configuration."""
+        
+        if 'model_type' in DER_config['basic_specs']:
+            DER_model_type_in_config = DER_config['basic_specs']['model_type']
+        elif 'model_type' in DER_parent_config['basic_specs']:
+            DER_model_type_in_config = DER_parent_config['basic_specs']['model_type']
+        else:
+            raise ValueError('{}:Model type was not found for parameter ID {}!'.format(self.name,self.parameter_ID))
+        
+        if not self.DER_model_type == DER_model_type_in_config:
+            raise ValueError('{}:DER configuration with ID:{} is defined to be used with model type {} but is being used with model {}!'.format(self.name,self.parameter_ID,DER_model_type_in_config,self.DER_model_type))
+   
     def check_basic_specs(self):
         """Check basic specs in DER config."""
-                
+        
         if self.DER_model_type in templates.DER_design_template:
+            
             n_phases = self.DER_config['basic_specs']['n_phases']
             if not n_phases == templates.DER_design_template[self.DER_model_type]['basic_specs']['n_phases']:
                 raise ValueError('{}:DER configuration with ID:{} has {} phases which is invalid for {} DER model!'.format(self.name,self.parameter_ID,n_phases,self.DER_model_type))

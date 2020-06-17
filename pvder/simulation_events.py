@@ -269,7 +269,7 @@ class SimulationEvents(Logging):
     def remove_solar_event(self,T=None,REMOVE_ALL=False):
         """Remove solar event at 'T'."""
         
-        if not REMOVE_ALL and T!=None:
+        if not REMOVE_ALL and T is not None:
             T = float(T)
             REMOVE_FLAG = False
             for event in self.solar_events_list:
@@ -303,7 +303,7 @@ class SimulationEvents(Logging):
     def remove_load_event(self,T=None,REMOVE_ALL=False):
         """Remove solar event at 'T'"""
         
-        if not REMOVE_ALL and T!=None:
+        if not REMOVE_ALL and T is not None:
             
             T = float(T)
             REMOVE_FLAG = False

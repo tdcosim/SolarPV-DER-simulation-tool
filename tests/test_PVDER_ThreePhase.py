@@ -10,7 +10,7 @@ import cmath
 
 import matplotlib.pyplot as plt
 
-from pvder.DER_components_three_phase import SolarPV_DER_ThreePhase
+from pvder.DER_components_three_phase import SolarPVDERThreePhase
 from pvder.grid_components import Grid
 from pvder.dynamic_simulation import DynamicSimulation
 from pvder.simulation_events import SimulationEvents
@@ -64,10 +64,10 @@ class TestPVDER(unittest.TestCase):
                         
         events = SimulationEvents()
                 
-        PVDER = SolarPV_DER_ThreePhase(events = events,configFile=config_file,
+        PVDER = SolarPVDERThreePhase(events = events,configFile=config_file,
                                        **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})
     
-        self.assertIsInstance(PVDER, SolarPV_DER_ThreePhase)
+        self.assertIsInstance(PVDER, SolarPVDERThreePhase)
         self.assertTrue(PVDER.steady_state_initialization)      
         
     def test_parameter_dict(self):
@@ -80,7 +80,7 @@ class TestPVDER(unittest.TestCase):
                 
         events = SimulationEvents()                
                 
-        PVDER = SolarPV_DER_ThreePhase(events = events,configFile=config_file,
+        PVDER = SolarPVDERThreePhase(events = events,configFile=config_file,
                                        **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})
     
         PVDER.initialize_parameter_dict(parameter_ID = new_ID,source_parameter_ID = source_ID)
@@ -100,7 +100,7 @@ class TestPVDER(unittest.TestCase):
                         
         events = SimulationEvents()                
                 
-        PVDER = SolarPV_DER_ThreePhase(events = events,configFile=config_file,
+        PVDER = SolarPVDERThreePhase(events = events,configFile=config_file,
                                        **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})
     
         jac_CHECK,Jn,Ja = PVDER.check_jacobian()
@@ -122,7 +122,7 @@ class TestPVDER(unittest.TestCase):
             
             print('Testing voltages:{}'.format(voltages))
                     
-            PVDER = SolarPV_DER_ThreePhase(events = events,configFile=config_file,
+            PVDER = SolarPVDERThreePhase(events = events,configFile=config_file,
                                        **{**self.flag_arguments,**self.ratings_arguments,**self.voltage_arguments})    
         
             self.assertAlmostEqual(PVDER.Ppv,PVDER.S.real,delta=0.001,msg='Inverter power output must be equal to PV module power output at steady-state!')

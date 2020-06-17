@@ -1,4 +1,4 @@
-"""Three phase PV-DER components."""
+"""Single phase constant Vdc PV-DER code."""
 
 from __future__ import division
 import numpy as np
@@ -11,40 +11,38 @@ import warnings
 import logging
 
 from pvder.DER_components import SolarPVDER,PVModule
-from pvder.DER_check_and_initialize import PVDER_SetupUtilities
-from pvder.DER_features import PVDER_SmartFeatures
-from pvder.DER_utilities import PVDER_ModelUtilities
 from pvder.grid_components import BaseValues
 
 from pvder import utility_functions
 from pvder import defaults,templates
 
-class SolarPVDERThreePhase(PVModule,SolarPVDER):
+class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):    
     """
-       Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
-       control systems.
-       
-       Attributes:
-          count (int): Number of instances of `SolarPVDERThreePhase`.
-          n_ODE (int): Number of ODE's.
-       
-    """
-    count = 0 #Object count
+    Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
+    control systems.
     
-    def __init__(self,events,configFile=None,**kwargs):        
-        """Creates an instance of `SolarPV_DER_ThreePhase`.
+    Attributes:
+          count (int): Number of instances of `SolarPVDER_ThreePhaseConstantVdc`.
+          n_ODE (int): Number of ODE's.
+    
+    """
+    
+    count = 0
+    
+    def __init__(self,events,configFile=None,**kwargs): 
+        """Creates an instance of `SolarPV_DER_SinglePhase`.
         
         Args:
           events (SimulationEvents): An instance of `SimulationEvents`.
-          gridModel (Grid): An instance of `Gridl`(only need to be suppled for stand alone simulation).
+          gridModel (Grid): An instance of `Grid`(only need to be suppled for stand alone simulation).
           powerRating (float): A scalar specifying the rated power (VA) of the DER.
           VrmsRating (float): A scalar specifying the rated RMS L-G voltage (V) of the DER.
           ia0,xa0,ua0 (complex): Initial value of inverter states in p.u. of the DER instance.
-          xDC0,xQ0,xPLL0,wte0 (float): Initial value of inverter states in the DER instance.
-          gridVoltatePhaseA,gridVoltatePhaseA,gridVoltatePhaseA (float): Initial voltage phasor (V) at PCC - LV side from external program (only need to be suppled if model is not stand alone).
+          xP0,xQ0,xPLL0,wte0 (float): Initial value of inverter states in the DER instance.
+          gridVoltatePhaseA: Initial voltage phasor (V) at PCC - LV side from external program (only need to be suppled if model is not stand alone).
           standAlone (bool): Specify if the DER instance is a stand alone simulation or part of a larger simulation.
-          STEADY_STATE_INITIALIZATION (bool): Specify whether states in the DER instance will be initialized to steady state values.
-          allow_unbalanced_m (bool): Allow duty cycles to take on unbalanced values during initialization (default: False).
+          steadyStateInitialization (bool): Specify whether states in the DER instance will be initialized to steady state values.
+          allowUnbalancedM (bool): Allow duty cycles to take on unbalanced values during initialization (default: False).
           derConfig (dict): Configuration parameters that may be supplied from an external program.
           identifier (str): An identifier that can be used to name the instance (default: None).
           
@@ -53,28 +51,29 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
           ValueError: If rated DC link voltage is not sufficient.
         
         """
-                
-        SolarPVDERThreePhase.count = SolarPVDERThreePhase.count+1 #Increment count to keep track of number of PV-DER model instances
-        DER_arguments = self.setup_DER(events,configFile,**kwargs)         
         
+        SolarPVDERThreePhaseConstantVdc.count = SolarPVDERThreePhaseConstantVdc.count+1 #Increment count to keep track of number of PV-DER model instances
+                      
+        DER_arguments = self.setup_DER(events,configFile,**kwargs)
+                               
         if six.PY3:
             super().__init__(self.DER_config['basic_options']['Sinsol'])  #Initialize PV module class (base class)
         elif six.PY2:
-            super(SolarPVDERThreePhase,self).__init__(self.DER_config['basic_options']['Sinsol'])
+            super(SolarPVDERThreePhaseConstantVdc,self).__init__(self.DER_config['basic_options']['Sinsol'])
         
-        self.initialize_DER(DER_arguments)         
-        self.creation_message()        
-    
+        self.initialize_DER(DER_arguments)
+        self.creation_message()
+            
     @property                         #Decorator used for auto updating
     def y0(self):
         """List of initial states"""
         
-        return  [self.ia.real, self.ia.imag, self.xa.real, self.xa.imag, self.ua.real,self.ua.imag,\
-                 self.ib.real, self.ib.imag, self.xb.real, self.xb.imag, self.ub.real,self.ub.imag,\
-                 self.ic.real, self.ic.imag, self.xc.real, self.xc.imag, self.uc.real,self.uc.imag,\
-                 self.Vdc,self.xDC,self.xQ,self.xPLL,self.wte]
-    
-    #Apparent power output at inverter terminal
+        return  [self.ia.real, self.ia.imag, self.xa.real, self.xa.imag, self.ua.real,self.ua.imag,
+                 self.ib.real, self.ib.imag, self.xb.real, self.xb.imag, self.ub.real,self.ub.imag,
+                 self.ic.real, self.ic.imag, self.xc.real, self.xc.imag, self.uc.real,self.uc.imag,
+                 self.xP,self.xQ,
+                 self.xPLL,self.wte]
+
     def S_calc(self):
         """Inverter apparent power output"""
         
@@ -98,6 +97,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
     
         return (1/2)*((-(self.ia-(self.va/self.Zload1))/self.a).conjugate()*self.grid_model.vag+(-(self.ib-(self.vb/self.Zload1))/self.a).conjugate()*self.grid_model.vbg+(-(self.ic-(self.vc/self.Zload1))/self.a).conjugate()*self.grid_model.vcg)
 
+    
     #@property
     def Vtrms_calc(self):
         """Inverter terminal voltage -  RMS"""
@@ -113,7 +113,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
         """Inverter current - RMS"""
         
         return utility_functions.Urms_calc(self.ia,self.ib,self.ic)
-        
+    
     def Vtabrms_calc(self):
         """Inverter terminal voltage - line to line  RMS"""
         
@@ -124,8 +124,13 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
         
         return abs(self.va-self.vb)/math.sqrt(2)
     
-    def update_inverter_states(self,ia,xa,ua,ib,xb,ub,ic,xc,uc,Vdc,xDC,xQ,xPLL,wte):
-        """Update inverter states"""
+    def update_inverter_states(self,ia,xa,ua,ib,xb,ub,ic,xc,uc,xP,xQ,xPLL,wte):
+        """Update inverter states
+        Args:
+             ia (complex): Inverter phase a current.
+             xa (complex): Inverter controller state.
+             ua (complex): Inverter controller state.                          
+        """
         
         self.ia = ia
         self.xa = xa
@@ -139,13 +144,12 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
         self.xc = xc
         self.uc = uc
         
-        self.Vdc = Vdc
-        self.xDC = xDC
+        self.xP = xP
         self.xQ = xQ
         
         self.xPLL = xPLL
         self.wte = wte
-        
+    
     def update_voltages(self):
         """Update voltages."""
         
@@ -158,10 +162,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
         self.va = self.va_calc()
         self.vb = self.vb_calc()
         self.vc = self.vc_calc()
-        
-        #self.vtunbalance = utility_functions.Uunbalance_calc(self.vta,self.vtb,self.vtc)
-        #self.vunbalance = utility_functions.Uunbalance_calc(self.va,self.vb,self.vc)
-   
+                
     def update_RMS(self):
         """Update RMS voltages."""
         
@@ -173,7 +174,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
         if self.DO_EXTRA_CALCULATIONS:
             self.Vtabrms = self.Vtabrms_calc()        
             self.Vabrms = self.Vabrms_calc()        
-            
+    
     def update_power(self):
         """Update RMS voltages."""
         
@@ -192,16 +193,23 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
             self.icload1 = self.iphload1_calc(self.vc)
             
             self.S_G = self.S_G_calc()
-            self.S_load1 = self.S_load1_calc()       
+            self.S_load1 = self.S_load1_calc()        
     
+    def update_Pref(self):
+        """Update active power reference"""   
+        
+        if not self.use_Pref:
+            self.Pref = self.Ppv
+        else:
+            raise ValueError('{}:User active power reference not implemented!')
+       
     def update_iref(self):
-        """Update reference reference current."""
-    
-        #Get current controller setpoint
-        self.ia_ref = self.ia_ref_calc()
-        self.ib_ref = self.ib_ref_calc()
-        self.ic_ref = self.ic_ref_calc()
-    
+        """Update current reference"""    
+       
+        self.ia_ref = self.ia_ref_activepower_control()  #Get current controller setpoint
+        self.ib_ref = self.ib_ref_activepower_control()  #Get current controller setpoint
+        self.ic_ref = self.ic_ref_activepower_control()  #Get current controller setpoint
+        
     def update_inverter_frequency(self,t):
         """Update d-q quantities."""
         
@@ -218,28 +226,34 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
         self.winv = self.we
     
     def ODE_model(self,y,t):
-        """Derivatives for the equation."""
+        """System of ODE's defining the dynamic DER model.
         
+        Args:
+             y (list of float): Initial conditions for the states..
+             t (float): Simulation time in seconds.
+             
+        Returns:
+             result (list of float): Derivates for the system of ODE's.
+        """
         iaR, iaI, xaR, xaI, uaR, uaI,\
         ibR, ibI, xbR, xbI, ubR, ubI,\
         icR, icI, xcR, xcI, ucR, ucI,\
-        Vdc, xDC, xQ, xPLL, wte = y   # unpack current values of y
+        xP, xQ, xPLL, wte = y   # unpack current values of y
         
-        self.update_inverter_states(iaR + 1j*iaI, xaR + 1j*xaI,uaR + 1j*uaI,\
-                                    ibR + 1j*ibI, xbR + 1j*xbI,ubR + 1j*ubI,\
-                                    icR + 1j*icI, xcR + 1j*xcI,ucR + 1j*ucI,\
-                                    Vdc,xDC,xQ,\
+        self.update_inverter_states(iaR + 1j*iaI, xaR + 1j*xaI,uaR + 1j*uaI,
+                                    ibR + 1j*ibI, xbR + 1j*xbI,ubR + 1j*ubI,
+                                    icR + 1j*icI, xcR + 1j*xcI,ucR + 1j*ucI,
+                                    xP,xQ,
                                     xPLL,wte)
-        
+       
         self.update_Ppv(t)
-        self.update_Zload1(t)        
+        self.update_Zload1(t) 
         
         self.update_voltages()
-        self.update_power()
-        self.update_RMS()
+        self.update_power()    
+        self.update_RMS()          
         
-        self.update_Qref(t)
-        self.update_Vdc_ref(t)    
+        self.update_Qref(t)        
         self.update_iref()
         
         self.update_inverter_frequency(t)
@@ -250,9 +264,9 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
         #Phase a inverter output current
         diaR = (1/self.Lf)*(-self.Rf*self.ia.real - self.va.real + self.vta.real) + (self.winv/self.wbase)*self.ia.imag 
         diaI = (1/self.Lf)*(-self.Rf*self.ia.imag - self.va.imag + self.vta.imag) - (self.winv/self.wbase)*self.ia.real  
-       
+        
         #Current controller dynamics
-        if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
+        if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
             if np.sign(self.Ki_GCC*self.ua.real) == np.sign(self.xa.real):
                 dxaR = 0.0
             else:
@@ -266,7 +280,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
             dxaR = self.Ki_GCC*self.ua.real
             dxaI = self.Ki_GCC*self.ua.imag
             
-        if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
+        if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
             if np.sign( (self.wp)*(-self.ua.real +  self.ia_ref.real - self.ia.real)) == np.sign(self.ua.real):
                 duaR = 0.0
             else:
@@ -359,18 +373,18 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
             ducI = (self.wp)*(-self.uc.imag +  self.ic_ref.imag - self.ic.imag)
         
         #DC link voltage dynamics
-        dVdc = (self.Ppv - self.S.real)/(self.Vdc*self.C)
-        
-        if abs(self.xDC + self.Kp_DC*(self.Vdc_ref - self.Vdc) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)))>self.iref_limit:
-            if np.sign(self.Ki_DC*(self.Vdc_ref - self.Vdc)) == np.sign(self.xDC):
-                dxDC = 0.0
+        dVdc = 0.0
+                
+        if abs(self.xP + self.Kp_P*(self.Ppv -  self.S.real) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)))>self.iref_limit:
+            if np.sign(self.Ki_P*(self.Ppv -  self.S.real)) == np.sign(self.xP):
+                dxP = 0.0
             else:
-                dxDC = self.Ki_DC*(self.Vdc_ref - self.Vdc)
+                dxP = self.Ki_P*(self.Ppv -  self.S.real)
         else:
-            dxDC = self.Ki_DC*(self.Vdc_ref - self.Vdc)
-            
+            dxP = self.Ki_P*(self.Ppv -  self.S.real)
+        
         # Reactive power controller dynamics
-        if abs(self.xDC + self.Kp_DC*(self.Vdc_ref - self.Vdc) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)))>self.iref_limit:
+        if abs(self.xP + self.Kp_P*(self.Ppv -  self.S.real) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)))>self.iref_limit:
             
             if np.sign(-self.Ki_Q*(self.Q_ref - self.S_PCC.imag)) == np.sign(self.xQ):
                 dxQ = 0.0
@@ -385,56 +399,47 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
         #Frequency integration to get angle
         dwte = self.we
         
-        result =     [ diaR,# list of dy/dt=f functions
-                       diaI,
-                       dxaR,
-                       dxaI,
-                       duaR,
-                       duaI,
-                       dibR,
-                       dibI,
-                       dxbR,
-                       dxbI,
-                       dubR,
-                       dubI,
-                       dicR,
-                       dicI,
-                       dxcR,
-                       dxcI,
-                       ducR,
-                       ducI,
-                       dVdc,
-                       dxDC,
-                       dxQ,
-                       dxPLL,
-                       dwte]
+        result = [diaR,diaI,dxaR,dxaI,duaR,duaI,
+                  dibR,dibI,dxbR,dxbI,dubR,dubI,
+                  dicR,dicI,dxcR,dxcI,ducR,ducI,
+                  dxP,dxQ,
+                  dxPLL,dwte] # list of dy/dt=f functions
         
         return np.array(result)
 
     def jac_ODE_model(self,y,t):
-        """Jacobian for the system of ODE's."""
+        """Jacobian for the system of ODE's.
+                
+        Args:
+             y (list of float): Initial conditions for the states..
+             t (float): Simulation time in seconds.
+             
+        Returns:
+             result (array of float): An array containing the elements of the Jacobian.
+        """
         
         iaR, iaI, xaR, xaI, uaR, uaI,\
         ibR, ibI, xbR, xbI, ubR, ubI,\
         icR, icI, xcR, xcI, ucR, ucI,\
-        Vdc, xDC, xQ, xPLL, wte = y   # unpack current values of y
+        xP, xQ, xPLL, wte = y   # unpack current values of y
         
-        self.update_inverter_states(iaR + 1j*iaI, xaR + 1j*xaI,uaR + 1j*uaI,\
-                                    ibR + 1j*ibI, xbR + 1j*xbI,ubR + 1j*ubI,\
-                                    icR + 1j*icI, xcR + 1j*xcI,ucR + 1j*ucI,\
-                                    Vdc,xDC,xQ,\
+        self.update_inverter_states(iaR + 1j*iaI, xaR + 1j*xaI,uaR + 1j*uaI,
+                                    ibR + 1j*ibI, xbR + 1j*xbI,ubR + 1j*ubI,
+                                    icR + 1j*icI, xcR + 1j*xcI,ucR + 1j*ucI,
+                                    xP,xQ,
                                     xPLL,wte)
-
+        
         J = self.J
         varInd = self.varInd 
         self.update_Ppv(t)
+        #self.update_Zload1(t) 
         
         self.update_voltages()
         self.update_power()
         self.update_RMS()
         
         self.update_Qref(t)
-        self.update_Vdc_ref(t)    
+        #self.update_Vdc_ref(t)    
         self.update_iref()
         
         #d-q transformation
@@ -444,7 +449,6 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
         self.disconnect_or_reconnect(t)
         
         #Phase a inverter output current
-        
         ra,theta_a = cmath.polar(self.va)
         rb,theta_b = cmath.polar(self.vb)
         rc,theta_c = cmath.polar(self.vc)
@@ -456,21 +460,17 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
         J[varInd['iaR'],varInd['iaI']] = (self.xPLL+self.Kp_PLL*self.vd+2*math.pi*60)/self.wbase
         J[varInd['iaR'],varInd['xaR']] = self.Vdc/(2*self.Lf)
         J[varInd['iaR'],varInd['uaR']] = (self.Vdc*self.Kp_GCC)/(2*self.Lf)
-        J[varInd['iaR'],varInd['Vdc']] = (self.xa.real+self.ua.real*self.Kp_GCC)/(2*self.Lf)
         J[varInd['iaR'],varInd['xPLL']] = self.ia.imag/self.wbase
-        J[varInd['iaR'],varInd['wte']] = (2/3)*((self.Kp_PLL*self.ia.imag)/self.wbase)*(-ra*math.cos(theta_a)*math.sin(self.wte)
-                                         + 0.5*rb*math.cos(theta_b)*math.sin(self.wte) + 0.8660254037*rb*math.cos(theta_b)*math.cos(self.wte)
-                                         + 0.5*rc*math.cos(theta_c)*math.sin(self.wte) - 0.8660254037*rc*math.cos(theta_c)*math.cos(self.wte))
+        J[varInd['iaR'],varInd['wte']] = ((self.Kp_PLL*self.ia.imag*ra)/self.wbase)*(-math.cos(theta_a)*math.sin(self.wte)
+                                                                                    + math.cos(theta_a-math.pi/2)*math.cos(self.wte))
         
         J[varInd['iaI'],varInd['iaR']]= -(self.xPLL+self.Kp_PLL*self.vd+2*math.pi*60)/self.wbase
         J[varInd['iaI'],varInd['iaI']]= -self.Rf/self.Lf
         J[varInd['iaI'],varInd['xaI']]= self.Vdc/(2*self.Lf) 
         J[varInd['iaI'],varInd['uaI']]= (self.Vdc*self.Kp_GCC)/(2*self.Lf)
-        J[varInd['iaI'],varInd['Vdc']]= (self.xa.imag+self.ua.imag*self.Kp_GCC)/(2*self.Lf)
         J[varInd['iaI'],varInd['xPLL']]= -self.ia.real/self.wbase
-        J[varInd['iaI'],varInd['wte']] = -(2/3)*((self.Kp_PLL*self.ia.real)/self.wbase)*(-ra*math.cos(theta_a)*math.sin(self.wte) 
-                                         + 0.5*rb*math.cos(theta_b)*math.sin(self.wte) + 0.8660254037*rb*math.cos(theta_b)*math.cos(self.wte)
-                                         + 0.5*rc*math.cos(theta_c)*math.sin(self.wte) - 0.8660254037*rc*math.cos(theta_c)*math.cos(self.wte))
+        J[varInd['iaI'],varInd['wte']] = ((self.Kp_PLL*self.ia.real*ra)/self.wbase)*(-math.cos(theta_a)*math.sin(self.wte)
+                                                                                    + math.cos(theta_a-math.pi/2)*math.cos(self.wte))
             
         #Current controller dynamics
         if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
@@ -491,14 +491,12 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
             if np.sign( (self.wp)*(-self.ua.real +  self.ia_ref.real - self.ia.real)) == np.sign(self.ua.real):
                 J[varInd['uaR'],varInd['iaR']]= 0.0
                 J[varInd['uaR'],varInd['uaR']]= 0.0
-                J[varInd['uaR'],varInd['Vdc']]= 0.0
-                J[varInd['uaR'],varInd['xDC']]= 0.0   
+                J[varInd['uaR'],varInd['xP']]= 0.0   
             else:
                 #duaR = (self.wp)*(-self.ua.real +  self.ia_ref.real - self.ia.real)
                 J[varInd['uaR'],varInd['iaR']]= -self.wp
                 J[varInd['uaR'],varInd['uaR']]= -self.wp
-                J[varInd['uaR'],varInd['Vdc']]= -self.wp*self.Kp_DC
-                J[varInd['uaR'],varInd['xDC']]= self.wp                    
+                J[varInd['uaR'],varInd['xP']]= self.wp                    
                     
             if np.sign((self.wp)*(-self.ua.imag +  self.ia_ref.imag - self.ia.imag)) == np.sign(self.ua.imag):
                 #duaI = 0.0
@@ -506,40 +504,25 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
                 J[varInd['uaI'],varInd['iaI']]= 0.0
                 J[varInd['uaI'],varInd['uaI']]= 0.0
                 J[varInd['uaI'],varInd['xQ']]= 0.0
-                    
-                J[varInd['uaI'],varInd['ibR']]= 0.0
-                J[varInd['uaI'],varInd['ibI']]= 0.0
-                J[varInd['uaI'],varInd['icR']]= 0.0
-                J[varInd['uaI'],varInd['icI']]= 0.0
+
             else:
                 #duaI = (self.wp)*(-self.ua.imag +  self.ia_ref.imag - self.ia.imag)
                 J[varInd['uaI'],varInd['iaR']]= (self.Kp_Q*self.wp*self.va.imag/2)
                 J[varInd['uaI'],varInd['iaI']]= -self.wp - (self.Kp_Q*self.wp*self.va.real/2)
                 J[varInd['uaI'],varInd['uaI']]= -self.wp
                 J[varInd['uaI'],varInd['xQ']]= self.wp
-                    
-                J[varInd['uaI'],varInd['ibR']]= (self.Kp_Q*self.wp*self.vb.imag/2)
-                J[varInd['uaI'],varInd['ibI']]= - (self.Kp_Q*self.wp*self.vb.real/2)
-                J[varInd['uaI'],varInd['icR']]= (self.Kp_Q*self.wp*self.vc.imag/2)
-                J[varInd['uaI'],varInd['icI']]= - (self.Kp_Q*self.wp*self.vc.real/2)
                 
         else:
             #duaR = (self.wp)*(-self.ua.real +  self.ia_ref.real - self.ia.real)
             #duaI = (self.wp)*(-self.ua.imag +  self.ia_ref.imag - self.ia.imag)
             J[varInd['uaR'],varInd['iaR']]= -self.wp
             J[varInd['uaR'],varInd['uaR']]= -self.wp
-            J[varInd['uaR'],varInd['Vdc']]= -self.wp*self.Kp_DC
-            J[varInd['uaR'],varInd['xDC']]= self.wp   
+            J[varInd['uaR'],varInd['xP']]= self.wp   
                 
             J[varInd['uaI'],varInd['iaR']]= (self.Kp_Q*self.wp*self.va.imag/2)
             J[varInd['uaI'],varInd['iaI']]= -self.wp - (self.Kp_Q*self.wp*self.va.real/2)
             J[varInd['uaI'],varInd['uaI']]= -self.wp
             J[varInd['uaI'],varInd['xQ']]= self.wp
-                
-            J[varInd['uaI'],varInd['ibR']]= (self.Kp_Q*self.wp*self.vb.imag/2)
-            J[varInd['uaI'],varInd['ibI']]= - (self.Kp_Q*self.wp*self.vb.real/2)
-            J[varInd['uaI'],varInd['icR']]= (self.Kp_Q*self.wp*self.vc.imag/2)
-            J[varInd['uaI'],varInd['icI']]= - (self.Kp_Q*self.wp*self.vc.real/2)
         
         #Phase b inverter output current
         #dibR = (1/self.Lf)*(-self.Rf*self.ib.real - self.vb.real + self.vtb.real) + (self.winv/self.wbase)*self.ib.imag 
@@ -549,7 +532,6 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
         J[varInd['ibR'],varInd['ibI']]= (self.xPLL+self.Kp_PLL*self.vd+2*math.pi*60)/self.wbase
         J[varInd['ibR'],varInd['xbR']]= self.Vdc/(2*self.Lf)
         J[varInd['ibR'],varInd['ubR']]= (self.Vdc*self.Kp_GCC)/(2*self.Lf)
-        J[varInd['ibR'],varInd['Vdc']]= (self.xb.real+self.ub.real*self.Kp_GCC)/(2*self.Lf)
         J[varInd['ibR'],varInd['xPLL']]= self.ib.imag/self.wbase     
         J[varInd['ibR'],varInd['wte']] = (2/3)*((self.Kp_PLL*self.ib.imag)/self.wbase)*(-ra*math.cos(theta_a)*math.sin(self.wte)
                                          + 0.5*rb*math.cos(theta_b)*math.sin(self.wte) + 0.8660254037*rb*math.cos(theta_b)*math.cos(self.wte)
@@ -559,7 +541,6 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
         J[varInd['ibI'],varInd['ibI']]= -self.Rf/self.Lf
         J[varInd['ibI'],varInd['xbI']]= self.Vdc/(2*self.Lf)
         J[varInd['ibI'],varInd['ubI']]= (self.Vdc*self.Kp_GCC)/(2*self.Lf)
-        J[varInd['ibI'],varInd['Vdc']]= (self.xb.imag+self.ub.imag*self.Kp_GCC)/(2*self.Lf)
         J[varInd['ibI'],varInd['xPLL']]= -self.ib.real/self.wbase
         J[varInd['ibI'],varInd['wte']] = -(2/3)*((self.Kp_PLL*self.ib.real)/self.wbase)*(-ra*math.cos(theta_a)*math.sin(self.wte) 
                                          + 0.5*rb*math.cos(theta_b)*math.sin(self.wte) + 0.8660254037*rb*math.cos(theta_b)*math.cos(self.wte)
@@ -598,8 +579,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
                 J[varInd['ubR'],varInd['icR']]= 0.0
                 J[varInd['ubR'],varInd['icI']]= 0.0
                 
-                J[varInd['ubR'],varInd['Vdc']]= 0.0
-                J[varInd['ubR'],varInd['xDC']]= 0.0
+                J[varInd['ubR'],varInd['xP']]= 0.0
                 J[varInd['ubR'],varInd['xQ']]= 0.0
             else:
                 #dubR = (self.wp)*(-self.ub.real +  self.ib_ref.real - self.ib.real)
@@ -611,8 +591,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
                 J[varInd['ubR'],varInd['icR']]= 0.866025403*(self.Kp_Q*self.wp*self.vc.imag/2)
                 J[varInd['ubR'],varInd['icI']]= -0.866025403*(self.Kp_Q*self.wp*self.vc.real/2)
                 
-                J[varInd['ubR'],varInd['Vdc']]= 0.5*self.wp*self.Kp_DC
-                J[varInd['ubR'],varInd['xDC']]= -0.5*self.wp  
+                J[varInd['ubR'],varInd['xP']]= -0.5*self.wp  
                 J[varInd['ubR'],varInd['xQ']]= 0.866025403*self.wp
                     
             if np.sign((self.wp)*(-self.ub.imag +  self.ib_ref.imag - self.ib.imag)) == np.sign(self.ub.imag):
@@ -625,8 +604,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
                 J[varInd['ubI'],varInd['icR']]= 0.0
                 J[varInd['ubI'],varInd['icI']]= 0.0
                 
-                J[varInd['ubI'],varInd['Vdc']]= 0.0
-                J[varInd['ubI'],varInd['xDC']]= 0.0
+                J[varInd['ubI'],varInd['xP']]= 0.0
                 J[varInd['ubI'],varInd['xQ']]= 0.0
                 
             else:
@@ -639,8 +617,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
                 J[varInd['ubI'],varInd['icR']]= -(self.Kp_Q*self.wp*self.vc.imag/4)
                 J[varInd['ubI'],varInd['icI']]= (self.Kp_Q*self.wp*self.vc.real/4)
                 
-                J[varInd['ubI'],varInd['Vdc']]= 0.866025403*self.Kp_DC*self.wp
-                J[varInd['ubI'],varInd['xDC']]= -0.866025403*self.wp
+                J[varInd['ubI'],varInd['xP']]= -0.866025403*self.wp
                 J[varInd['ubI'],varInd['xQ']]= -0.5*self.wp
                     
         else:
@@ -655,8 +632,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
             J[varInd['ubR'],varInd['icR']]= 0.866025403*(self.Kp_Q*self.wp*self.vc.imag/2)
             J[varInd['ubR'],varInd['icI']]= -0.866025403*(self.Kp_Q*self.wp*self.vc.real/2)
             
-            J[varInd['ubR'],varInd['Vdc']]= 0.5*self.wp*self.Kp_DC
-            J[varInd['ubR'],varInd['xDC']]= -0.5*self.wp  
+            J[varInd['ubR'],varInd['xP']]= -0.5*self.wp  
             J[varInd['ubR'],varInd['xQ']]= 0.866025403*self.wp
                     
             J[varInd['ubI'],varInd['iaR']]= -(self.Kp_Q*self.wp*self.va.imag/4)
@@ -667,8 +643,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
             J[varInd['ubI'],varInd['icR']]= -(self.Kp_Q*self.wp*self.vc.imag/4)
             J[varInd['ubI'],varInd['icI']]= (self.Kp_Q*self.wp*self.vc.real/4)
                 
-            J[varInd['ubI'],varInd['Vdc']]= 0.866025403*self.Kp_DC*self.wp
-            J[varInd['ubI'],varInd['xDC']]= -0.866025403*self.wp
+            J[varInd['ubI'],varInd['xP']]= -0.866025403*self.wp
             J[varInd['ubI'],varInd['xQ']]= -0.5*self.wp                    
             
         #Phase c inverter output current
@@ -679,7 +654,6 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
         J[varInd['icR'],varInd['icI']]= (self.xPLL+self.Kp_PLL*self.vd+2*math.pi*60)/self.wbase
         J[varInd['icR'],varInd['xcR']]= self.Vdc/(2*self.Lf)
         J[varInd['icR'],varInd['ucR']]= (self.Vdc*self.Kp_GCC)/(2*self.Lf)
-        J[varInd['icR'],varInd['Vdc']]= (self.xc.real+self.uc.real*self.Kp_GCC)/(2*self.Lf)
         J[varInd['icR'],varInd['xPLL']]= self.ic.imag/self.wbase 
         J[varInd['icR'],varInd['wte']] = (2/3)*((self.Kp_PLL*self.ic.imag)/self.wbase)*(-ra*math.cos(theta_a)*math.sin(self.wte)
                                           + 0.5*rb*math.cos(theta_b)*math.sin(self.wte) + 0.8660254037*rb*math.cos(theta_b)*math.cos(self.wte)
@@ -689,7 +663,6 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
         J[varInd['icI'],varInd['icI']]= -self.Rf/self.Lf
         J[varInd['icI'],varInd['xcI']]= self.Vdc/(2*self.Lf)
         J[varInd['icI'],varInd['ucI']]= (self.Vdc*self.Kp_GCC)/(2*self.Lf)
-        J[varInd['icI'],varInd['Vdc']]= (self.xc.imag+self.uc.imag*self.Kp_GCC)/(2*self.Lf)
         J[varInd['icI'],varInd['xPLL']]= -self.ic.real/self.wbase
         J[varInd['icI'],varInd['wte']] = -(2/3)*((self.Kp_PLL*self.ic.real)/self.wbase)*(-ra*math.cos(theta_a)*math.sin(self.wte) 
                                          + 0.5*rb*math.cos(theta_b)*math.sin(self.wte) + 0.8660254037*rb*math.cos(theta_b)*math.cos(self.wte)
@@ -726,8 +699,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
                 J[varInd['ucR'],varInd['icR']]= 0.0
                 J[varInd['ucR'],varInd['icI']]= 0.0
                 J[varInd['ucR'],varInd['ucR']]= 0.0
-                J[varInd['ucR'],varInd['Vdc']]= 0.0
-                J[varInd['ucR'],varInd['xDC']]= 0.0
+                J[varInd['ucR'],varInd['xP']]= 0.0
                 J[varInd['ucR'],varInd['xQ']]= 0.0
             else:
                 #ducR = (self.wp)*(-self.uc.real +  self.ic_ref.real - self.ic.real)
@@ -739,8 +711,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
                 J[varInd['ucR'],varInd['icI']]= 0.866025403*(self.Kp_Q*self.wp*self.vc.real/2)
                 J[varInd['ucR'],varInd['ucR']]= -self.wp
                 
-                J[varInd['ucR'],varInd['Vdc']]=  0.5*self.wp*self.Kp_DC
-                J[varInd['ucR'],varInd['xDC']]=  -0.5*self.wp
+                J[varInd['ucR'],varInd['xP']]=  -0.5*self.wp
                 J[varInd['ucR'],varInd['xQ']]=  -0.866025403*self.wp
                     
             if np.sign((self.wp)*(-self.uc.imag +  self.ic_ref.imag - self.ic.imag)) == np.sign(self.uc.imag):
@@ -754,8 +725,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
                 J[varInd['ucI'],varInd['ibR']]= 0.0
                 J[varInd['ucI'],varInd['ibI']]= 0.0
                     
-                J[varInd['ucI'],varInd['Vdc']]= 0.0
-                J[varInd['ucI'],varInd['xDC']]= 0.0
+                J[varInd['ucI'],varInd['xP']]= 0.0
                 J[varInd['ucI'],varInd['xQ']]= 0.0
                     
             else:
@@ -768,8 +738,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
                 J[varInd['ucI'],varInd['icI']]= -self.wp + (self.Kp_Q*self.wp*self.vc.real/4)
                 J[varInd['ucI'],varInd['ucI']]= -self.wp
                     
-                J[varInd['ucI'],varInd['Vdc']]= -0.8660254037*self.Kp_DC*self.wp
-                J[varInd['ucI'],varInd['xDC']]= 0.8660254037*self.wp
+                J[varInd['ucI'],varInd['xP']]= 0.8660254037*self.wp
                 J[varInd['ucI'],varInd['xQ']]= -0.5*self.wp                    
         else:
             #ducR = (self.wp)*(-self.uc.real +  self.ic_ref.real - self.ic.real)
@@ -782,8 +751,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
             J[varInd['ucR'],varInd['icI']]= 0.866025403*(self.Kp_Q*self.wp*self.vc.real/2)
             J[varInd['ucR'],varInd['ucR']]= -self.wp
                 
-            J[varInd['ucR'],varInd['Vdc']]=  0.5*self.wp*self.Kp_DC
-            J[varInd['ucR'],varInd['xDC']]=  -0.5*self.wp
+            J[varInd['ucR'],varInd['xP']]=  -0.5*self.wp
             J[varInd['ucR'],varInd['xQ']]=  -0.866025403*self.wp
                 
             J[varInd['ucI'],varInd['iaR']]= -self.Kp_Q*self.wp*self.va.imag/4
@@ -794,86 +762,50 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
             J[varInd['ucI'],varInd['icI']]= -self.wp + (self.Kp_Q*self.wp*self.vc.real/4)
             J[varInd['ucI'],varInd['ucI']]= -self.wp
                 
-            J[varInd['ucI'],varInd['Vdc']]= -0.8660254037*self.Kp_DC*self.wp
-            J[varInd['ucI'],varInd['xDC']]= 0.8660254037*self.wp
+            J[varInd['ucI'],varInd['xP']]= 0.8660254037*self.wp
             J[varInd['ucI'],varInd['xQ']]= -0.5*self.wp
         
-        #DC link voltage dynamics
-        dVdc = (self.Ppv - self.S.real)/(self.Vdc*self.C)
-        J[varInd['Vdc'],varInd['iaR']]= -(self.xa.real+self.Kp_GCC*self.ua.real)/(4*self.C)
-        J[varInd['Vdc'],varInd['iaI']]= -(self.xa.imag+self.Kp_GCC*self.ua.imag)/(4*self.C)
-        J[varInd['Vdc'],varInd['xaR']]= -self.ia.real/(4*self.C)
-        J[varInd['Vdc'],varInd['xaI']]= -self.ia.imag/(4*self.C)
-        J[varInd['Vdc'],varInd['uaR']]= -(self.Kp_GCC*self.ia.real)/(4*self.C)
-        J[varInd['Vdc'],varInd['uaI']]= -(self.Kp_GCC*self.ia.imag)/(4*self.C)
-
-        J[varInd['Vdc'],varInd['ibR']]= -(self.xb.real+self.Kp_GCC*self.ub.real)/(4*self.C)
-        J[varInd['Vdc'],varInd['ibI']]= -(self.xb.imag+self.Kp_GCC*self.ub.imag)/(4*self.C)
-        J[varInd['Vdc'],varInd['xbR']]= -self.ib.real/(4*self.C)
-        J[varInd['Vdc'],varInd['xbI']]= -self.ib.imag/(4*self.C)
-        J[varInd['Vdc'],varInd['ubR']]= -(self.Kp_GCC*self.ib.real)/(4*self.C)
-        J[varInd['Vdc'],varInd['ubI']]= -(self.Kp_GCC*self.ib.imag)/(4*self.C)
-
-        J[varInd['Vdc'],varInd['icR']]= -(self.xc.real+self.Kp_GCC*self.uc.real)/(4*self.C)
-        J[varInd['Vdc'],varInd['icI']]= -(self.xc.imag+self.Kp_GCC*self.uc.imag)/(4*self.C)
-        J[varInd['Vdc'],varInd['xcR']]= -self.ic.real/(4*self.C)
-        J[varInd['Vdc'],varInd['xcI']]= -self.ic.imag/(4*self.C)
-        J[varInd['Vdc'],varInd['ucR']]= -(self.Kp_GCC*self.ic.real)/(4*self.C)
-        J[varInd['Vdc'],varInd['ucI']]= -(self.Kp_GCC*self.ic.imag)/(4*self.C)                
-            
-        J[varInd['Vdc'],varInd['Vdc']]= (-(self.q*self.Np*self.Irs*(self.Vdcbase**2))/(self.C*self.k*self.A*self.Ns*self.Tactual*self.Sbase))*math.exp((self.q*self.Vdc*self.Vdcbase)/(self.k*self.A*self.Ns*self.Tactual))
-        #DC link voltage controller dynamics
-        if abs(self.xDC + self.Kp_DC*(self.Vdc_ref - self.Vdc) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)))>self.iref_limit:
-            if np.sign(self.Ki_DC*(self.Vdc_ref - self.Vdc)) == np.sign(self.xDC):
-                #dxDC = 0.0
-                J[varInd['xDC'],varInd['Vdc']]= 0.0
+        #Active power controller dynamics
+        if abs(self.xP + self.Kp_P*(self.Ppv -  self.S.real) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)))>self.iref_limit:
+            if np.sign(self.Ki_P*(self.Ppv -  self.S.real)) == np.sign(self.xP):
+                #dxP = 0.0
+                J[varInd['xP'],varInd['iaR']]= 0.0
+                J[varInd['xP'],varInd['iaI']]= 0.0
             else:
-                #dxDC = self.Ki_DC*(self.Vdc_ref - self.Vdc)
-                J[varInd['xDC'],varInd['Vdc']]=-self.Ki_DC
+                #dxP = self.Ki_P*(self.Ppv -  self.S.real)
+                J[varInd['xP'],varInd['iaR']]= (self.Ki_P*self.va.imag/2)
+                J[varInd['xP'],varInd['iaI']]= -(self.Ki_P*self.va.real/2)
         else:
-            #dxDC = self.Ki_DC*(self.Vdc_ref - self.Vdc)
-            J[varInd['xDC'],varInd['Vdc']]=-self.Ki_DC
-            
+            #dxP = self.Ki_P*(self.Ppv -  self.S.real)
+            J[varInd['xP'],varInd['iaR']]= (self.Ki_P*self.va.imag/2)
+            J[varInd['xP'],varInd['iaI']]= -(self.Ki_P*self.va.real/2)
+                    
         # Reactive power controller dynamics
-        if abs(self.xDC + self.Kp_DC*(self.Vdc_ref - self.Vdc) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)))>self.iref_limit:
-            
+        if abs(self.xP + self.Kp_P*(self.Ppv -  self.S.real) + 1j*(self.xQ  - self.Kp_Q*(self.Q_ref - self.S_PCC.imag)))>self.iref_limit:
             if np.sign(-self.Ki_Q*(self.Q_ref - self.S_PCC.imag)) == np.sign(self.xQ):
                 #dxQ = 0.0
                 J[varInd['xQ'],varInd['iaR']]= 0.0
                 J[varInd['xQ'],varInd['iaI']]= 0.0
-                J[varInd['xQ'],varInd['ibR']]= 0.0
-                J[varInd['xQ'],varInd['ibI']]= 0.0
-                J[varInd['xQ'],varInd['icR']]= 0.0
-                J[varInd['xQ'],varInd['icI']]= 0.0
+
             else:
                 #dxQ = -self.Ki_Q*(self.Q_ref - self.S_PCC.imag)
                 J[varInd['xQ'],varInd['iaR']]= (self.Ki_Q*self.va.imag/2)
                 J[varInd['xQ'],varInd['iaI']]= -(self.Ki_Q*self.va.real/2)
-                J[varInd['xQ'],varInd['ibR']]= (self.Ki_Q*self.vb.imag/2)
-                J[varInd['xQ'],varInd['ibI']]= -(self.Ki_Q*self.vb.real/2)
-                J[varInd['xQ'],varInd['icR']]= (self.Ki_Q*self.vc.imag/2)
-                J[varInd['xQ'],varInd['icI']]= -(self.Ki_Q*self.vc.real/2)
         
         else:
             #dxQ = -self.Ki_Q*(self.Q_ref - self.S_PCC.imag)
             J[varInd['xQ'],varInd['iaR']]= (self.Ki_Q*self.va.imag/2)
             J[varInd['xQ'],varInd['iaI']]= -(self.Ki_Q*self.va.real/2)
-            J[varInd['xQ'],varInd['ibR']]= (self.Ki_Q*self.vb.imag/2)
-            J[varInd['xQ'],varInd['ibI']]= -(self.Ki_Q*self.vb.real/2)
-            J[varInd['xQ'],varInd['icR']]= (self.Ki_Q*self.vc.imag/2)
-            J[varInd['xQ'],varInd['icI']]= -(self.Ki_Q*self.vc.real/2)
         
         #SRF-PLL dynamics
         #dxPLL = self.Ki_PLL*(self.vd)
-        J[varInd['xPLL'],varInd['wte']] = (2/3)*self.Ki_PLL*(-ra*math.cos(theta_a)*math.sin(self.wte) +
-                                             0.5*rb*math.cos(theta_b)*math.sin(self.wte) + 0.8660254037*rb*math.cos(theta_b)*math.cos(self.wte)+
-                                             0.5*rc*math.cos(theta_c)*math.sin(self.wte) - 0.8660254037*rc*math.cos(theta_c)*math.cos(self.wte))
+        J[varInd['xPLL'],varInd['wte']] = (self.Ki_PLL*ra)*(-math.cos(theta_a)*math.sin(self.wte)
+                                                            + math.cos(theta_a-math.pi/2)*math.cos(self.wte))
         
         #Frequency integration to get angle
         #dwte = self.we
         J[varInd['wte'],varInd['xPLL']]= 1
-        J[varInd['wte'],varInd['wte']] = (2/3)*self.Kp_PLL*(-ra*math.cos(theta_a)*math.sin(self.wte) +
-                                          0.5*rb*math.cos(theta_b)*math.sin(self.wte) + 0.8660254037*rb*math.cos(theta_b)*math.cos(self.wte)+
-                                          0.5*rc*math.cos(theta_c)*math.sin(self.wte) - 0.8660254037*rc*math.cos(theta_c)*math.cos(self.wte))
+        J[varInd['wte'],varInd['wte']] = (self.Kp_PLL*ra)*(-math.cos(theta_a)*math.sin(self.wte)
+                                                            + math.cos(theta_a-math.pi/2)*math.cos(self.wte))
         
-        return J
+        return J    
