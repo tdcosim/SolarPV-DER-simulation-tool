@@ -168,12 +168,10 @@ class PVDER_ModelUtilities(BaseValues):
     def vb_calc(self):
         """PCC - LV side - Phase B"""
         
-        if self.standAlone:
-            #if type(self).__name__ == 'SolarPV_DER_SinglePhase':
+        if self.standAlone:            
             if self.DER_model_type in templates.single_phase_models:
                 val=((self.grid_model.vbg)/(self.a))*((self.Zload1*self.a*self.a)/((self.a*self.a*(self.Z1+self.Zload1))+self.grid_model.Z2))
-            
-            #elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
+                        
             elif self.DER_model_type in templates.three_phase_models:
                 val = ((self.grid_model.vbg+(self.ib/self.a)*self.grid_model.Z2)/(self.a) +self.ib*self.Z1)*((self.Zload1*self.a*self.a)/((self.a*self.a*(self.Z1+self.Zload1))+self.grid_model.Z2))
         
@@ -186,12 +184,10 @@ class PVDER_ModelUtilities(BaseValues):
     def vc_calc(self):
         """PCC - LV side - Phase C"""
         
-        if self.standAlone:
-            #if type(self).__name__ == 'SolarPV_DER_SinglePhase':
+        if self.standAlone:            
             if self.DER_model_type in templates.single_phase_models:
                 val=((self.grid_model.vcg)/(self.a))*((self.Zload1*self.a*self.a)/((self.a*self.a*(self.Z1+self.Zload1))+self.grid_model.Z2))
-            
-            #elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
+                        
             elif self.DER_model_type in templates.three_phase_models:
                 val = ((self.grid_model.vcg+(self.ic/self.a)*self.grid_model.Z2)/(self.a) +self.ic*self.Z1)*((self.Zload1*self.a*self.a)/((self.a*self.a*(self.Z1+self.Zload1))+self.grid_model.Z2))
         
@@ -525,9 +521,9 @@ class PVDER_ModelUtilities(BaseValues):
     def get_default_parameter_ID(self):
         """Return default parameter ID."""
         
-        if type(self).__name__ == 'SolarPV_DER_SinglePhase':
+        if self.DER_model_type == 'SolarPVDERSinglePhase':
             default_ID = '10'  
-        elif type(self).__name__ == 'SolarPV_DER_ThreePhase':
+        elif self.DER_model_type == 'SolarPVDERThreePhase':
             default_ID = '50'  
         
         return default_ID
