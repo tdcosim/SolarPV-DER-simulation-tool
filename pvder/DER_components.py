@@ -73,8 +73,7 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         self.check_basic_specs()
         
         return DER_arguments   
-    
-         
+             
     def get_DER_parent_id(self,DER_config):
         """Check if user has specified a parent configuration."""
         
@@ -86,8 +85,7 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         return DER_parent_id
     
     def get_DER_parent_config(self,configFile,derParentId):
-        """Check if user has specified a parent configuration."""
-        
+        """Check if user has specified a parent configuration."""        
         
         if derParentId:
            self.logger.info('{}:Reading parent DER config:{} for DER config:{}'.format(self.name,derParentId,self.parameter_ID)) 

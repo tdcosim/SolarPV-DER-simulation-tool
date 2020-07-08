@@ -5,7 +5,7 @@ import numpy as np
 import math
 import cmath
 import six
-from pvder.simulation_utilities import SimulationUtilities
+#from pvder.simulation_utilities import SimulationUtilities
 from pvder import utility_functions
 
 class BaseValues():
@@ -21,7 +21,7 @@ class BaseValues():
     Lbase = Zbase/wbase
     Cbase = 1/(Zbase*wbase)
     
-class Grid(BaseValues,SimulationUtilities):
+class Grid(BaseValues):
     """ Class for grid"""
     
     grid_count = 0 #Count for grid objects

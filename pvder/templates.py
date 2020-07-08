@@ -84,7 +84,65 @@ DER_design_template = {"SolarPVDERSinglePhase":
                                          "xPLL":0.0,"wte":6.28}
                        }
                        }
+    
 
+VRT_config_template = {'LVRT':{'parent_config':'',
+                                  'config':{'0':{'V_threshold':0.5,
+                                                 't_threshold':1.0,
+                                                 'mode':'mandatory_operation',
+                                                 't_start':0.0,
+                                                 'threshold_breach':False},
+                                            '1':{'V_threshold':0.7,
+                                                 't_threshold':3.5,
+                                                 'mode':'momentary_cessation', #'momentary_cessation'
+                                                 't_start':0.0,
+                                                 'threshold_breach':False},
+                                            '2':{'V_threshold':0.88,
+                                                 't_threshold':5.0,
+                                                 'mode':'mandatory_operation',
+                                                 't_start':0.0,
+                                                 'threshold_breach':False},
+                                  }
+                        },
+                        'HVRT':{'parent_config':'',
+                                  'config':{'0':{'V_threshold':1.12,
+                                                't_threshold':0.5,
+                                                'mode':'mandatory_operation',
+                                                't_start':0.0,
+                                                'threshold_breach':False},
+                                           '1':{'V_threshold':1.06,
+                                                't_threshold':1.0,
+                                                'mode':'mandatory_operation',
+                                                't_start':0.0,
+                                                'threshold_breach':False},
+                              }
+                         },
+                        'VRT_delays':{'parent_config':'',
+                                     'config':{'output_cessation_delay':0.01,
+                                              'output_restore_delay':1.75,
+                                              'restore_Vdc':False}
+                       }}
+
+FRT_config_template =  {'LFRT':{'parent_config':'',
+                           'config':{'1':{'F_LF':57.0,
+                                          't_LF_limit':1/60,
+                                          't_LFstart':0.0},
+                                     '2':{'F_LF':58.8,
+                                          't_LF_limit':299.0,
+                                          't_LFstart':0.0}
+                                    }},
+                        'HFRT':{'parent_config':'',
+                           'config':{'1':{'F_HF':61.2,
+                                          't_HF_limit':299.0,
+                                          't_HFstart':0.0},
+                                     '2':{'F_HF':62.0,
+                                          't_HF_limit':1/60,
+                                          't_HFstart':0.0}
+                                    }},
+                        'FRT_delays':{'parent_config':'',
+                                 'config':{'FRT_INSTANTANEOUS_TRIP':False}}
+                        }                           
+                      
 #Voltage and frequency ride through settings from IEEE 1557-2018 Category III (Table 16, page 48) 
 #V1 to V2 - zone 2,V1 < - zone 1  SolarPVDER_ThreePhaseConstantVdc
     

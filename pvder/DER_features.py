@@ -23,15 +23,15 @@ class PVDER_SmartFeatures():
     t_disconnect_low_limit = defaults.tdisconnect_low_limit #seconds #Minimum time to initiate DER disconnection (output cessation)
     t_reconnect_low_limit = defaults.treconnect_low_limit #seconds #Minimum time to initiate DER reconnection (output restoration)
       
-    default_RT_config =  defaults.RT_config
+    #default_RT_config =  defaults.RT_config
    
-    RT_config =  dict((key, {}) for key in templates.RT_config_template.keys()) 
+    #RT_config =  dict((key, {}) for key in templates.RT_config_template.keys()) 
     #Temporitly using earlier settings for FRT
-    default_RT_config.update({'F_LF1':57.0,'F_LF2':58.8,
-                           't_LF1_limit':1/60,'t_LF2_limit':299.0,
-                           'F_HF1':61.2,'F_HF2':62.0,
-                           't_HF1_limit':299.0,'t_HF2_limit':1/60,
-                           'FRT_INSTANTANEOUS_TRIP':False})
+    #default_RT_config.update({'F_LF1':57.0,'F_LF2':58.8,
+    #                       't_LF1_limit':1/60,'t_LF2_limit':299.0,
+    #                       'F_HF1':61.2,'F_HF2':62.0,
+    #                       't_HF1_limit':299.0,'t_HF2_limit':1/60,
+    #                       'FRT_INSTANTANEOUS_TRIP':False})
 
     f_ref = 60.0
     DER_CONNECTED = True
@@ -262,11 +262,11 @@ class PVDER_SmartFeatures():
     def RT_initialize(self,DER_arguments):
         """Initialize VRT and FRT settings."""
         
+        self.RT_config = {}
         self.update_RT_config(DER_arguments['derConfig']) #Checks and updates RT_config if any entries are missing
         
         self.VRT_initialize()
-        self.FRT_initialize()    
-    
+        self.FRT_initialize()        
     
     def VRT_initialize(self):
         """Initialize LVRT and HVRT settings."""
@@ -300,10 +300,10 @@ class PVDER_SmartFeatures():
         
         self.LVRT_dict = self.RT_config['LVRT']
         self.HVRT_dict = self.RT_config['HVRT']
-        #print(self.RT_config)
-        self.t_disconnect_delay = self.RT_config['OUTPUT_CESSATION_DELAY']#(1/120.0)
-        self.t_reconnect_delay = self.RT_config['OUTPUT_RESTORE_DELAY'] 
-        self.RESTORE_Vdc = self.RT_config['RESTORE_Vdc'] #Restore Vdc to nominal reference by using a ramp
+        
+        self.t_disconnect_delay = self.RT_config['VRT_delays']['output_cessation_delay']#(1/120.0)
+        self.t_reconnect_delay = self.RT_config['VRT_delays']['output_restore_delay'] 
+        self.RESTORE_Vdc = self.RT_config['VRT_delays']['restore_Vdc'] #Restore Vdc to nominal reference by using a ramp
                           
         self.check_VRT_settings()
     
@@ -444,7 +444,7 @@ class PVDER_SmartFeatures():
        
    
     
-    def print_VRT_events(self,simulation_time,voltage,zone_name,timer_start=0.0,event_name='',print_inline = False,verbose = False):
+    def print_VRT_events(self,simulation_time,voltage,zone_name,timer_start=0.0,event_name='',print_inline = True,verbose = False):
         """Print logs for VRT events."""
         
         voltage = (voltage*self.Vbase)/(self.Vrms_ref*self.Vbase)#175
@@ -473,7 +473,7 @@ class PVDER_SmartFeatures():
 
         self.print_event(text_string,print_inline)           
     
-    def print_reconnect_events(self,simulation_time,voltage,frequency,timer_start=0.0,event_name='',print_inline = False,verbose = False):
+    def print_reconnect_events(self,simulation_time,voltage,frequency,timer_start=0.0,event_name='',print_inline = True,verbose = False):
         """Print logs for VRT events."""
         
         voltage = (voltage*self.Vbase)/(self.Vrms_ref*self.Vbase)#175
@@ -510,7 +510,7 @@ class PVDER_SmartFeatures():
             if LVRT_values['t_start'] > 0.0: #Check if any timer started
                 print('Voltage anomaly started at {:.4f} due to zone {} with threshold {:.2f} V p.u.'.format(LVRT_values['t_start'],LVRT_key,LVRT_values['V_threshold']))
       
-    def update_RT_config(self,derConfig):
+    def update_RT_config_old(self,derConfig):
         """Check whether the config file is good."""        
                    
         for item in templates.RT_config_template.keys():
@@ -524,7 +524,24 @@ class PVDER_SmartFeatures():
                 self.RT_config[item] = self.default_RT_config[item]
             else:
                 raise KeyError('{}:Ridethrough setting {} could not be found!'.format(self.name,item))
-     
+    
+    def update_RT_config(self,derConfig):
+        """Check whether the config file is good."""        
+        
+        VRT_list = ['LVRT','HVRT','VRT_delays']
+        FRT_list = ['LFRT','HFRT','FRT_delays']
+        
+        for RT in VRT_list + FRT_list:
+            if RT in derConfig:
+                self.RT_config[RT] = derConfig[RT]
+            elif RT in self.DER_config:
+                self.RT_config[RT] = self.DER_config[RT]        
+            else:
+                if RT in VRT_list:
+                    self.RT_config[RT] = templates.VRT_config_template[RT]['config']
+                if RT in FRT_list:
+                    self.RT_config[RT] = templates.FRT_config_template[RT]['config']
+    
     def show_RT_settings(self,settings_type='LVRT',PER_UNIT=True):
         """Method to show LVRT settings."""
         
@@ -564,10 +581,7 @@ class PVDER_SmartFeatures():
         if settings_type ==  'LFRT' or settings_type ==  'HFRT':
             print('FRT_INSTANTANEOUS_TRIP:{}'.format(self.FRT_INSTANTANEOUS_TRIP))        
         print('OUTPUT_CESSATION_DELAY:{},OUTPUT_RESTORE_DELAY:{}'.format(self.t_disconnect_delay,self.t_reconnect_delay))
-                
-    
-   
-    
+     
     def FRT_initialize(self):
         """Initialize LFRT and HFRT settings."""
         
@@ -580,28 +594,10 @@ class PVDER_SmartFeatures():
         self.HFRT_TRIP = False
         
         self.del_f =0.02
-        
-        self.LFRT_dict = {'1':{'F_LF':self.RT_config['F_LF1'],
-                               't_LF_limit':self.RT_config['t_LF1_limit'],
-                               't_LFstart':0.0
-                              },
-                          '2':{'F_LF':self.RT_config['F_LF2'],
-                               't_LF_limit':self.RT_config['t_LF2_limit'],
-                               't_LFstart':0.0
-                              }
-                         }        
-        
-        self.HFRT_dict = {'1':{'F_HF':self.RT_config['F_HF1'],
-                               't_HF_limit':self.RT_config['t_HF1_limit'],
-                               't_HFstart':0.0
-                              },
-                          '2':{'F_HF':self.RT_config['F_HF2'],
-                               't_HF_limit':self.RT_config['t_HF2_limit'],
-                               't_HFstart':0.0
-                              }
-                         }        
-    
-        self.FRT_INSTANTANEOUS_TRIP = self.RT_config['FRT_INSTANTANEOUS_TRIP'] #Disconnects PV-DER within one cycle for frequency anomaly
+
+        self.LFRT_dict = self.RT_config['LFRT']
+        self.HFRT_dict = self.RT_config['HFRT']
+        self.FRT_INSTANTANEOUS_TRIP = self.RT_config['FRT_delays']['FRT_INSTANTANEOUS_TRIP'] #Disconnects PV-DER within one cycle for frequency anomaly
     
         self.check_LFRT_settings()    
         self.check_HFRT_settings()
@@ -609,6 +605,7 @@ class PVDER_SmartFeatures():
     def check_LFRT_settings(self):
         """Sanity check for LFRT settings."""
         
+        print(self.LFRT_dict)
         if not self.LFRT_dict['2']['F_LF'] > self.LFRT_dict['1']['F_LF']:
             
             raise ValueError('LFRT frequency settings - F_LF1:{:.2f},F_LF2:{:.2f} are infeasible!'.format(self.LFRT_dict['1']['F_LF'],self.LFRT_dict['2']['F_LF']))
@@ -677,14 +674,12 @@ class PVDER_SmartFeatures():
             self.HFRT_dict['1']['t_LF_limit'] = self.HFRT_dict['2']['t_LF_limit']  = 30*(1/60) #Disconnect within n cycles  
             
         else:
-            self.LFRT_dict['1']['t_LF_limit'] = self.RT_config['t_LF1_limit']
-            self.LFRT_dict['2']['t_LF_limit'] = self.RT_config['t_LF2_limit']
-            self.HFRT_dict['1']['t_HF_limit']  = self.RT_config['t_HF1_limit']
-            self.HFRT_dict['2']['t_HF_limit']  = self.RT_config['t_HF2_limit']
+            self.LFRT_dict['1']['t_LF_limit'] = self.RT_config['LFRT']['1']['t_LF_limit'] 
+            self.LFRT_dict['2']['t_LF_limit'] = self.RT_config['LFRT']['2']['t_LF_limit'] 
+            self.HFRT_dict['1']['t_HF_limit']  = self.RT_config['HFRT']['1']['t_HF_limit'] 
+            self.HFRT_dict['2']['t_HF_limit']  = self.RT_config['HFRT']['2']['t_HF_limit'] 
                     
-        return self.__FRT_INSTANTANEOUS_TRIP   
-    
-    
+        return self.__FRT_INSTANTANEOUS_TRIP          
    
     
     def print_LFRT_events(self,simulation_time,frequency,timer_start=0.0,event_name='',print_inline = False,verbose = False):
