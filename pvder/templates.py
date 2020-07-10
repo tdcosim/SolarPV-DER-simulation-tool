@@ -22,6 +22,7 @@ DER_design_template = {"SolarPVDERSinglePhase":
                                          "Vdc":550.0,
                                          "xDC":0.0,"xQ":0.0,
                                          "xPLL":0.0,"wte":6.28}
+                       
                        },
                        
                        "SolarPVDERSinglePhaseConstantVdc":
@@ -50,7 +51,8 @@ DER_design_template = {"SolarPVDERSinglePhase":
                        "initial_states":{"iaR":0,"iaI":0.0,"xaR":0.0,"xaI":0.0,"uaR":0.0,"uaI":0.0,
                                          "ibR":0,"ibI":0.0,"xbR":0.0,"xbI":0.0,"ubR":0.0,"ubI":0.0,
                                          "icR":0,"icI":0.0,"xcR":0.0,"xcI":0.0,"ucR":0.0,"ucI":0.0,
-                                         "Vdc":550.0,"xDC":0.0,"xQ":0.0,"xPLL":0.0,"wte":6.28}
+                                         "Vdc":550.0,"xDC":0.0,"xQ":0.0,"xPLL":0.0,"wte":6.28}                      
+                       
                        },
                        
                        "SolarPVDERThreePhaseBalanced":
@@ -86,7 +88,7 @@ DER_design_template = {"SolarPVDERSinglePhase":
                        }
     
 
-VRT_config_template = {'LVRT':{'parent_config':'',
+VRT_config_template = {'LVRT':{'config_id':'',
                                   'config':{'0':{'V_threshold':0.5,
                                                  't_threshold':1.0,
                                                  'mode':'mandatory_operation',
@@ -104,7 +106,7 @@ VRT_config_template = {'LVRT':{'parent_config':'',
                                                  'threshold_breach':False},
                                   }
                         },
-                        'HVRT':{'parent_config':'',
+                        'HVRT':{'config_id':'',
                                   'config':{'0':{'V_threshold':1.12,
                                                 't_threshold':0.5,
                                                 'mode':'mandatory_operation',
@@ -117,7 +119,7 @@ VRT_config_template = {'LVRT':{'parent_config':'',
                                                 'threshold_breach':False},
                               }
                          },
-                        'VRT_delays':{'parent_config':'',
+                        'VRT_delays':{'config_id':'',
                                      'config':{'output_cessation_delay':0.01,
                                               'output_restore_delay':1.75,
                                               'restore_Vdc':False}

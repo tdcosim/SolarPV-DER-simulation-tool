@@ -15,11 +15,33 @@
       
       "steadystate_values":{"maR0":0.89,"maI0":0.0,"iaR0":1.0,"iaI0":0.001},
       "initial_states":{"iaR":0,"iaI":0.0,"xaR":0.0,"xaI":0.0,"uaR":0.0,"uaI":0.0,
-                        "xDC":0.0,"xQ":0.0,"xPLL":0.0,"wte":6.28}
+                        "xDC":0.0,"xQ":0.0,"xPLL":0.0,"wte":6.28},
+      "verbosity":"DEBUG",
+      "LVRT":{"config_id":"LVRT_1547cat3"}    
      },
+     
 "50_type1":{"parent_config":"50",                          
       "inverter_ratings":{"Ioverload":1.1}
      },
+     
+"LVRT_1547cat3":{"config":{"0":{"V_threshold":0.5,
+                                                 "t_threshold":1.0,
+                                                 "mode":"mandatory_operation",
+                                                 "t_start":0.0,
+                                                 "threshold_breach":false},
+                                            "1":{"V_threshold":0.7,
+                                                 "t_threshold":3.5,
+                                                 "mode":"momentary_cessation", 
+                                                 "t_start":0.0,
+                                                 "threshold_breach":false},
+                                            "2":{"V_threshold":0.88,
+                                                 "t_threshold":5.0,
+                                                 "mode":"mandatory_operation",
+                                                 "t_start":0.0,
+                                                 "threshold_breach":false}
+                                  }
+                        },
+                        
 "250":{"parent_config":"",
        "basic_specs":{"model_type":"SolarPVDERThreePhase"},
        "basic_options":{"Sinsol":100.0},
@@ -75,7 +97,27 @@
       
       "steadystate_values":{"maR0":0.89,"maI0":0.0,"iaR0":1.0,"iaI0":0.001},
       "initial_states":{"iaR":0,"iaI":0.0,"xaR":0.0,"xaI":0.0,"uaR":0.0,"uaI":0.0,
-                        "xDC":0.0,"xQ":0.0,"xPLL":0.0,"wte":6.28}
+                        "xDC":0.0,"xQ":0.0,"xPLL":0.0,"wte":6.28},
+      "verbosity":"DEBUG",
+      
+      "LVRT":{"parent_config":"",
+              "config":{"0":{"V_threshold":0.55,
+                            "t_threshold":1.0,
+                            "mode":"mandatory_operation",
+                            "t_start":0.0,
+                            "threshold_breach":false},
+                        "1":{"V_threshold":0.7,
+                             "t_threshold":3.5,
+                             "mode":"momentary_cessation",
+                                                 "t_start":0.0,
+                                                 "threshold_breach":false},
+                                            "2":{"V_threshold":0.88,
+                                                 "t_threshold":5.0,
+                                                 "mode":"mandatory_operation",
+                                                 "t_start":0.0,
+                                                 "threshold_breach":false}
+                                  }
+                        }
      },
     
 "10_constantVdc":{"parent_config":"",

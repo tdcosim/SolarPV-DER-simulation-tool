@@ -5,7 +5,6 @@ import numpy as np
 import math
 import cmath
 import six
-#from pvder.simulation_utilities import SimulationUtilities
 from pvder import utility_functions
 
 class BaseValues():

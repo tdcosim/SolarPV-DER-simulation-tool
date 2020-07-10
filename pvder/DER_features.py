@@ -6,7 +6,7 @@ import six
 import math
 
 from pvder import utility_functions
-from pvder import defaults,templates
+from pvder import defaults,templates,specifications
 
 class PVDER_SmartFeatures():
     """Class for describing smart inverter inverter features of PV-DER."""
@@ -22,17 +22,7 @@ class PVDER_SmartFeatures():
     t_threshold_high_limit = defaults.tthreshold_high_limit #seconds
     t_disconnect_low_limit = defaults.tdisconnect_low_limit #seconds #Minimum time to initiate DER disconnection (output cessation)
     t_reconnect_low_limit = defaults.treconnect_low_limit #seconds #Minimum time to initiate DER reconnection (output restoration)
-      
-    #default_RT_config =  defaults.RT_config
-   
-    #RT_config =  dict((key, {}) for key in templates.RT_config_template.keys()) 
-    #Temporitly using earlier settings for FRT
-    #default_RT_config.update({'F_LF1':57.0,'F_LF2':58.8,
-    #                       't_LF1_limit':1/60,'t_LF2_limit':299.0,
-    #                       'F_HF1':61.2,'F_HF2':62.0,
-    #                       't_HF1_limit':299.0,'t_HF2_limit':1/60,
-    #                       'FRT_INSTANTANEOUS_TRIP':False})
-
+    
     f_ref = 60.0
     DER_CONNECTED = True
     DER_MOMENTARY_CESSATION = False
@@ -260,11 +250,8 @@ class PVDER_SmartFeatures():
                 self.print_reconnect_events(t, Vrms_measured,fgrid,self.t_reconnect_start,event_name='reconnect_start')
     
     def RT_initialize(self,DER_arguments):
-        """Initialize VRT and FRT settings."""
-        
-        self.RT_config = {}
-        self.update_RT_config(DER_arguments['derConfig']) #Checks and updates RT_config if any entries are missing
-        
+        """Initialize VRT and FRT settings."""      
+                
         self.VRT_initialize()
         self.FRT_initialize()        
     
@@ -441,8 +428,7 @@ class PVDER_SmartFeatures():
             
             if self.t_reconnect_delay < self.t_reconnect_low_limit:
                 raise ValueError('DER output restore time delay {} s after momentary cessation is infeasible!'.format(self.t_reconnect_delay))   
-       
-   
+    
     
     def print_VRT_events(self,simulation_time,voltage,zone_name,timer_start=0.0,event_name='',print_inline = True,verbose = False):
         """Print logs for VRT events."""
@@ -525,22 +511,43 @@ class PVDER_SmartFeatures():
             else:
                 raise KeyError('{}:Ridethrough setting {} could not be found!'.format(self.name,item))
     
-    def update_RT_config(self,derConfig):
+    def update_RT_config(self,DER_config,DER_arguments,config_dict):
+        """Check whether the config file is good."""             
+                     
+        for RT in  list(templates.VRT_config_template.keys()) +  list(templates.FRT_config_template.keys()):
+            if RT in DER_arguments['derConfig']:
+                self.RT_config[RT] = DER_arguments['derConfig'][RT]
+                self.logger.debug('{}:{} updated with settings from derConfig.'.format(self.name,RT))
+            elif RT in self.DER_config:              
+                if 'config_id' in self.DER_config[RT]:
+                    self.RT_config[RT] = config_dict[self.DER_config[RT]['config_id']]['config']
+                    self.logger.debug('{}:{} updated with settings from config id {}.'.format(self.name,RT,self.DER_config[RT]['config_id']))
+                elif 'config' in self.DER_config[RT]:
+                    self.RT_config[RT] = self.DER_config[RT]['config'] 
+                    self.logger.debug('{}:{} updated with settings from DER config file.'.format(self.name,RT))
+            else:
+                if RT in list(templates.VRT_config_template.keys()):
+                    self.RT_config[RT] = templates.VRT_config_template[RT]['config']
+                if RT in list(templates.FRT_config_template.keys()):
+                    self.RT_config[RT] = templates.FRT_config_template[RT]['config']
+                self.logger.debug('{}:{} updated with settings from template.'.format(self.name,RT))
+   
+    def check_RT_config(self):
         """Check whether the config file is good."""        
         
-        VRT_list = ['LVRT','HVRT','VRT_delays']
-        FRT_list = ['LFRT','HFRT','FRT_delays']
-        
-        for RT in VRT_list + FRT_list:
-            if RT in derConfig:
-                self.RT_config[RT] = derConfig[RT]
-            elif RT in self.DER_config:
-                self.RT_config[RT] = self.DER_config[RT]        
-            else:
-                if RT in VRT_list:
-                    self.RT_config[RT] = templates.VRT_config_template[RT]['config']
-                if RT in FRT_list:
-                    self.RT_config[RT] = templates.FRT_config_template[RT]['config']
+        for RT in list(templates.VRT_config_template.keys()):
+            if RT != 'VRT_delays':
+                for RT_setting in templates.VRT_config_template[RT]['config']['0']:                    
+                    for level,setting in self.RT_config[RT].items():                        
+                        if RT_setting not in setting:
+                            raise ValueError('{} not found for level {} in {}!'.format(RT_setting,level,RT))
+            
+        for RT in list(templates.FRT_config_template.keys()):
+            if RT != 'FRT_delays':
+                for RT_setting in templates.FRT_config_template[RT]['config']['1']:
+                    for level,setting in self.RT_config[RT].items():                        
+                        if RT_setting not in setting:
+                            raise ValueError('{} not found for level {} in {}!'.format(RT_setting,level,RT))        
     
     def show_RT_settings(self,settings_type='LVRT',PER_UNIT=True):
         """Method to show LVRT settings."""
@@ -603,9 +610,8 @@ class PVDER_SmartFeatures():
         self.check_HFRT_settings()
     
     def check_LFRT_settings(self):
-        """Sanity check for LFRT settings."""
+        """Sanity check for LFRT settings."""        
         
-        print(self.LFRT_dict)
         if not self.LFRT_dict['2']['F_LF'] > self.LFRT_dict['1']['F_LF']:
             
             raise ValueError('LFRT frequency settings - F_LF1:{:.2f},F_LF2:{:.2f} are infeasible!'.format(self.LFRT_dict['1']['F_LF'],self.LFRT_dict['2']['F_LF']))

@@ -50,7 +50,7 @@ class Logging(object):
     def verbosity(self,verbosity):
         """Method to set verbosity of logging on terminal. Different classes may have different levels of verbosity."""
         
-        if isinstance(verbosity,str):
+        if isinstance(verbosity,specifications.string_type):
             if verbosity not in specifications.logging_levels:
                 raise ValueError('{} is not a valid logging level!'.format(verbosity))                
             self.__verbosity = verbosity.upper()
@@ -59,7 +59,7 @@ class Logging(object):
                 raise ValueError('{} is not a valid logging level!'.format(verbosity))
             self.__verbosity = logging.getLevelName(verbosity)
         else:
-            raise ValueError('{} is an invalid verbosity level!'.format(verbosity))
+            raise ValueError('{} is an valid type for verbosity!'.format(type(verbosity)))
         
         #Set logging level - {DEBUG,INFO,WARNING,ERROR.CRITICAL}
         if self.__verbosity == 'DEBUG':

@@ -52,10 +52,10 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         self.parameter_ID = self.get_DER_id(**kwargs)
         self.create_template()
         
-        DER_config = self.get_DER_config(configFile,self.parameter_ID)
+        DER_config,config_dict = self.get_DER_config(configFile,self.parameter_ID)
         
-        DER_arguments = self.get_DER_arguments(DER_config,**kwargs)    
-        
+        DER_arguments = self.get_DER_arguments(DER_config,**kwargs)   
+                
         self.name_instance(DER_arguments['identifier']) #Generate a name for the instance  
         self.initialize_logger(DER_arguments['verbosity'])  #Set logging level - {DEBUG,INFO,WARNING,ERROR}       
         
@@ -71,6 +71,10 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         self.check_model_type(DER_config,DER_parent_config)
         self.update_DER_config(DER_config,DER_parent_config,DER_arguments,self.parameter_ID,self.DER_parent_ID)
         self.check_basic_specs()
+        
+        self.RT_config = {}
+        self.update_RT_config(DER_config,DER_arguments,config_dict) #Checks and updates RT_config if any entries are missing
+        self.check_RT_config()
         
         return DER_arguments   
              
@@ -89,7 +93,7 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         
         if derParentId:
            self.logger.info('{}:Reading parent DER config:{} for DER config:{}'.format(self.name,derParentId,self.parameter_ID)) 
-           DER_parent_config = self.get_DER_config(configFile,derParentId)    
+           DER_parent_config,_ = self.get_DER_config(configFile,derParentId)    
         else:
            DER_parent_config = {}    
         
@@ -106,7 +110,7 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         else:
             raise KeyError('DER configuration with ID:{} could not be found in {}! - Available IDs are:{}'.format(derId,configFile,available_ids))
         
-        return config_dict[derId]
+        return config_dict[derId],config_dict
     
     def create_template(self):
         """Create templates for DER model."""
@@ -142,26 +146,33 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         DER_arguments = {}        
         found_arguments = kwargs.keys() #Arguments which were passed
         used_arguments =[]
-        
+       
         for key, value in specifications.DER_argument_spec .items():
             
-            if key in kwargs.keys():
+            if key in kwargs.keys():                
                 if isinstance(kwargs[key],specifications.DER_argument_spec [key]['type']):
                    DER_arguments.update({key:kwargs[key]})
                    used_arguments.append(key)
                 else:
                     raise ValueError('Found {} to have type:{} - Valid type:{}'.format(key,type(kwargs[key]),specifications.DER_argument_spec [key]['type']))
             elif key in DER_config: #Check if key available in config file
-                if isinstance(kwargs[key],specifications.DER_argument_spec [key]['type']):
+                if isinstance(DER_config[key],specifications.DER_argument_spec[key]['type']):
                     DER_arguments.update({key:DER_config[key]})
+                    logger.debug('Updated DER argument {} from DER_config'.format(key))       
                 else:
                     raise ValueError('Found {} to have type:{} - Valid type:{}'.format(key,type(DER_config[key]),specifications.DER_argument_spec [key]['type']))
-            
-            elif specifications.DER_argument_spec [key]['default_value'] is not None:
-                DER_arguments.update({key:specifications.DER_argument_spec [key]['default_value']})
-                
+            elif key in specifications.DER_argument_spec:
+                if specifications.DER_argument_spec [key]['default_value'] is not None:
+                    DER_arguments.update({key:specifications.DER_argument_spec [key]['default_value']})
+           
         logger.debug('Used arguments:{}\nInvalid arguments:{}'.format(used_arguments,list(set(found_arguments).difference(set(used_arguments)))))       
         
+        if 'powerRating' in found_arguments:
+            DER_arguments.update({'Srated':kwargs['powerRating']})
+            
+        if 'VrmsRating' in found_arguments:
+            DER_arguments.update({'Vrmsrated':kwargs['VrmsRating']})  
+                    
         return DER_arguments
        
     def initialize_DER(self,DER_arguments):
@@ -174,7 +185,7 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
         self.attach_grid_model(DER_arguments)
         
         self.initialize_grid_measurements(DER_arguments)
-        self.initialize_DER_model(DER_arguments) #DER model parameters
+        self.initialize_DER_model() #DER model parameters
         self.RT_initialize(DER_arguments) #VRT and FRT settings  
         
         self.initialize_jacobian()
