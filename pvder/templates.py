@@ -8,6 +8,8 @@ Created on Mon Mar 30 10:19:16 2020
 single_phase_models = ["SolarPVDERSinglePhase","SolarPVDERSinglePhaseConstantVdc"]
 three_phase_models = ["SolarPVDERThreePhase","SolarPVDERThreePhaseConstantVdc","SolarPVDERThreePhaseBalanced"]
 
+model_types = ['SinglePhase','SinglePhaseConstantVdc',
+               'ThreePhaseUnbalanced','ThreePhaseUnbalancedConstantVdc','ThreePhaseBalanced']
 
 DER_design_template = {"SolarPVDERSinglePhase":
                        {"parent_config":"",                        

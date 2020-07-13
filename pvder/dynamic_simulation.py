@@ -31,7 +31,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Logging):
     DEBUG_POWER = False
     DEBUG_PLL = False
     
-    jac_list = ['SolarPVDERThreePhase','SolarPVDERSinglePhase']
+    jac_list = ['SolarPVDERThreePhase','SolarPVDERSinglePhase','SolarPVDERThreePhaseBalanced']
         
     def __init__(self,PV_model,events,gridModel = None,tStop = 0.5,
                  LOOP_MODE = False,COLLECT_SOLUTION = True,jacFlag = False,

@@ -275,14 +275,7 @@ class PVDER_SmartFeatures():
         self.HVRT_MOMENTARY_CESSATION = False
                
         
-        for RT in ['LVRT','HVRT']:
-            for RT_level,RT_config in self.RT_config[RT].items():
-               
-                assert isinstance(RT_config,dict), 'Ridethrough level must be specified as a dictionary!'
-                if 't_start' not in RT_config.keys():
-                    RT_config.update({'t_start':0.0})
-                if 'threshold_breach' not in RT_config.keys():
-                    RT_config.update({'threshold_breach':False})
+        
                 
         
         self.LVRT_dict = self.RT_config['LVRT']
@@ -514,7 +507,7 @@ class PVDER_SmartFeatures():
     def update_RT_config(self,DER_config,DER_arguments,config_dict):
         """Check whether the config file is good."""             
                      
-        for RT in  list(templates.VRT_config_template.keys()) +  list(templates.FRT_config_template.keys()):
+        for RT in list(templates.VRT_config_template.keys()) +  list(templates.FRT_config_template.keys()):
             if RT in DER_arguments['derConfig']:
                 self.RT_config[RT] = DER_arguments['derConfig'][RT]
                 self.logger.debug('{}:{} updated with settings from derConfig.'.format(self.name,RT))
@@ -532,6 +525,15 @@ class PVDER_SmartFeatures():
                     self.RT_config[RT] = templates.FRT_config_template[RT]['config']
                 self.logger.debug('{}:{} updated with settings from template.'.format(self.name,RT))
    
+        for RT in ['LVRT','HVRT']:
+            for RT_level,RT_config in self.RT_config[RT].items():
+               
+                assert isinstance(RT_config,dict), 'Ridethrough level must be specified as a dictionary!'
+                if 't_start' not in RT_config.keys():
+                    RT_config.update({'t_start':0.0})
+                if 'threshold_breach' not in RT_config.keys():
+                    RT_config.update({'threshold_breach':False})    
+    
     def check_RT_config(self):
         """Check whether the config file is good."""        
         
