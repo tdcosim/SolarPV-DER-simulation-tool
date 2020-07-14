@@ -301,6 +301,7 @@ class PVDER_SmartFeatures():
                 t_threshold = LVRT_values['t_threshold']
                 
                 if Vrms_measured < V_threshold and not LVRT_values['threshold_breach']: #Check if voltage below threshold
+                    
                     if LVRT_values['t_start'] == 0.0: #Start timer if voltage goes below threshold
                         LVRT_values['t_start']  = t
                         self.print_VRT_events(t,Vrms_measured,zone_name,LVRT_values['t_start'],event_name='zone_entered')
@@ -497,7 +498,7 @@ class PVDER_SmartFeatures():
                 self.RT_config[item] = derConfig[item]
             elif item in self.DER_config:
                 self.RT_config[item] = self.DER_config[item]
-                self.logger.debug('{}:{} updated with value from config file {}.'.format(self.name,item,self.DER_config[item]))
+                self.logger.debug('{}:{} updated with alue from config file {}.'.format(self.name,item,self.DER_config[item]))
             elif item in self.default_RT_config:
                 self.logger.debug('{}:{} updated with default value {}.'.format(self.name,item,self.default_RT_config[item]))    
                 self.RT_config[item] = self.default_RT_config[item]
@@ -510,20 +511,21 @@ class PVDER_SmartFeatures():
         for RT in list(templates.VRT_config_template.keys()) +  list(templates.FRT_config_template.keys()):
             if RT in DER_arguments['derConfig']:
                 self.RT_config[RT] = DER_arguments['derConfig'][RT]
-                self.logger.debug('{}:{} updated with settings from derConfig.'.format(self.name,RT))
+                self.logger.debug('{}:{} updated with {} from derConfig.'.format(self.name,RT,DER_arguments['derConfig'][RT]))
             elif RT in self.DER_config:              
                 if 'config_id' in self.DER_config[RT]:
                     self.RT_config[RT] = config_dict[self.DER_config[RT]['config_id']]['config']
-                    self.logger.debug('{}:{} updated with settings from config id {}.'.format(self.name,RT,self.DER_config[RT]['config_id']))
+                    self.logger.debug('{}:{} updated with {} from config id {}.'.format(self.name,RT,config_dict[self.DER_config[RT]['config_id']]['config'],self.DER_config[RT]['config_id']))
                 elif 'config' in self.DER_config[RT]:
                     self.RT_config[RT] = self.DER_config[RT]['config'] 
-                    self.logger.debug('{}:{} updated with settings from DER config file.'.format(self.name,RT))
+                    self.logger.debug('{}:{} updated with {} from DER config file.'.format(self.name,RT,self.DER_config[RT]['config'] ))
             else:
+                
                 if RT in list(templates.VRT_config_template.keys()):
                     self.RT_config[RT] = templates.VRT_config_template[RT]['config']
                 if RT in list(templates.FRT_config_template.keys()):
                     self.RT_config[RT] = templates.FRT_config_template[RT]['config']
-                self.logger.debug('{}:{} updated with settings from template.'.format(self.name,RT))
+                self.logger.debug('{}:{} updated with {} from template.'.format(self.name,RT,self.RT_config[RT]))
    
         for RT in ['LVRT','HVRT']:
             for RT_level,RT_config in self.RT_config[RT].items():
@@ -533,14 +535,19 @@ class PVDER_SmartFeatures():
                     RT_config.update({'t_start':0.0})
                 if 'threshold_breach' not in RT_config.keys():
                     RT_config.update({'threshold_breach':False})    
+                    
+        for config_parameter in templates.VRT_config_template['VRT_delays']['config']:
+            if config_parameter not in self.RT_config['VRT_delays']:
+                self.RT_config['VRT_delays'][config_parameter] = templates.VRT_config_template['VRT_delays']['config'][config_parameter]
+                self.logger.debug('{}: Updated {} from template with value {}'.format(self.name,config_parameter,templates.VRT_config_template['VRT_delays']['config'][config_parameter]))
     
     def check_RT_config(self):
         """Check whether the config file is good."""        
         
-        for RT in list(templates.VRT_config_template.keys()):
+        for RT in list(templates.VRT_config_template.keys()):            
             if RT != 'VRT_delays':
                 for RT_setting in templates.VRT_config_template[RT]['config']['0']:                    
-                    for level,setting in self.RT_config[RT].items():                        
+                    for level,setting in self.RT_config[RT].items():                                               
                         if RT_setting not in setting:
                             raise ValueError('{} not found for level {} in {}!'.format(RT_setting,level,RT))
             

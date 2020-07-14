@@ -150,7 +150,7 @@ FRT_config_template =  {'LFRT':{'parent_config':'',
 #Voltage and frequency ride through settings from IEEE 1557-2018 Category III (Table 16, page 48) 
 #V1 to V2 - zone 2,V1 < - zone 1  SolarPVDER_ThreePhaseConstantVdc
     
-RT_config_template = {'LVRT':{'0':['V_threshold','t_threshold','mode','t_start','threshold_breach']},
+RT_config_template_old = {'LVRT':{'0':['V_threshold','t_threshold','mode','t_start','threshold_breach']},
                       'HVRT':{'0':['V_threshold','t_threshold','mode','t_start','threshold_breach']},
                       'OUTPUT_CESSATION_DELAY':'','OUTPUT_RESTORE_DELAY':'','RESTORE_Vdc':'',
                       'F_LF1':'','F_LF2':'','t_LF1_limit':'','t_LF2_limit':'',
