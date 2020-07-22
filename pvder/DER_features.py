@@ -187,16 +187,16 @@ class PVDER_SmartFeatures():
         
         if self.t_disconnect_start == 0.0: #Start disconnect timer
             text_string = '{}:{:.4f}:DER disconnect timer started.'.format(self.name,t)
-            print(text_string)
-            self.print_event(text_string,False) 
+            
+            self.print_event(text_string,True) 
             self.t_disconnect_start = t
         elif t-self.t_disconnect_start < self.t_disconnect_delay: #Disconnect DER only after disconnect time delay has elapsed
             text_string = '{}:{:.4f}:DER is in disconnect timer zone.'.format(self.name,t)
             self.logger.debug(text_string)
         elif t-self.t_disconnect_start >= self.t_disconnect_delay: #Disconnect DER only after disconnect time delay has elapsed
             text_string = '{}:{:.4f}:DER will be disconnected.'.format(self.name,t)
-            print(text_string)
-            self.print_event(text_string,False) 
+            
+            self.print_event(text_string,True) 
             self.t_disconnect_start = 0.0
             self.DER_CONNECTED = False
     
@@ -441,12 +441,12 @@ class PVDER_SmartFeatures():
         
         elif event_name == 'momentary_cessation':
             text_string = '{}:{:.4f}:{} zone - momentary cessation at {:.4f} s for {:.3f} V p.u. (Vref:{:.2f} V)'                           .format(self.name,simulation_time,zone_name,timer_start,voltage,self.Vrms_ref*self.Vbase)
-            six.print_(text_string)
+            
         
         elif event_name == 'trip':
             text_string = '{}:{:.4f}:{} violation at {:.4f}s after {:.4f} s for {:.3f} V p.u. (Vref:{:.2f} V) - DER will be tripped'\
                             .format(self.name,simulation_time,zone_name,simulation_time,simulation_time-timer_start,voltage,self.Vrms_ref*self.Vbase)
-            six.print_(text_string)
+            
         
         else:
             text_string =''
@@ -473,7 +473,7 @@ class PVDER_SmartFeatures():
         elif event_name == 'DER_reconnection':
             text_string = '{}:{time_stamp:.4f}:DER reconnecting after momentary cessation at {time_stamp:.4f}s after {time_elasped:.4f}s for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'\
                             .format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
-            six.print_(text_string)
+            
 
         elif event_name == 'DER_tripped' and verbose: 
             text_string = '{}:{time_stamp:.4f}:Inverter in tripped condition for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'.format(self.name,time_stamp=simulation_time,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
@@ -699,7 +699,7 @@ class PVDER_SmartFeatures():
     
     def print_LFRT_events(self,simulation_time,frequency,timer_start=0.0,event_name='',print_inline = False,verbose = False):
         """Print LFRT events."""    
-        #print(event_name)
+        
         if event_name == 'LF1_start':
             text_string = '{time_stamp:.4f}:LF1 zone entered at {timer_start:.4f}s for {frequency:.3f} Hz'\
                             .format(time_stamp=simulation_time,timer_start=timer_start,frequency=frequency)
@@ -740,17 +740,17 @@ class PVDER_SmartFeatures():
         elif event_name == 'inverter_trip_LF1':
             text_string = '{time_stamp:.4f}:LF1 violation at {time_stamp:.4f}s after {time_elasped:.4f} s for {frequency:.3f} Hz - Inverter will be tripped'\
                             .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,frequency=frequency)
-            six.print_(text_string)
+            
 
         elif event_name == 'inverter_trip_LF2':
             text_string = '{time_stamp:.4f}:LF2 violation at {time_stamp:.4f}s after {time_elasped:.4f} s for {frequency:.3f} Hz - Inverter will be tripped'\
                             .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,frequency=frequency)    
-            six.print_(text_string)
+            
 
         elif event_name == 'inverter_trip_LF3':
             text_string = '{time_stamp:.4f}:LF3 violation at {time_stamp:.4f}s after {time_elasped:.4f} s for {frequency:.3f} Hz - Inverter will be tripped'\
                             .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,frequency=frequency)    
-            six.print_(text_string)
+            
 
         elif event_name == 'reconnect_start':
             text_string = '{time_stamp:.4f}:Reconnect timer started at {timer_start:.4f} s for {frequency:.3f} Hz'\
@@ -767,7 +767,7 @@ class PVDER_SmartFeatures():
         elif event_name == 'inverter_reconnection':
             text_string = '{time_stamp:.4f}:Inverter reconnecting after LF trip at {time_stamp:.4f}s after {time_elasped:.4f}s for {frequency:.3f} Hz'\
                             .format(time_stamp=simulation_time,time_elasped=simulation_time-timer_start,frequency=frequency)
-            six.print_(text_string)
+            
 
         elif event_name == 'inverter_tripped' and verbose: 
             text_string = '{time_stamp:.4f}:Inverter in tripped condition for {frequency:.3f} Hz'.format(time_stamp=simulation_time,frequency=frequency)
