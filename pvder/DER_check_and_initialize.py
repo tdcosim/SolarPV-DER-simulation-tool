@@ -48,7 +48,11 @@ class PVDER_SetupUtilities(BaseValues,Logging):
             else:
                 for DER_parameter in self.DER_design_template[DER_component]:
                     _ = self.update_DER_parameter(DER_config,DER_parent_config,DER_arguments,DER_id,DER_parent_id,DER_component,DER_parameter)
-
+        
+        for RT_component in list(templates.VRT_config_template.keys()) + list(templates.FRT_config_template.keys()):
+            if RT_component in DER_config:
+                self.DER_config[RT_component] = DER_config[RT_component]
+        
         self.basic_specs = {DER_id:self.DER_config['basic_specs']}
         self.module_parameters = {DER_id:self.DER_config['module_parameters']}
         self.inverter_ratings = {DER_id:self.DER_config['inverter_ratings']}
@@ -291,7 +295,7 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.update_iref() #Reference currents
         self.update_inverter_frequency(t=0.0)
     
-    def initialize_DER_model(self,DER_arguments):
+    def initialize_DER_model(self):
         """Initialize DER ratings.
 
         Args:
@@ -304,61 +308,47 @@ class PVDER_SetupUtilities(BaseValues,Logging):
         self.logger.debug('Creating inverter instance for DER with parameter ID:{}!'.format(self.parameter_ID))
         
         self.initialize_module_parameters()
-        self.initialize_inverter_ratings(DER_arguments) #Initialize inverter ratings according to DER rating
-        self.check_voltage() #Check if voltage is feasible
-               
+        self.initialize_inverter_ratings() #Initialize inverter ratings according to DER rating
+        self.check_voltage() #Check if voltage is feasible               
         
         self.initialize_circuit_parameters()
         self.check_circuit_parameters()  #Check PV-DER circuit parameters
             
         self.initialize_controller_gains()  #Initialize control loop gains according to DER rating           
     
-    def initialize_inverter_ratings(self,DER_arguments):
+    def initialize_inverter_ratings(self):
         """Initialize inverter voltage and power ratings."""
         
         if self.parameter_ID in self.inverter_ratings:
             
-            self.initialize_Sinverter(DER_arguments)
-            self.initialize_Vdc(DER_arguments)
-            self.initialize_Vac(DER_arguments)    
+            self.initialize_Sinverter()
+            self.initialize_Vdc()
+            self.initialize_Vac()    
             self.initialize_Iac()
             
         else:
             raise ValueError('Inverter voltage, current, power ratings not available for parameter ID {}!'.format(self.parameter_ID))       
     
-    def initialize_Sinverter(self,DER_arguments):
+    def initialize_Sinverter(self):
         """Initialize inverter power rating."""
         
-        if 'powerRating' in DER_arguments:
-            self.Sinverter_rated = DER_arguments['powerRating'] #Inverter rating in kVA
-        elif 'Srated' in self.inverter_ratings[self.parameter_ID]:
-            self.Sinverter_rated = self.inverter_ratings[self.parameter_ID]['Srated']
-        else:
-            raise ValueError('Sinverter rated not found for {}'.format(self.parameter_ID))
+        self.Sinverter_rated = self.inverter_ratings[self.parameter_ID]['Srated']
         
         self.Sinverter_nominal = (self.Sinverter_rated/BaseValues.Sbase) #Converting to p.u. value           
         
-    def initialize_Vdc(self,DER_arguments):
+    def initialize_Vdc(self):
         """Initialize DC side voltages."""
         
-        if 'Vdcrated' in DER_arguments:
-            self.Vdcrated = DER_arguments['Vdcrated'] #Rated DC link voltage in V
-        else:
-            self.Vdcrated = self.inverter_ratings[self.parameter_ID]['Vdcrated'] #Rated DC link voltage in V
+        self.Vdcrated = self.inverter_ratings[self.parameter_ID]['Vdcrated'] #Rated DC link voltage in V
         
         self.Vdcnominal = self.Vdcrated/self.Vdcbase   #Converting to p.u. value 
         self.Vdc_ref = self.set_Vdc_ref()
         self.Vdc_ref_new = self.set_Vdc_ref()        
     
-    def initialize_Vac(self,DER_arguments):
+    def initialize_Vac(self):
         """Initialize AC side voltages."""
         
-        if 'VrmsRating' in DER_arguments: #First check if rated voltage is given in arguments
-            self.Vrms_rated = DER_arguments['VrmsRating'] #Inverter rating in kVA
-        elif 'Vrmsrated' in self.inverter_ratings[self.parameter_ID]:
-            self.Vrms_rated = self.inverter_ratings[self.parameter_ID]['Vrmsrated']
-        else:
-            raise ValueError('Vrms rated not found for {}'.format(self.parameter_ID))
+        self.Vrms_rated = self.inverter_ratings[self.parameter_ID]['Vrmsrated']
         self.Varated = self.Vrms_rated*math.sqrt(2) #L-G peak to peak 
         
         self.Vanominal = self.Varated/BaseValues.Vbase #Converting to p.u. value

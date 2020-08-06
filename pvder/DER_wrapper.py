@@ -55,6 +55,6 @@ class DERModel(object):
             self.DER_model = SolarPVDERSinglePhaseConstantVdc(events,configFile,**kwargs)
         
         else:
-            raise ValueError('{} is not a valid model type!'.format(modelType))
+            raise ValueError('{} is not a valid model type! - Valid model types:{}'.format(modelType,templates.model_types))
         
         

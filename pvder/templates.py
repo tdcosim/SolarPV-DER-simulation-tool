@@ -8,6 +8,8 @@ Created on Mon Mar 30 10:19:16 2020
 single_phase_models = ["SolarPVDERSinglePhase","SolarPVDERSinglePhaseConstantVdc"]
 three_phase_models = ["SolarPVDERThreePhase","SolarPVDERThreePhaseConstantVdc","SolarPVDERThreePhaseBalanced"]
 
+model_types = ['SinglePhase','SinglePhaseConstantVdc',
+               'ThreePhaseUnbalanced','ThreePhaseUnbalancedConstantVdc','ThreePhaseBalanced']
 
 DER_design_template = {"SolarPVDERSinglePhase":
                        {"parent_config":"",                        
@@ -22,6 +24,7 @@ DER_design_template = {"SolarPVDERSinglePhase":
                                          "Vdc":550.0,
                                          "xDC":0.0,"xQ":0.0,
                                          "xPLL":0.0,"wte":6.28}
+                       
                        },
                        
                        "SolarPVDERSinglePhaseConstantVdc":
@@ -50,7 +53,8 @@ DER_design_template = {"SolarPVDERSinglePhase":
                        "initial_states":{"iaR":0,"iaI":0.0,"xaR":0.0,"xaI":0.0,"uaR":0.0,"uaI":0.0,
                                          "ibR":0,"ibI":0.0,"xbR":0.0,"xbI":0.0,"ubR":0.0,"ubI":0.0,
                                          "icR":0,"icI":0.0,"xcR":0.0,"xcI":0.0,"ucR":0.0,"ucI":0.0,
-                                         "Vdc":550.0,"xDC":0.0,"xQ":0.0,"xPLL":0.0,"wte":6.28}
+                                         "Vdc":550.0,"xDC":0.0,"xQ":0.0,"xPLL":0.0,"wte":6.28}                      
+                       
                        },
                        
                        "SolarPVDERThreePhaseBalanced":
@@ -84,11 +88,69 @@ DER_design_template = {"SolarPVDERSinglePhase":
                                          "xPLL":0.0,"wte":6.28}
                        }
                        }
+    
 
+VRT_config_template = {'LVRT':{'config_id':'',
+                                  'config':{'0':{'V_threshold':0.5,
+                                                 't_threshold':1.0,
+                                                 'mode':'mandatory_operation',
+                                                 't_start':0.0,
+                                                 'threshold_breach':False},
+                                            '1':{'V_threshold':0.7,
+                                                 't_threshold':3.5,
+                                                 'mode':'momentary_cessation', #'momentary_cessation'
+                                                 't_start':0.0,
+                                                 'threshold_breach':False},
+                                            '2':{'V_threshold':0.88,
+                                                 't_threshold':5.0,
+                                                 'mode':'mandatory_operation',
+                                                 't_start':0.0,
+                                                 'threshold_breach':False},
+                                  }
+                        },
+                        'HVRT':{'config_id':'',
+                                  'config':{'0':{'V_threshold':1.12,
+                                                't_threshold':0.5,
+                                                'mode':'mandatory_operation',
+                                                't_start':0.0,
+                                                'threshold_breach':False},
+                                           '1':{'V_threshold':1.06,
+                                                't_threshold':1.0,
+                                                'mode':'mandatory_operation',
+                                                't_start':0.0,
+                                                'threshold_breach':False},
+                              }
+                         },
+                        'VRT_delays':{'config_id':'',
+                                     'config':{'output_cessation_delay':0.01,
+                                              'output_restore_delay':1.75,
+                                              'restore_Vdc':False}
+                       }}
+
+FRT_config_template =  {'LFRT':{'parent_config':'',
+                           'config':{'1':{'F_LF':57.0,
+                                          't_LF_limit':1/60,
+                                          't_LFstart':0.0},
+                                     '2':{'F_LF':58.8,
+                                          't_LF_limit':299.0,
+                                          't_LFstart':0.0}
+                                    }},
+                        'HFRT':{'parent_config':'',
+                           'config':{'1':{'F_HF':61.2,
+                                          't_HF_limit':299.0,
+                                          't_HFstart':0.0},
+                                     '2':{'F_HF':62.0,
+                                          't_HF_limit':1/60,
+                                          't_HFstart':0.0}
+                                    }},
+                        'FRT_delays':{'parent_config':'',
+                                 'config':{'FRT_INSTANTANEOUS_TRIP':False}}
+                        }                           
+                      
 #Voltage and frequency ride through settings from IEEE 1557-2018 Category III (Table 16, page 48) 
 #V1 to V2 - zone 2,V1 < - zone 1  SolarPVDER_ThreePhaseConstantVdc
     
-RT_config_template = {'LVRT':{'0':['V_threshold','t_threshold','mode','t_start','threshold_breach']},
+RT_config_template_old = {'LVRT':{'0':['V_threshold','t_threshold','mode','t_start','threshold_breach']},
                       'HVRT':{'0':['V_threshold','t_threshold','mode','t_start','threshold_breach']},
                       'OUTPUT_CESSATION_DELAY':'','OUTPUT_RESTORE_DELAY':'','RESTORE_Vdc':'',
                       'F_LF1':'','F_LF2':'','t_LF1_limit':'','t_LF2_limit':'',

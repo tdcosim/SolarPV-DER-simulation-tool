@@ -8,12 +8,10 @@ import six
 import logging
 import pprint
 
-from pvder import templates
+from pvder import templates,specifications
 
 class Logging(object):
     """ Utility class for common methods."""
-    
-    logging_levels = ['DEBUG','INFO','WARNING']#,'ERROR'
     
     pp = pprint.PrettyPrinter(indent=4)
     
@@ -38,9 +36,9 @@ class Logging(object):
         self.name  = str(identifier) + '-' +self.name  #Add additional identifier to object name if it was provided
     
     def initialize_logger(self,logging_level):
-        """Initialize loggers for different classes."""
+        """Initialize loggers for different classes."""        
         
-        self.logger = logging.getLogger(type(self).__name__)
+        self.logger = logging.getLogger(type(self).__name__)       
         
         self.verbosity = logging_level
     
@@ -52,20 +50,33 @@ class Logging(object):
     def verbosity(self,verbosity):
         """Method to set verbosity of logging on terminal. Different classes may have different levels of verbosity."""
         
-        assert verbosity in self.logging_levels, '{} is not a valid logging level!'.format(verbosity)
+        if isinstance(verbosity,specifications.string_type):
+            if verbosity not in specifications.logging_levels:
+                raise ValueError('{} is not a valid logging level!'.format(verbosity))                
+            self.__verbosity = verbosity.upper()
+        elif isinstance(verbosity,int):
+            if verbosity not in specifications.logging_levels_integer:
+                raise ValueError('{} is not a valid logging level!'.format(verbosity))
+            self.__verbosity = logging.getLevelName(verbosity)
+        else:
+            raise ValueError('{} is an valid type for verbosity!'.format(type(verbosity)))
         
-        self.__verbosity = verbosity
-        
-        #Set logging level - {DEBUG,INFO,WARNING,ERROR}
-        if verbosity == 'DEBUG':
+        #Set logging level - {DEBUG,INFO,WARNING,ERROR.CRITICAL}
+        if self.__verbosity == 'DEBUG':
             self.logger.setLevel(logging.DEBUG)            
         
-        elif verbosity == 'INFO':
+        elif self.__verbosity == 'INFO':
             self.logger.setLevel(logging.INFO)            
             
-        elif verbosity == 'WARNING':
+        elif self.__verbosity == 'WARNING':
             self.logger.setLevel(logging.WARNING)
+        
+        elif self.__verbosity == 'ERROR':
+            self.logger.setLevel(logging.ERROR)
+        
+        elif self.__verbosity == 'CRITICAL':
+            self.logger.setLevel(logging.CRITICAL)
             
-        self.logger.debug('{}:Logging level is set to:{}'.format(self.name,verbosity))
+        self.logger.debug('{}:Logging level is set to:{}'.format(self.name,self.__verbosity))
                     
         return self.__verbosity
