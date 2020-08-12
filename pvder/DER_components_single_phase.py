@@ -150,7 +150,8 @@ class SolarPVDERSinglePhase(PVModule,SolarPVDER):
         """Update RMS voltages."""
         
         self.Vtrms = self.Vtrms_calc()
-        self.Vrms = self.Vrms_calc()
+        self.Vrms_min = self.Vrms = self.Vrms_calc()
+        
         self.Irms = self.Irms_calc()
         
         #Update RMS values
