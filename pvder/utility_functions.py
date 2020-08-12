@@ -70,10 +70,8 @@ def Urms_calc(ua,ub,uc):
 def Urms_min_calc(ua,ub,uc):
     """Function to calculate minimum of rms value of scalar phasor quantities."""
     
-    return min(abs(ua),abs(ub),abs(uc))/math.sqrt(2)  #Pure python implementation is faster      
-
-    return math.sqrt((pow(abs(ua),2)+pow(abs(ub),2)+pow(abs(uc),2))/3.0)/math.sqrt(2)  #Pure python implementation is faster      
-
+    return min(abs(ua),abs(ub),abs(uc))/math.sqrt(2)  #Pure python implementation is faster 
+   
 def Urms_calc_1phase(ua):
     """Function to calculate rms value of scalar phasor quantities for single phase."""
     
