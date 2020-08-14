@@ -219,8 +219,8 @@ class PVDER_SmartFeatures():
     def DER_reconnect_logic(self,t):
         """Logic used to decide reconnection."""
         
-        #Select RMS voltage source
-        Vrms_measured = self.Vrms   #Select PCC - LV side voltage   
+        Vrms_measured = self.get_Vrms_measured()
+        
         fgrid = self.we/(2.0*math.pi)  #Use grid frequency as estimated by PLL
         
         assert not self.DER_CONNECTED, 'Reconnection logic can only be used if DER is disconnected.'
@@ -273,11 +273,7 @@ class PVDER_SmartFeatures():
         self.HVRT_ENABLE = True
         self.HVRT_TRIP = False
         self.HVRT_MOMENTARY_CESSATION = False
-               
-        
-        
-                
-        
+         
         self.LVRT_dict = self.RT_config['LVRT']
         self.HVRT_dict = self.RT_config['HVRT']
         
@@ -286,12 +282,11 @@ class PVDER_SmartFeatures():
         self.RESTORE_Vdc = self.RT_config['VRT_delays']['restore_Vdc'] #Restore Vdc to nominal reference by using a ramp
                           
         self.check_VRT_settings()
-    
+   
     def LVRT(self,t):
         """Function to implement LVRT ridethrough and trip logic."""
         
-        #Select RMS voltage source
-        Vrms_measured = self.Vrms   #Select PCC - LV side voltage             
+        Vrms_measured = self.get_Vrms_measured()
         
         if t > self.t_stable: #Go through logic only after a short time delay
             for LVRT_key,LVRT_values in self.LVRT_dict.items():
@@ -330,8 +325,7 @@ class PVDER_SmartFeatures():
     def HVRT(self,t):
         """Function to implement HVRT ridethrough and trip logic."""
         
-        #Select RMS voltage source
-        Vrms_measured = self.Vrms   #Select PCC - LV side voltage     
+        Vrms_measured = self.get_Vrms_measured()
         
         if t > self.t_stable: #Go through logic only after a short time delay
             for HVRT_key,HVRT_values in self.HVRT_dict.items():
@@ -365,6 +359,17 @@ class PVDER_SmartFeatures():
                     else: #Do nothing
                         pass
     
+    def get_Vrms_measured(self):
+        """Get Vrms measurement"""
+         
+        #Select RMS voltage source
+        if specifications.RT_measurement_type == 'minimum':
+            Vrms_measured  = self.Vrms_min  #Select minimum value of PCC-Voltages as per IEEE 1547-2018 reccomendations
+        elif specifications.RT_measurement_type == 'average':
+            Vrms_measured = self.Vrms   #Select PCC - LV side voltage  
+        
+        return Vrms_measured
+        
     def show_RT_flags(self):
         """Show all RT flags."""
         

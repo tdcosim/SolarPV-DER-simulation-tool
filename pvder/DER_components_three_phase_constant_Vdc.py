@@ -109,6 +109,11 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
         
         return utility_functions.Urms_calc(self.va,self.vb,self.vc)
     
+    def Vrms_min_calc(self):
+        """PCC LV side voltage - RMS"""
+        
+        return utility_functions.Urms_min_calc(self.va,self.vb,self.vc)
+          
     def Irms_calc(self):
         """Inverter current - RMS"""
         
@@ -168,6 +173,8 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
         
         self.Vtrms = self.Vtrms_calc()
         self.Vrms = self.Vrms_calc()
+        self.Vrms_min = self.Vrms_min_calc()
+        
         self.Irms = self.Irms_calc()
         
         #Update RMS values
