@@ -1,5 +1,6 @@
 """Store configuration options."""
 
+
 #Results options
 
 # Changing these adjusts the size and layout of the plot
@@ -45,43 +46,52 @@ DEFAULT_basic_specs = {"Sinsol0":1.0}
 DEFAULT_module_parameters = {'Np':2,'Ns':1000,'Vdcmpp0':750.0,'Vdcmpp_min': 650.0,'Vdcmpp_max': 800.0}
 DEFAULT_inverter_ratings = {"Vdcrated":550.0,"Ioverload":DEFAULT_Ioverload,"Vrmsrated":177.0}
 DEFAULT_circuit_parameters = {"Rf_actual":0.002,"Lf_actual":25.0e-6,
-                              "C_actual":300.0e-6,"R1_actual":DEFAULT_Z1_actual.real,"X1_actual":DEFAULT_Z1_actual.imag}
+							  "C_actual":300.0e-6,"R1_actual":DEFAULT_Z1_actual.real,"X1_actual":DEFAULT_Z1_actual.imag}
 DEFAULT_controller_gains ={"Kp_GCC":12000.0,"Ki_GCC":4000.0,
-                               "Kp_DC":-4.0,"Ki_DC":-20.0,
-                               "Kp_Q":0.4,"Ki_Q":20.0,"wp": 20e4}
+								"Kp_DC":-4.0,"Ki_DC":-20.0,
+								"Kp_Q":0.4,"Ki_Q":20.0,"wp": 20e4}
 DEFAULT_steadystate_values = {"maR0":0.7,"maI0":0.0,"iaR0":0.5,"iaI0":0.01}
 DEFAULT_initial_values = {"iaR0":0,"iaI0":0.0,"xaR0":0.0,"xaI0":0.0,"uaR0":0.0,"uaI0":0.0,
-                          "xDC0":0.0,"xQ0":0.0,"xPLL0":0.0,"wte0":6.28}
+						  "xDC0":0.0,"xQ0":0.0,"xPLL0":0.0,"wte0":6.28}
 
 #Default VRT config
 """
 RT_config =  {'LVRT':{'0':{'V_threshold':0.5,
-                                    't_threshold':1.0,
-                                    'mode':'mandatory_operation',
-                                    't_start':0.0,
-                                    'threshold_breach':False},
-                                '1':{'V_threshold':0.7,
-                                     't_threshold':3.5,
-                                     'mode':'momentary_cessation', #'momentary_cessation'
-                                     't_start':0.0,
-                                     'threshold_breach':False},
-                                '2':{'V_threshold':0.88,
-                                     't_threshold':5.0,
-                                     'mode':'mandatory_operation',
-                                     't_start':0.0,
-                                     'threshold_breach':False},
-                              },                       
-                       'HVRT':{'0':{'V_threshold':1.12,
-                                    't_threshold':0.5,
-                                    'mode':'mandatory_operation',
-                                    't_start':0.0,
-                                    'threshold_breach':False},
-                               '1':{'V_threshold':1.06,
-                                     't_threshold':1.0,
-                                     'mode':'mandatory_operation',
-                                     't_start':0.0,
-                                     'threshold_breach':False},
-                              },
-                       'OUTPUT_CESSATION_DELAY':0.01,
-                       'OUTPUT_RESTORE_DELAY':1.75,
-                       'RESTORE_Vdc':False}
+									't_threshold':1.0,
+									'mode':'mandatory_operation',
+									't_start':0.0,
+									'threshold_breach':False},
+								'1':{'V_threshold':0.7,
+									 't_threshold':3.5,
+									 'mode':'momentary_cessation', #'momentary_cessation'
+									 't_start':0.0,
+									 'threshold_breach':False},
+								'2':{'V_threshold':0.88,
+									 't_threshold':5.0,
+									 'mode':'mandatory_operation',
+									 't_start':0.0,
+									 'threshold_breach':False},
+							  },					   
+						'HVRT':{'0':{'V_threshold':1.12,
+									't_threshold':0.5,
+									'mode':'mandatory_operation',
+									't_start':0.0,
+									'threshold_breach':False},
+								'1':{'V_threshold':1.06,
+									 't_threshold':1.0,
+									 'mode':'mandatory_operation',
+									 't_start':0.0,
+									 'threshold_breach':False},
+							  },
+						'OUTPUT_CESSATION_DELAY':0.01,
+						'OUTPUT_RESTORE_DELAY':1.75,
+						'RESTORE_Vdc':False}
+
+logConfig={
+	"logLevel": 20, 
+	"logFilePath": "logs/pvder.log", 
+	"mode": "w", 
+	"loggerName": "pvder_logger"
+}
+
+
