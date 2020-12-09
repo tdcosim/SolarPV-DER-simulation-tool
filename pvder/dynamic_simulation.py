@@ -8,9 +8,8 @@ import time
 
 import pdb
 import six
-import logging
 
-from pvder.utility_classes import Logging
+from pvder.utility_classes import Utilities
 from pvder.grid_components import Grid
 from pvder.simulation_utilities import SimulationUtilities
 from pvder import utility_functions
@@ -18,7 +17,7 @@ from pvder import defaults,templates
 from pvder.logutil import LogUtil
 
 
-class DynamicSimulation(Grid,SimulationUtilities,Logging):
+class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 	""" Utility class for running simulations."""
 	
 	count = 0

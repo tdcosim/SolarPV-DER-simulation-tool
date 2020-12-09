@@ -8,8 +8,6 @@ FIGURE_WIDTH = 8
 FIGURE_HEIGHT = 8
 FIGURE_DPI = 1200
 
-#Logging
-LOGGING_LEVEL = 'INFO'
 
 #Model options
 Ioverload = 1.3 #Inverter overload
@@ -87,6 +85,7 @@ RT_config =  {'LVRT':{'0':{'V_threshold':0.5,
 						'OUTPUT_RESTORE_DELAY':1.75,
 						'RESTORE_Vdc':False}
 
+#Logging
 logConfig={
 	"logLevel": 20, 
 	"logFilePath": "logs/pvder.log", 

@@ -3,20 +3,19 @@
 from __future__ import division
 import operator
 import six
-import logging
 
 import random
 import math
 import numpy as np
 import cmath
 
-from pvder.utility_classes import Logging
+from pvder.utility_classes import Utilities
 from pvder import utility_functions
 from pvder import defaults
 from pvder.logutil import LogUtil
 
 
-class SimulationEvents(Logging):
+class SimulationEvents(Utilities):
 	""" Utility class for events."""
 	count = 0
 	Tactual_default = defaults.Tactual # 298.15

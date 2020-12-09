@@ -13,12 +13,12 @@ from scipy.integrate import odeint,ode
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-from pvder.utility_classes import Logging
+from pvder.utility_classes import Utilities
 from pvder import defaults
 from pvder.logutil import LogUtil
 
 
-class SimulationResults(Logging):
+class SimulationResults(Utilities):
 	""" Utility class for simulation results."""
 	
 	count = 0

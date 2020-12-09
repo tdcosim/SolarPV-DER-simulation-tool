@@ -46,12 +46,8 @@ class ExceptionUtil(object):
 		try:
 			# create logger
 			self.logger = logging.getLogger(loggerName)
-			self.logger.setLevel(logLevel)
 			self._logFilePath=logFilePath
-
-			# create file handler which logs messages
-			fh = logging.FileHandler(logFilePath,mode=mode)
-
+			
 			# create formatter and add it to the handlers
 			if not formatterStr:
 				formatterStr=self._defaultFormatterStr
@@ -59,8 +55,19 @@ class ExceptionUtil(object):
 
 			self._formatterStr=formatterStr
 			self._formatterStrSep=formatterStrSep
+			self.set_logger(logLevel,mode)
 
-			formatter = logging.Formatter(formatterStr)
+		except:
+			raise
+
+#===================================================================================================
+	def set_logger(self,logLevel,mode):
+		try:
+			self.logger.setLevel(logLevel)
+			# create file handler which logs messages
+			fh = logging.FileHandler(self._logFilePath,mode=mode)
+
+			formatter = logging.Formatter(self._formatterStr)
 			fh.setFormatter(formatter)
 			fh.setLevel(logLevel)
 

@@ -2,7 +2,6 @@
 
 from __future__ import division
 import operator
-import logging
 import pprint
 import json
 import pickle
@@ -11,13 +10,13 @@ import math
 import cmath
 import numpy as np
 
-from pvder.utility_classes import Logging
+from pvder.utility_classes import Utilities
 from pvder.grid_components import BaseValues
 from pvder import utility_functions
 from pvder import defaults, templates, properties
 from pvder.logutil import LogUtil
 
-class PVDER_ModelUtilities(BaseValues,Logging):
+class PVDER_ModelUtilities(BaseValues,Utilities):
 	"""
 	   Utility class for single phase and three phase PV-DER model.
 	"""

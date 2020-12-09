@@ -43,7 +43,6 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
 	winv = we = 2.0*math.pi*60.0 #Frequency of fundamental waveform
 	fswitching  = 10e3 #Inverter switching frequency (not used by model)
 
-	#DER_argument_template = specifications.DER_argument_spec	
 	def setup_DER(self,events,configFile,**kwargs):
 		"""Setup pvder instance"""
 		try:
@@ -56,18 +55,18 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
 			DER_config,config_dict = self.get_DER_config(configFile,self.parameter_ID)
 			
 			DER_arguments = self.get_DER_arguments(DER_config,**kwargs)   
-					
+			
 			self.name_instance(DER_arguments['identifier']) #Generate a name for the instance  
-			self.initialize_logger(DER_arguments['verbosity'])  #Set logging level - {DEBUG,INFO,WARNING,ERROR}	   
+			self.initialize_logger(DER_arguments['verbosity'])  #Set logging level - {DEBUG,INFO,WARNING,ERROR}
 			
 			self.DER_parent_ID = self.get_DER_parent_id(DER_config)
 			DER_parent_config = self.get_DER_parent_config(configFile,self.DER_parent_ID)
 			
 			for DER_component in self.DER_design_template:
-			   if DER_component not in DER_config:
-				  DER_config.update({DER_component:{}})
-			   if DER_component not in DER_parent_config:
-				  DER_parent_config.update({DER_component:{}})
+				if DER_component not in DER_config:
+					DER_config.update({DER_component:{}})
+				if DER_component not in DER_parent_config:
+					DER_parent_config.update({DER_component:{}})
 			
 			self.check_model_type(DER_config,DER_parent_config)
 			self.update_DER_config(DER_config,DER_parent_config,DER_arguments,self.parameter_ID,self.DER_parent_ID)
@@ -186,7 +185,7 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
 			return DER_arguments
 		except:
 			LogUtil.exception_handler()
-	   
+	
 	def initialize_DER(self,DER_arguments):
 		"""Initialize flags"""
 		try:
@@ -359,9 +358,9 @@ class PVModule(object):
 		try:
 			self.Iph = self.Iph_calc()
 			self.Ipv = (self.Np*self.Iph)-(self.Np*self.Irs*(math.exp((self.q*Vdc_actual)/(self.k*self.Tactual*self.A*self.Ns))-1))   #Faster  with Pure Python functions
-		   
+		
 			return max(0,(self.Ipv*Vdc_actual))/BaseValues.Sbase
-	   #return utility_functions.Ppv_calc(self.Iph,self.Np,self.Ns,Vdc_actual,self.Tactual,Grid.Sbase)
+			#return utility_functions.Ppv_calc(self.Iph,self.Np,self.Ns,Vdc_actual,self.Tactual,Grid.Sbase)
 		except:
 			LogUtil.exception_handler()
 
@@ -370,23 +369,23 @@ class PVModule(object):
 		try:
 			self.Tactual =  298.15  #Use constant temperature
 			self._MPP_fit_points = 10
-			_Srange = np.linspace(self._S_min,self._S_max,self._MPP_fit_points+1)
-			_Vdcmpp_list = []
-			_Ppvmpp_list =[]
-			_Sinsol_list= []
-			LogUtil.logger.log(20,'Calculating {} values for MPP polynomial fit!'.format(len(_Srange)))
-			for S in _Srange:
+			Srange = np.linspace(self._S_min,self._S_max,self._MPP_fit_points+1)
+			Vdcmpp_list = []
+			Ppvmpp_list =[]
+			Sinsol_list= []
+			LogUtil.logger.log(20,'Calculating {} values for MPP polynomial fit!'.format(len(Srange)))
+			for S in Srange:
 				self.Sinsol = S
-				_Vdcmpp = self.Vdcmpp
-				_Ppvmpp = self.Ppv_calc(self.Vdcmpp)*BaseValues.Sbase
+				Vdcmpp = self.Vdcmpp
+				Ppvmpp = self.Ppv_calc(self.Vdcmpp)*BaseValues.Sbase
 				
-				_Sinsol_list.append(S)
-				_Vdcmpp_list.append(_Vdcmpp)
-				_Ppvmpp_list.append(_Ppvmpp)			
+				Sinsol_list.append(S)
+				Vdcmpp_list.append(Vdcmpp)
+				Ppvmpp_list.append(Ppvmpp)
 			
-			_x = np.array(_Sinsol_list)
-			_y = np.array(_Vdcmpp_list)
-			self.z = np.polyfit(_x, _y, 3)
+			x = np.array(Sinsol_list)
+			y = np.array(Vdcmpp_list)
+			self.z = np.polyfit(x, y, 3)
 			LogUtil.logger.log(20,'Found polynomial for MPP :{:.4f}x^3 + {:.4f}x^2 +{:.4f}x^1 + {:.4f}!'.format(self.z[0],self.z[1],self.z[2], self.z[3]))		
 		except:
 			LogUtil.exception_handler()

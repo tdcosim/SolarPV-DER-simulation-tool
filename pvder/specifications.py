@@ -45,5 +45,5 @@ DER_argument_spec = {'derId':{'default_value':None,'type':string_type},
 logging_levels = ['DEBUG','INFO','WARNING','ERROR','CRITICAL']
 logging_levels_integer = [10,20,30,40,50]
 
-
+logging_levels_dict = {'DEBUG':10,'INFO':20,'WARNING':30,'ERROR':40,'CRITICAL':50}
 
