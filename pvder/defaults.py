@@ -21,7 +21,7 @@ Vthreshold_high_limit = 1.5 #percentage
 tthreshold_high_limit = 100.0 #seconds
 
 tdisconnect_low_limit = 1/120.0 #seconds #Minimum time required to initiate DER disconnection (output cessation)
-treconnect_low_limit = 0.4 #seconds #Minimum time required to initiate DER reconnection (output restoration)
+treconnect_low_limit = 0.1 #seconds #Minimum time required to initiate DER reconnection (output restoration)
 
 #DC link voltage control
 DEFAULT_del_Vdc_ref = 2.0
