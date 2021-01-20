@@ -2,6 +2,7 @@
 
 from __future__ import division
 import six
+import copy
 
 import math
 
@@ -310,8 +311,8 @@ class PVDER_SmartFeatures():
 			self.HVRT_TRIP = False
 			self.HVRT_MOMENTARY_CESSATION = False
 			 
-			self.LVRT_dict = self.RT_config['LVRT']
-			self.HVRT_dict = self.RT_config['HVRT']
+			self.LVRT_dict = copy.deepcopy(self.RT_config['LVRT'])
+			self.HVRT_dict = copy.deepcopy(self.RT_config['HVRT'])
 		
 			self.t_disconnect_delay = self.RT_config['VRT_delays']['output_cessation_delay']#(1/120.0)
 			self.t_reconnect_delay = self.RT_config['VRT_delays']['output_restore_delay'] 
