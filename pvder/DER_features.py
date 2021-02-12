@@ -350,7 +350,7 @@ class PVDER_SmartFeatures():
 						  
 						elif t-LVRT_values['t_start'] >= t_threshold: #Trip DER if timer exceeds threshold
 							self.print_VRT_events(t,Vrms_measured,zone_name,LVRT_values['t_start'],V_threshold,t_threshold,LVRT_mode,event_name='trip')
-							LVRT_values['threshold_breach'] = True						   
+							LVRT_values['threshold_breach'] = True
 							self.LVRT_TRIP = True
 							LVRT_values['t_start'] = 0.0
 					
@@ -374,28 +374,29 @@ class PVDER_SmartFeatures():
 					zone_name = 'HV'+str(HVRT_key)
 					V_threshold = HVRT_values['V_threshold']*self.Vrms_ref #Convert % thresholds into p.u.
 					t_threshold = HVRT_values['t_threshold']
-				
+					HVRT_mode = HVRT_values['mode']
+					
 					if Vrms_measured > V_threshold and not HVRT_values['threshold_breach']: #Check if voltage above threshold
 						if HVRT_values['t_start'] == 0.0: #Start timer if voltage goes above threshold
 							HVRT_values['t_start']  = t
-							self.print_VRT_events(t,Vrms_measured,zone_name,HVRT_values['t_start'],event_name='zone_entered')
-						
-							if HVRT_values['mode'] == 'momentary_cessation': #Go into momentary cessation
+							self.print_VRT_events(t,Vrms_measured,zone_name,HVRT_values['t_start'],V_threshold,t_threshold,HVRT_mode,event_name='zone_entered')
+							
+							if HVRT_mode == 'momentary_cessation': #Go into momentary cessation
 								self.HVRT_MOMENTARY_CESSATION = True
-								self.print_VRT_events(t,Vrms_measured,zone_name,HVRT_values['t_start'],event_name='momentary_cessation')
+								self.print_VRT_events(t,Vrms_measured,zone_name,HVRT_values['t_start'],V_threshold,t_threshold,HVRT_mode,event_name='momentary_cessation')
 					
 						elif t-HVRT_values['t_start'] <= t_threshold: #Remain in LV zone and monitor
-							self.print_VRT_events(t,Vrms_measured,zone_name,HVRT_values['t_start'],event_name='zone_continue')
-						  
+							self.print_VRT_events(t,Vrms_measured,zone_name,HVRT_values['t_start'],V_threshold,t_threshold,HVRT_mode,event_name='zone_continue')
+						
 						elif t-HVRT_values['t_start'] >= t_threshold: #Trip DER if timer exceeds threshold
-							self.print_VRT_events(t,Vrms_measured,zone_name,HVRT_values['t_start'],event_name='trip')
-							HVRT_values['threshold_breach'] = True						   
+							self.print_VRT_events(t,Vrms_measured,zone_name,HVRT_values['t_start'],V_threshold,t_threshold,HVRT_mode,event_name='trip')
+							HVRT_values['threshold_breach'] = True
 							self.HVRT_TRIP = True
 							HVRT_values['t_start'] = 0.0
 					
 					elif  Vrms_measured < V_threshold: #Check if voltage below threshold
 						if HVRT_values['t_start'] > 0.0: #Reset timer if voltage goes below threshold
-							self.print_VRT_events(t,Vrms_measured,zone_name,HVRT_values['t_start'],event_name='zone_reset')
+							self.print_VRT_events(t,Vrms_measured,zone_name,HVRT_values['t_start'],V_threshold,t_threshold,HVRT_mode,event_name='zone_reset')
 							HVRT_values['t_start']  = 0.0 
 							self.HVRT_MOMENTARY_CESSATION = False #Reset momentary cessation flags
 						else: #Do nothing
@@ -485,7 +486,7 @@ class PVDER_SmartFeatures():
 	def print_VRT_events(self,simulation_time,voltage,zone_name,timer_start=0.0,V_threshold=None,t_threshold=None,LVRT_mode=None,event_name='',print_inline = True,verbose = False):
 		"""Print logs for VRT events."""
 		try:
-			voltage = (voltage*self.Vbase)/(self.Vrms_ref*self.Vbase)#175
+			voltage = voltage#*self.Vbase)/(self.Vrms_ref*self.Vbase)#175
 
 			if event_name == 'zone_entered':
 				text_string = '{}:{:.4f}:{} zone entered at {:.4f} s for {:.3f} V p.u. (Vref:{:.2f} V,V_thresh:{:.2f} V,t_thresh:{:.2f} s,mode:{})'.format(self.name,simulation_time,zone_name,timer_start,voltage,self.Vrms_ref*self.Vbase,V_threshold,t_threshold,LVRT_mode)
