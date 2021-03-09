@@ -3,7 +3,7 @@
 # Utility for simulating dynamics of PV-DER
 
 [![Build Status](https://travis-ci.org/sibyjackgrove/SolarPV-DER-simulation-utility.svg?branch=master)](https://travis-ci.org/sibyjackgrove/SolarPV-DER-simulation-utility)
-[![CodeFactor](https://www.codefactor.io/repository/github/sibyjackgrove/solarpv-der-simulation-utility/badge)](https://www.codefactor.io/repository/github/sibyjackgrove/solarpv-der-simulation-utility)
+[![CodeFactor](https://www.codefactor.io/repository/github/tdcosim/solarpv-der-simulation-utility/badge)](https://www.codefactor.io/repository/github/tdcosim/solarpv-der-simulation-utility)
 
 Solar photovoltaic distributed energy resources (PV-DER) are power electronic inverter based generation (IBG) connected to the electric power distribution system (eg. roof top solar PV systems). This utility can be used to simulate the dynamics of a single DER connected to a stiff voltage source as shown in the following schematic:
 
