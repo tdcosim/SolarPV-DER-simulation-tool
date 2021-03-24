@@ -313,11 +313,16 @@ class PVDER_SmartFeatures():
 			 
 			self.LVRT_dict = copy.deepcopy(self.RT_config['LVRT'])
 			self.HVRT_dict = copy.deepcopy(self.RT_config['HVRT'])
-		
+			
+			self.LVRT_levels = [int(level) for level in list(self.LVRT_dict)]
+			self.HVRT_levels = [int(level) for level in list(self.HVRT_dict)]
+			self.LVRT_levels.sort()
+			self.HVRT_levels.sort()
+			
 			self.t_disconnect_delay = self.RT_config['VRT_delays']['output_cessation_delay']#(1/120.0)
 			self.t_reconnect_delay = self.RT_config['VRT_delays']['output_restore_delay'] 
 			self.RESTORE_Vdc = self.RT_config['VRT_delays']['restore_Vdc'] #Restore Vdc to nominal reference by using a ramp
-							  
+			
 			self.check_VRT_settings()
 		except:
 			LogUtil.exception_handler()
@@ -327,6 +332,7 @@ class PVDER_SmartFeatures():
 		"""Function to implement LVRT ridethrough and trip logic."""
 		try:
 			Vrms_measured = self.get_Vrms_measured()
+			
 			if t > self.t_stable: #Go through logic only after a short time delay
 				for LVRT_key,LVRT_values in self.LVRT_dict.items():
 					zone_name = 'LV'+str(LVRT_key)
@@ -451,15 +457,15 @@ class PVDER_SmartFeatures():
 						if VRT_values['V_threshold'] >= 1.0:
 							raise ValueError(voltage_error_text) 
 						if not six.PY2: #Since dictionaries don't preserve insertion order in Python 2
-							if not V_threshold_list == sorted(V_threshold_list): #Check if voltage values are in ascending order
-								raise ValueError('LVRT voltage limits - {} are infeasible!'.format(V_threshold_list))
+							if not V_threshold_list == sorted(V_threshold_list,reverse=True): #Check if voltage threshold values are in descending order
+								raise ValueError('LVRT voltage limits {} are not equal to sorted limits {}!'.format(V_threshold_list,sorted(V_threshold_list,reverse=True)))
 
 					elif RT_type == 'HV':
 						if VRT_values['V_threshold'] <= 1.0:
 							raise ValueError(voltage_error_text) 
 						if not six.PY2: #Since dictionaries don't preserve insertion order in Python 2
-							if not V_threshold_list == sorted(V_threshold_list,reverse=True): #Check if voltage values are in descending order
-								raise ValueError('HVRT voltage limits - {} are infeasible!'.format(V_threshold_list))
+							if not V_threshold_list == sorted(V_threshold_list,reverse=False): #Check if voltage values are in ascending order
+								raise ValueError('HVRT voltage limits {} are not equal to sorted limits {}!'.format(V_threshold_list,sorted(V_threshold_list,reverse=False)))
 					
 					if VRT_values['V_threshold'] <= 0.0:
 						raise ValueError(voltage_error_text) 
@@ -486,22 +492,24 @@ class PVDER_SmartFeatures():
 	def print_VRT_events(self,simulation_time,voltage,zone_name,timer_start=0.0,V_threshold=None,t_threshold=None,LVRT_mode=None,event_name='',print_inline = True,verbose = False):
 		"""Print logs for VRT events."""
 		try:
-			voltage = voltage#*self.Vbase)/(self.Vrms_ref*self.Vbase)#175
-
+			voltage_actual = voltage*self.Vbase#)/(self.Vrms_ref*self.Vbase)#175
+			Vrms_ref_actual = self.Vrms_ref*self.Vbase
+			V_threshold_actual = V_threshold*self.Vbase
+			V_threshold_frac = V_threshold/self.Vrms_ref
 			if event_name == 'zone_entered':
-				text_string = '{}:{:.4f}:{} zone entered at {:.4f} s for {:.3f} V p.u. (Vref:{:.2f} V,V_thresh:{:.2f} V,t_thresh:{:.2f} s,mode:{})'.format(self.name,simulation_time,zone_name,timer_start,voltage,self.Vrms_ref*self.Vbase,V_threshold,t_threshold,LVRT_mode)
+				text_string = '{}:{:.4f}:{} zone entered at {:.4f} s for {:.3f} V p.u. (Vref:{:.2f} V,V_thresh:{:.2f} V({:.2f}),t_thresh:{:.2f} s,mode:{})'.format(self.name,simulation_time,zone_name,timer_start,voltage_actual,Vrms_ref_actual,V_threshold_actual,V_threshold_frac,t_threshold,LVRT_mode)
 		
 			elif event_name == 'zone_reset':
-				text_string = '{}:{:.4f}:{} flag reset at {:.4f} s after {:.4f} s for {:.3f} V p.u. (Vref:{:.2f} V,V_thresh:{:.2f} V,t_thresh:{:.2f} s,mode:{})'.format(self.name,simulation_time,zone_name,simulation_time,simulation_time-timer_start,voltage,self.Vrms_ref*self.Vbase,V_threshold,t_threshold,LVRT_mode)
+				text_string = '{}:{:.4f}:{} flag reset at {:.4f} s after {:.4f} s for {:.3f} V p.u. (Vref:{:.2f} V,V_thresh:{:.2f} V({:.2f}),t_thresh:{:.2f} s,mode:{})'.format(self.name,simulation_time,zone_name,simulation_time,simulation_time-timer_start,voltage_actual,Vrms_ref_actual,V_threshold_actual,V_threshold_frac,t_threshold,LVRT_mode)
 		
 			elif event_name == 'zone_continue' and verbose:
 				text_string = '{}:{:.4f}:{} zone entered at:{:.4f} s and continuing for {:.4f} s'\
 								.format(self.name,simulation_time,zone_name,timer_start,simulation_time-timer_start)
 			elif event_name == 'momentary_cessation':
-				text_string = '{}:{:.4f}:{} zone - momentary cessation at {:.4f} s for {:.3f} V p.u. (Vref:{:.2f} V,V_thresh:{:.2f} V,t_thresh:{:.2f} s,mode:{})'.format(self.name,simulation_time,zone_name,timer_start,voltage,self.Vrms_ref*self.Vbase,V_threshold,t_threshold,LVRT_mode)
+				text_string = '{}:{:.4f}:{} zone - momentary cessation at {:.4f} s for {:.3f} V p.u. (Vref:{:.2f} V,V_thresh:{:.2f} V({:.2f}),t_thresh:{:.2f} s,mode:{})'.format(self.name,simulation_time,zone_name,timer_start,voltage_actual,Vrms_ref_actual,V_threshold_actual,V_threshold_frac,t_threshold,LVRT_mode)
 			elif event_name == 'trip':
-				text_string = '{}:{:.4f}:{} violation at {:.4f}s after {:.4f} s for {:.3f} V p.u. (Vref:{:.2f} V,V_thresh:{:.2f} V,t_thresh:{:.2f} s,mode:{}) - DER will be tripped'\
-								.format(self.name,simulation_time,zone_name,simulation_time,simulation_time-timer_start,voltage,self.Vrms_ref*self.Vbase,V_threshold,t_threshold,LVRT_mode)
+				text_string = '{}:{:.4f}:{} violation at {:.4f}s after {:.4f} s for {:.3f} V p.u. (Vref:{:.2f} V,V_thresh:{:.2f} V({:.2f}),t_thresh:{:.2f} s,mode:{}) - DER will be tripped'\
+								.format(self.name,simulation_time,zone_name,simulation_time,simulation_time-timer_start,voltage_actual,Vrms_ref_actual,V_threshold_actual,V_threshold_frac,t_threshold,LVRT_mode)
 			else:
 				text_string =''
 
@@ -513,14 +521,15 @@ class PVDER_SmartFeatures():
 	def print_reconnect_events(self,simulation_time,voltage,frequency,timer_start=0.0,event_name='',print_inline = True,verbose = False):
 		"""Print logs for VRT events."""
 		try:
-			voltage = (voltage*self.Vbase)/(self.Vrms_ref*self.Vbase)#175
+			voltage_actual = voltage*self.Vbase#)/(self.Vrms_ref*self.Vbase)#175#175
+			Vrms_ref_actual = self.Vrms_ref*self.Vbase
 			if event_name == 'reconnect_start':
 				text_string = '{}:{:.4f}:Reconnect timer started at {:.4f} s for {:.3f} V p.u. (Vref:{:.2f} V)'\
-								.format(self.name,simulation_time,timer_start,voltage,self.Vrms_ref*self.Vbase)
+								.format(self.name,simulation_time,timer_start,voltage_actual,Vrms_ref_actual)
 
 			elif event_name == 'reconnect_reset':
 				text_string = '{}:{time_stamp:.4f}:Reconnect timer reset after {time_elasped:.4f} s for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'\
-								.format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
+								.format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage_actual,Vref=Vrms_ref_actual)
 
 			elif event_name == 'reconnect_zone' and verbose:
 				text_string = '{}:{time_stamp:.4f}:Reconnect timer started at {timer_start:.4f} s and continuing for {time_elasped:.4f} s'\
@@ -528,11 +537,11 @@ class PVDER_SmartFeatures():
 
 			elif event_name == 'DER_reconnection':
 				text_string = '{}:{time_stamp:.4f}:DER reconnecting after momentary cessation at {time_stamp:.4f}s after {time_elasped:.4f}s for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'\
-								.format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
+								.format(self.name,time_stamp=simulation_time,time_elasped=simulation_time-timer_start,voltage=voltage_actual,Vref=Vrms_ref_actual)
 			
 
 			elif event_name == 'DER_tripped' and verbose: 
-				text_string = '{}:{time_stamp:.4f}:Inverter in tripped condition for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'.format(self.name,time_stamp=simulation_time,voltage=voltage,Vref=self.Vrms_ref*self.Vbase)
+				text_string = '{}:{time_stamp:.4f}:Inverter in tripped condition for {voltage:.3f} V p.u. (Vref:{Vref:.2f} V)'.format(self.name,time_stamp=simulation_time,voltage=voltage_actual,Vref=Vrms_ref_actual)
 
 			else:
 				text_string =''
@@ -571,13 +580,13 @@ class PVDER_SmartFeatures():
 
 
 	def update_RT_config(self,DER_config,DER_arguments,config_dict):
-		"""Check whether the config file is good."""			 
+		"""Check whether the config file is good."""
 		try:
 			for RT in list(templates.VRT_config_template.keys()) +  list(templates.FRT_config_template.keys()):
 				if RT in DER_arguments['derConfig']:
 					self.RT_config[RT] = DER_arguments['derConfig'][RT]
 					LogUtil.logger.debug('{}:{} updated with {} from derConfig.'.format(self.name,RT,DER_arguments['derConfig'][RT]))
-				elif RT in self.DER_config:			  
+				elif RT in self.DER_config:
 					if 'config_id' in self.DER_config[RT]:
 						self.RT_config[RT] = config_dict[self.DER_config[RT]['config_id']]['config']
 						LogUtil.logger.debug('{}:{} updated with {} from config id {}.'.format(self.name,RT,config_dict[self.DER_config[RT]['config_id']]['config'],self.DER_config[RT]['config_id']))
@@ -599,7 +608,7 @@ class PVDER_SmartFeatures():
 					if 't_start' not in RT_config.keys():
 						RT_config.update({'t_start':0.0})
 					if 'threshold_breach' not in RT_config.keys():
-						RT_config.update({'threshold_breach':False})	
+						RT_config.update({'threshold_breach':False})
 
 			for config_parameter in templates.VRT_config_template['VRT_delays']['config']:
 				if config_parameter not in self.RT_config['VRT_delays']:
@@ -610,21 +619,21 @@ class PVDER_SmartFeatures():
 
 
 	def check_RT_config(self):
-		"""Check whether the config file is good."""		
+		"""Check whether the config file is good."""
 		try:
-			for RT in list(templates.VRT_config_template.keys()):			
+			for RT in list(templates.VRT_config_template.keys()):
 				if RT != 'VRT_delays':
-					for RT_setting in templates.VRT_config_template[RT]['config']['0']:					
-						for level,setting in self.RT_config[RT].items():											   
+					for RT_setting in templates.VRT_config_template[RT]['config']['1']:
+						for level,setting in self.RT_config[RT].items():
 							if RT_setting not in setting:
 								raise ValueError('{} not found for level {} in {}!'.format(RT_setting,level,RT))
 			
 			for RT in list(templates.FRT_config_template.keys()):
 				if RT != 'FRT_delays':
 					for RT_setting in templates.FRT_config_template[RT]['config']['1']:
-						for level,setting in self.RT_config[RT].items():						
+						for level,setting in self.RT_config[RT].items():
 							if RT_setting not in setting:
-								raise ValueError('{} not found for level {} in {}!'.format(RT_setting,level,RT))		
+								raise ValueError('{} not found for level {} in {}!'.format(RT_setting,level,RT))
 		except:
 			LogUtil.exception_handler()
 
