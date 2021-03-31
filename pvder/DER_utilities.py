@@ -20,7 +20,7 @@ class PVDER_ModelUtilities(BaseValues,Utilities):
 	"""
 	   Utility class for single phase and three phase PV-DER model.
 	"""
-	Vdcbase = BaseValues.Vbase #DC side base value is same as AC side base value
+	#Vdcbase = BaseValues.Vbase #DC side base value is same as AC side base value
 	
 	#Ramp control
 	RAMP_ENABLE = False
@@ -287,7 +287,7 @@ class PVDER_ModelUtilities(BaseValues,Utilities):
 	def we_calc(self):
 		"""Calculate inverter frequency from PLL."""
 		try:
-			return  self.Kp_PLL*(self.vd) + self.xPLL + 2*math.pi*60.0
+			return  (self.Kp_PLL*(self.vd) + self.xPLL + 2*math.pi*60.0)#/self.wbase
 		except:
 			LogUtil.exception_handler()
 

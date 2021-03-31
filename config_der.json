@@ -20,7 +20,10 @@
       "LVRT":{"config_id":"LVRT_1547cat3"},
       "VRT_delays":{"config_id":"VRT_delay_cat3"}
      },
-     
+
+"50_numba":{"parent_config":"50",                          
+             "basic_specs":{"model_type":"SolarPVDERThreePhaseNumba"}
+     },  
 "50_type1":{"parent_config":"50",                          
       "inverter_ratings":{"Ioverload":1.1}
      },
@@ -67,6 +70,10 @@
       "LVRT":{"config_id":"LVRT_1547cat3"}    
      },
 
+"250_numba":{"parent_config":"250",                          
+             "basic_specs":{"model_type":"SolarPVDERThreePhaseNumba"}
+     },
+    
 "10":{"parent_config":"",      
       "basic_specs":{"model_type":"SolarPVDERSinglePhase"},
       "basic_options":{"Sinsol":100.0},

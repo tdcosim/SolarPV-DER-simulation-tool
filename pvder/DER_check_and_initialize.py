@@ -513,6 +513,13 @@ class PVDER_SetupUtilities(BaseValues):
 							'Vdc',
 							'xDC','xQ',
 							'xPLL','wte']
+			elif self.DER_model_type == 'SolarPVDERThreePhaseNumba':
+				state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
+							'ibR','ibI','xbR','xbI','ubR','ubI',
+							'icR','icI','xcR','xcI','ucR','ucI',
+							'Vdc','xDC','xQ','xPLL','wte']		
+			else:
+				raise ValueError('{} is not a valid model type! - Valid model types:{}'.format(self.DER_model_type,templates.model_types))
 			for entry in state_list:
 				self.varInd[entry]=n
 				n+=1
@@ -708,7 +715,7 @@ class PVDER_SetupUtilities(BaseValues):
 		
 			if not result.success:
 				raise ValueError('Steady state solution did not converge! Change operating point or disable steady state flag and try again.')
-		
+			print(f"Rf:{self.Rf},Optimization results:{result.x}")
 			if 'xDC' in templates.DER_design_template[self.DER_model_type]['initial_states']:
 			 self.xDC = self.ia.real
 			if 'xP' in templates.DER_design_template[self.DER_model_type]['initial_states']:

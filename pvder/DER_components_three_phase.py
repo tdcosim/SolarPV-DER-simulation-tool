@@ -252,7 +252,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 			#Convert from 3ph time domain to d-q using Parks transformation
 			self.vd,self.vq,self.v0 = utility_functions.abc_to_dq0(self.vat,self.vbt,self.vct,self.wte) #PCC LV side voltage
 			self.we = self.we_calc() #Calculate inverter frequency from PLL equation
-			self.winv = self.we
+			self.winv = self.we#*self.wbase
 		except:
 			LogUtil.exception_handler()
 
