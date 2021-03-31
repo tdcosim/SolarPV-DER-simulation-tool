@@ -761,12 +761,21 @@ class PVDER_SetupUtilities(BaseValues):
 			
 				self.vb = self.vb_calc()
 				self.vc = self.vc_calc()	 
-		
-			self.S =self.S_calc()
-			self.S_PCC = self.S_PCC_calc()
-			self.Vtrms = self.Vtrms_calc()
-			self.Vrms = self.Vrms_calc()
-			self.Irms = self.Irms_calc()
+			
+			if self.DER_model_type == 'SolarPVDERThreePhaseNumba':
+				from pvder import utility_functions_numba #Import numba lazily
+				
+				self.S = utility_functions_numba.S_calc(self.vta,self.vtb,self.vtc,self.ia,self.ib,self.ic)
+				self.S_PCC = utility_functions_numba.S_calc(self.va,self.vb,self.vc,self.ia,self.ib,self.ic)
+				self.Vtrms = utility_functions_numba.Urms_calc(self.vta,self.vtb,self.vtc)
+				self.Vrms = utility_functions_numba.Urms_calc(self.va,self.vb,self.vc)
+				self.Irms = utility_functions_numba.Urms_calc(self.ia,self.ib,self.ic)
+			else:
+				self.S =self.S_calc()
+				self.S_PCC = self.S_PCC_calc()
+				self.Vtrms = self.Vtrms_calc()
+				self.Vrms = self.Vrms_calc()
+				self.Irms = self.Irms_calc()
 		
 			LogUtil.logger.debug('{}:Steady state values for operating point defined by Ppv:{:.2f} W, Vdc:{:.2f} V, va:{:.2f} V found at:'.format(self.name,self.Ppv*self.Sbase,self.Vdc*self.Vdcbase,self.va*self.Vbase))
 			
