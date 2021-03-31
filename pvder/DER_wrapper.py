@@ -53,6 +53,9 @@ class DERModel(object):
 				self.DER_model = SolarPVDERSinglePhase(events,configFile,**kwargs)
 			elif modelType == 'SinglePhaseConstantVdc':   
 				self.DER_model = SolarPVDERSinglePhaseConstantVdc(events,configFile,**kwargs)
+			elif modelType == 'ThreePhaseUnbalancedNumba':		
+				from pvder.DER_components_three_phase_numba  import SolarPVDERThreePhaseNumba
+				self.DER_model = SolarPVDERThreePhaseNumba(events,configFile,**kwargs)		
 			else:
 				raise ValueError('{} is not a valid model type! - Valid model types:{}'.format(modelType,templates.model_types))
 		except:

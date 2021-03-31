@@ -12,6 +12,7 @@ import six
 from pvder.utility_classes import Utilities
 from pvder.grid_components import Grid
 from pvder.simulation_utilities import SimulationUtilities
+#from pvder.simulation_utilities_experimental import SimulationUtilitiesExperimental
 from pvder import utility_functions
 from pvder import defaults,templates
 from pvder.logutil import LogUtil
@@ -115,7 +116,15 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 					 self.Vdc_t[-1],
 					 self.xDC_t[-1],self.xQ_t[-1],
 					 self.xPLL_t[-1],self.wte_t[-1]]
-
+		
+			elif self.DER_model_type  == 'SolarPVDERThreePhaseNumba':
+				y0 = [self.iaR_t[-1], self.iaI_t[-1], self.xaR_t[-1], self.xaI_t[-1], self.uaR_t[-1],self.uaI_t[-1],\
+					  self.ibR_t[-1], self.ibI_t[-1], self.xbR_t[-1], self.xbI_t[-1], self.ubR_t[-1],self.ubI_t[-1],\
+					  self.icR_t[-1], self.icI_t[-1], self.xcR_t[-1], self.xcI_t[-1], self.ucR_t[-1],self.ucI_t[-1],\
+					  self.Vdc_t[-1],
+					  self.xDC_t[-1],self.xQ_t[-1],
+					  self.xPLL_t[-1],self.wte_t[-1]]
+		
 			return y0
 		except:
 			LogUtil.exception_handler()
@@ -161,7 +170,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 				self.xPLL_t = np.array([self.PV_model.y0[9]]) #PLL variables			
 				self.wte_t = np.array([self.PV_model.y0[10]]) #Frequency integration to get angle
 		
-			elif type(self.PV_model).__name__ == 'SolarPVDERThreePhase':
+			elif (self.DER_model_type == 'SolarPVDERThreePhase') or (self.DER_model_type == 'SolarPVDERThreePhaseNumba'):
 				self.ibR_t = np.array([self.PV_model.y0[6]])
 				self.ibI_t = np.array([self.PV_model.y0[7]])
 				self.xbR_t = np.array([self.PV_model.y0[8]])
@@ -745,7 +754,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 			self.xaR_t = solution[:,2]
 			self.xaI_t = solution[:,3]
 			self.uaR_t = solution[:,4]
-			self.uaI_t = solution[:,5]			  
+			self.uaI_t = solution[:,5]
 		
 			if type(self.PV_model).__name__ == 'SolarPVDERSinglePhase':
 				#DC link voltage variables
@@ -757,7 +766,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 				#Frequency integration to get angle
 				self.wte_t = solution[:,10]
 
-			elif type(self.PV_model).__name__ == 'SolarPVDERThreePhase':
+			elif self.DER_model_type == 'SolarPVDERThreePhase' or self.DER_model_type == 'SolarPVDERThreePhaseNumba':
 			
 				#Phase b states
 				self.ibR_t = solution[:,6]

@@ -513,6 +513,13 @@ class PVDER_SetupUtilities(BaseValues):
 							'Vdc',
 							'xDC','xQ',
 							'xPLL','wte']
+			elif self.DER_model_type == 'SolarPVDERThreePhaseNumba':
+				state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
+							'ibR','ibI','xbR','xbI','ubR','ubI',
+							'icR','icI','xcR','xcI','ucR','ucI',
+							'Vdc','xDC','xQ','xPLL','wte']		
+			else:
+				raise ValueError('{} is not a valid model type! - Valid model types:{}'.format(self.DER_model_type,templates.model_types))
 			for entry in state_list:
 				self.varInd[entry]=n
 				n+=1
@@ -708,7 +715,7 @@ class PVDER_SetupUtilities(BaseValues):
 		
 			if not result.success:
 				raise ValueError('Steady state solution did not converge! Change operating point or disable steady state flag and try again.')
-		
+			print(f"Rf:{self.Rf},Optimization results:{result.x}")
 			if 'xDC' in templates.DER_design_template[self.DER_model_type]['initial_states']:
 			 self.xDC = self.ia.real
 			if 'xP' in templates.DER_design_template[self.DER_model_type]['initial_states']:
@@ -754,12 +761,21 @@ class PVDER_SetupUtilities(BaseValues):
 			
 				self.vb = self.vb_calc()
 				self.vc = self.vc_calc()	 
-		
-			self.S =self.S_calc()
-			self.S_PCC = self.S_PCC_calc()
-			self.Vtrms = self.Vtrms_calc()
-			self.Vrms = self.Vrms_calc()
-			self.Irms = self.Irms_calc()
+			
+			if self.DER_model_type == 'SolarPVDERThreePhaseNumba':
+				from pvder import utility_functions_numba #Import numba lazily
+				
+				self.S = utility_functions_numba.S_calc(self.vta,self.vtb,self.vtc,self.ia,self.ib,self.ic)
+				self.S_PCC = utility_functions_numba.S_calc(self.va,self.vb,self.vc,self.ia,self.ib,self.ic)
+				self.Vtrms = utility_functions_numba.Urms_calc(self.vta,self.vtb,self.vtc)
+				self.Vrms = utility_functions_numba.Urms_calc(self.va,self.vb,self.vc)
+				self.Irms = utility_functions_numba.Urms_calc(self.ia,self.ib,self.ic)
+			else:
+				self.S =self.S_calc()
+				self.S_PCC = self.S_PCC_calc()
+				self.Vtrms = self.Vtrms_calc()
+				self.Vrms = self.Vrms_calc()
+				self.Irms = self.Irms_calc()
 		
 			LogUtil.logger.debug('{}:Steady state values for operating point defined by Ppv:{:.2f} W, Vdc:{:.2f} V, va:{:.2f} V found at:'.format(self.name,self.Ppv*self.Sbase,self.Vdc*self.Vdcbase,self.va*self.Vbase))
 			

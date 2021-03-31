@@ -483,7 +483,7 @@ class SimulationUtilities():
 																																					 self.PV_model.vta*self.PV_model.Vbase,self.PV_model.va*self.PV_model.Vbase,self.PV_model.ia*self.PV_model.Ibase,self.PV_model.Ppv*self.PV_model.Sbase,self.PV_model.S*self.PV_model.Sbase,self.PV_model.ma)
 				primary_controller_states = '\nxa:{:.4f},ua:{:.4f}'.format(self.PV_model.xa,self.PV_model.ua) 
 			
-				if self.DER_model_type == 'SolarPVDERSinglePhase' or self.DER_model_type == 'SolarPVDERThreePhase'or self.DER_model_type == 'SolarPVDERThreePhaseBalanced':	
+				if self.DER_model_type in ['SolarPVDERSinglePhase', 'SolarPVDERThreePhase','SolarPVDERThreePhaseNumba','SolarPVDERThreePhaseBalanced']:
 					secondary_controller_states = '\nxDC:{:.4f},xQ:{:.4f}'.format(self.PV_model.xDC,self.PV_model.xQ)
 				elif self.DER_model_type == 'SolarPVDERSinglePhaseConstantVdc' or self.DER_model_type == 'SolarPVDERThreePhaseConstantVdc':
 					secondary_controller_states = '\nxP:{:.4f},xQ:{:.4f}'.format(self.PV_model.xP,self.PV_model.xQ)

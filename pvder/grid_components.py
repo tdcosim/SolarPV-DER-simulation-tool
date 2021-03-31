@@ -13,7 +13,7 @@ class BaseValues():
 	Vbase = 500.0  #L-G peak"
 	Sbase = 50e3 #VA base
 	wbase = 2*math.pi*60.0
-	
+	Vdcbase = Vbase #DC side base value is same as AC side base value
 	Ibase = Sbase/Vbase
 	Zbase = (Vbase**2)/Sbase
 	
