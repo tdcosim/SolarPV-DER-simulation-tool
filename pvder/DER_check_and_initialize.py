@@ -63,9 +63,9 @@ class PVDER_SetupUtilities(BaseValues):
 					self.DER_config[RT_component] = DER_parent_config[RT_component]
 				else:
 					if RT_component in list(templates.VRT_config_template.keys()):
-						default_RT = templates.VRT_config_template[RT_component]['config']
+						default_RT = templates.VRT_config_template[RT_component]
 					if RT_component in list(templates.FRT_config_template.keys()):
-						default_RT = templates.FRT_config_template[RT_component]['config']
+						default_RT = templates.FRT_config_template[RT_component]
 					LogUtil.logger.debug('{}:Updating {} from template with  settings:{}.'.format(self.name,RT_component,default_RT))
 					self.DER_config[RT_component] = default_RT
 

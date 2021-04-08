@@ -283,7 +283,7 @@ class PVDER_SmartFeatures():
 			LogUtil.exception_handler()
 
 
-	def RT_initialize(self,DER_arguments):
+	def RT_initialize(self):
 		"""Initialize VRT and FRT settings."""	  
 		try:
 			self.VRT_initialize()
@@ -579,7 +579,7 @@ class PVDER_SmartFeatures():
 			LogUtil.exception_handler()
 
 
-	def update_RT_config(self,DER_config,DER_arguments,config_dict):
+	def update_RT_config(self,config_dict):
 		"""Check whether the config file is good."""
 		try:
 			"""for RT in list(templates.VRT_config_template.keys()) +  list(templates.FRT_config_template.keys()):
@@ -602,12 +602,13 @@ class PVDER_SmartFeatures():
 					LogUtil.logger.debug('{}:{} updated with {} from template.'.format(self.name,RT,self.RT_config[RT]))
 			"""
 			for RT in list(templates.VRT_config_template.keys()) +  list(templates.FRT_config_template.keys()):
-				if 'config_id' in self.DER_config[RT]: #Check if an RT config id is provided
-					self.RT_config[RT] = config_dict[self.DER_config[RT]['config_id']]['config']
-					LogUtil.logger.debug('{}:{} updated with {} from config id {}.'.format(self.name,RT,config_dict[self.DER_config[RT]['config_id']]['config'],self.DER_config[RT]['config_id']))
-				elif 'config' in self.DER_config[RT]: #Check if an RT settings are provided
+				if 'config' in self.DER_config[RT]: #Check if an RT settings are provided
 					self.RT_config[RT] = self.DER_config[RT]['config'] 
 					LogUtil.logger.debug('{}:{} updated with {} from DER config file.'.format(self.name,RT,self.DER_config[RT]['config'] ))
+				elif 'config_id' in self.DER_config[RT]: #Check if an RT config id is provided
+					self.RT_config[RT] = config_dict[self.DER_config[RT]['config_id']]['config']
+					LogUtil.logger.debug('{}:{} updated with {} from config id {}.'.format(self.name,RT,config_dict[self.DER_config[RT]['config_id']]['config'],self.DER_config[RT]['config_id']))
+				
 			
 			for RT in ['LVRT','HVRT']:
 				for RT_level,RT_config in self.RT_config[RT].items():
