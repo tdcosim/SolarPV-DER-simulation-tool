@@ -45,15 +45,31 @@ class PVDER_SetupUtilities(BaseValues):
 			#parameters_from_default = {}
 	
 			for DER_component in self.DER_design_template:
-				if DER_component in DER_arguments['derConfig']: 
-					self.DER_config[DER_component] = DER_arguments['derConfig'][DER_component]
+				if DER_component in DER_arguments: 
+					self.DER_config[DER_component] = DER_arguments[DER_component]
 				else:
 					for DER_parameter in self.DER_design_template[DER_component]:
 						_ = self.update_DER_parameter(DER_config,DER_parent_config,DER_arguments,DER_id,DER_parent_id,DER_component,DER_parameter)
 	
-			for RT_component in list(templates.VRT_config_template.keys()) + list(templates.FRT_config_template.keys()):
-				if RT_component in DER_config:
+			for RT_component in list(templates.VRT_config_template.keys()) + list(templates.FRT_config_template.keys
+				if RT_component in DER_arguments:
+					LogUtil.logger.debug('{}:Updating {} from DER arguments with settings:{}.'.format(self.name,RT_component,DER_arguments[RT_component]))
+					self.DER_config[RT_component] = DER_arguments[RT_component]
+				elif RT_component in DER_config:
 					self.DER_config[RT_component] = DER_config[RT_component]
+					LogUtil.logger.info('{}:Updating {} from DER config {} with settings:{}.'.format(self.name,RT_component,DER_id,DER_config[RT_component]))
+				elif RT_component in DER_parent_config: #Check if RT setting exists in parent config file
+					LogUtil.logger.info('{}:Updating {} from parent DER config {} with settings {}.'.format(self.name,RT_component,DER_parent_id,DER_parent_config[RT_component])) 
+					self.DER_config[RT_component] = DER_parent_config[RT_component]
+				else:
+					if RT_component in list(templates.VRT_config_template.keys()):
+						default_RT = templates.VRT_config_template[RT_component]['config']
+					if RT_component in list(templates.FRT_config_template.keys()):
+						self.DER_config[RT_component]default_RT = templates.FRT_config_template[RT_component]['config']
+					LogUtil.logger.debug('{}:Updating {} from template with  settings:{}.'.format(self.name,RT_component,default_RT))
+					self.DER_config[RT_component] = default_RT
+
+					#raise ValueError("{} not found!".format(RT_component))
 	
 			self.basic_specs = {DER_id:self.DER_config['basic_specs']}
 			self.module_parameters = {DER_id:self.DER_config['module_parameters']}
@@ -80,7 +96,7 @@ class PVDER_SetupUtilities(BaseValues):
 				else:
 					raise ValueError('Found {} to have type {} - expected type:{}!'.format(DER_parameter,type(DER_arguments[DER_parameter]),DER_parameter_type))
 		
-			elif DER_parameter in DER_config[DER_component]: #Check if parameter exists in config file			
+			elif DER_parameter in DER_config[DER_component]: #Check if parameter exists in config file
 				if isinstance(DER_config[DER_component][DER_parameter],DER_parameter_type):
 					LogUtil.logger.debug('{}:Parameter {} in {} for ID:{} - updating from DER config {} with value {}.'.format(self.name,DER_parameter,DER_component,DER_id,DER_id,DER_config[DER_component][DER_parameter])) 
 					self.DER_config[DER_component].update({DER_parameter:DER_config[DER_component][DER_parameter]})
@@ -89,7 +105,7 @@ class PVDER_SetupUtilities(BaseValues):
 				else:
 					raise ValueError('Found {} to have type {} - expected type:{}!'.format(DER_parameter,type(DER_config[DER_component][DER_parameter]),DER_parameter_type))
 		
-			elif DER_parameter in DER_parent_config[DER_component]: #Check if parameter exists in parent config file			
+			elif DER_parameter in DER_parent_config[DER_component]: #Check if parameter exists in parent config file
 				if isinstance(DER_parent_config[DER_component][DER_parameter],DER_parameter_type):
 					LogUtil.logger.debug('{}:Parameter {} in {} for ID:{} - updating from parent DER config {} with value {}.'.format(self.name,DER_parameter,DER_component,DER_id,DER_parent_id,DER_parent_config[DER_component][DER_parameter])) 
 					self.DER_config[DER_component].update({DER_parameter:DER_parent_config[DER_component][DER_parameter]})

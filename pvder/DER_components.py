@@ -71,9 +71,9 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
 			self.check_model_type(DER_config,DER_parent_config)
 			self.update_DER_config(DER_config,DER_parent_config,DER_arguments,self.parameter_ID,self.DER_parent_ID)
 			self.check_basic_specs()
-			
+			LogUtil.logger.log(30,'DER config:{}'.format(self.DER_config))
 			self.RT_config = {}
-			self.update_RT_config(DER_config,DER_arguments,config_dict) #Checks and updates RT_config if any entries are missing
+			self.update_RT_config(self.DER_config,DER_arguments,config_dict) #Checks and updates RT_config if any entries are missing
 			self.check_RT_config()
 			
 			return DER_arguments
