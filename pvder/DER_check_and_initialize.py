@@ -51,7 +51,7 @@ class PVDER_SetupUtilities(BaseValues):
 					for DER_parameter in self.DER_design_template[DER_component]:
 						_ = self.update_DER_parameter(DER_config,DER_parent_config,DER_arguments,DER_id,DER_parent_id,DER_component,DER_parameter)
 	
-			for RT_component in list(templates.VRT_config_template.keys()) + list(templates.FRT_config_template.keys
+			for RT_component in list(templates.VRT_config_template.keys()) + list(templates.FRT_config_template.keys()):
 				if RT_component in DER_arguments:
 					LogUtil.logger.debug('{}:Updating {} from DER arguments with settings:{}.'.format(self.name,RT_component,DER_arguments[RT_component]))
 					self.DER_config[RT_component] = DER_arguments[RT_component]
@@ -65,7 +65,7 @@ class PVDER_SetupUtilities(BaseValues):
 					if RT_component in list(templates.VRT_config_template.keys()):
 						default_RT = templates.VRT_config_template[RT_component]['config']
 					if RT_component in list(templates.FRT_config_template.keys()):
-						self.DER_config[RT_component]default_RT = templates.FRT_config_template[RT_component]['config']
+						default_RT = templates.FRT_config_template[RT_component]['config']
 					LogUtil.logger.debug('{}:Updating {} from template with  settings:{}.'.format(self.name,RT_component,default_RT))
 					self.DER_config[RT_component] = default_RT
 

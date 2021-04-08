@@ -581,8 +581,8 @@ class PVDER_SmartFeatures():
 
 	def update_RT_config(self,DER_config,DER_arguments,config_dict):
 		"""Check whether the config file is good."""
-		try:"""
-			for RT in list(templates.VRT_config_template.keys()) +  list(templates.FRT_config_template.keys()):
+		try:
+			"""for RT in list(templates.VRT_config_template.keys()) +  list(templates.FRT_config_template.keys()):
 				if RT in DER_arguments:
 					self.RT_config[RT] = DER_arguments[RT]
 					LogUtil.logger.debug('{}:{} updated with {} from DER arguments.'.format(self.name,RT,DER_arguments[RT]))
