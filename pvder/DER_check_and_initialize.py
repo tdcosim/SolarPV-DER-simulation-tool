@@ -57,9 +57,9 @@ class PVDER_SetupUtilities(BaseValues):
 					self.DER_config[RT_component] = DER_arguments[RT_component]
 				elif RT_component in DER_config:
 					self.DER_config[RT_component] = DER_config[RT_component]
-					LogUtil.logger.info('{}:Updating {} from DER config {} with settings:{}.'.format(self.name,RT_component,DER_id,DER_config[RT_component]))
+					LogUtil.logger.debug('{}:Updating {} from DER config {} with settings:{}.'.format(self.name,RT_component,DER_id,DER_config[RT_component]))
 				elif RT_component in DER_parent_config: #Check if RT setting exists in parent config file
-					LogUtil.logger.info('{}:Updating {} from parent DER config {} with settings {}.'.format(self.name,RT_component,DER_parent_id,DER_parent_config[RT_component])) 
+					LogUtil.logger.debug('{}:Updating {} from parent DER config {} with settings {}.'.format(self.name,RT_component,DER_parent_id,DER_parent_config[RT_component])) 
 					self.DER_config[RT_component] = DER_parent_config[RT_component]
 				else:
 					if RT_component in list(templates.VRT_config_template.keys()):
@@ -68,8 +68,6 @@ class PVDER_SetupUtilities(BaseValues):
 						default_RT = templates.FRT_config_template[RT_component]
 					LogUtil.logger.debug('{}:Updating {} from template with  settings:{}.'.format(self.name,RT_component,default_RT))
 					self.DER_config[RT_component] = default_RT
-
-					#raise ValueError("{} not found!".format(RT_component))
 	
 			self.basic_specs = {DER_id:self.DER_config['basic_specs']}
 			self.module_parameters = {DER_id:self.DER_config['module_parameters']}

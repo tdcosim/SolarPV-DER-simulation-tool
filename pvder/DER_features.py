@@ -222,8 +222,9 @@ class PVDER_SmartFeatures():
 				text_string = '{}:{:.4f}:DER is in disconnect timer zone.'.format(self.name,t)
 				LogUtil.logger.debug(text_string)
 			elif t-self.t_disconnect_start >= self.t_disconnect_delay: #Disconnect DER only after disconnect time delay has elapsed
-				text_string = '{}:{:.4f}:DER will be disconnected.'.format(self.name,t)
-			
+				text_string = '{}:{:.4f}:DER will be disconnected (t_disconnect_timer:{:.4f} s,Vrms measured = {:.4f} V,LVRT Momentary cessation:{},LVRT Trip:{},HVRT Momentary cessation:{},HVRT Trip:{})'.format(self.name,t,
+																					t-self.t_disconnect_start,self.get_Vrms_measured()*self.Vbase,self.LVRT_MOMENTARY_CESSATION,self.LVRT_TRIP,self.HVRT_MOMENTARY_CESSATION,self.HVRT_TRIP)
+				
 				self.print_event(text_string,True) 
 				self.t_disconnect_start = 0.0
 				self.DER_CONNECTED = False
