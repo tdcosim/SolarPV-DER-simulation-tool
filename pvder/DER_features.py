@@ -222,8 +222,9 @@ class PVDER_SmartFeatures():
 				text_string = '{}:{:.4f}:DER is in disconnect timer zone.'.format(self.name,t)
 				LogUtil.logger.debug(text_string)
 			elif t-self.t_disconnect_start >= self.t_disconnect_delay: #Disconnect DER only after disconnect time delay has elapsed
-				text_string = '{}:{:.4f}:DER will be disconnected.'.format(self.name,t)
-			
+				text_string = '{}:{:.4f}:DER will be disconnected (t_disconnect_timer:{:.4f} s,Vrms measured = {:.4f} V,LVRT Momentary cessation:{},LVRT Trip:{},HVRT Momentary cessation:{},HVRT Trip:{})'.format(self.name,t,
+																					t-self.t_disconnect_start,self.get_Vrms_measured()*self.Vbase,self.LVRT_MOMENTARY_CESSATION,self.LVRT_TRIP,self.HVRT_MOMENTARY_CESSATION,self.HVRT_TRIP)
+				
 				self.print_event(text_string,True) 
 				self.t_disconnect_start = 0.0
 				self.DER_CONNECTED = False
@@ -283,7 +284,7 @@ class PVDER_SmartFeatures():
 			LogUtil.exception_handler()
 
 
-	def RT_initialize(self,DER_arguments):
+	def RT_initialize(self):
 		"""Initialize VRT and FRT settings."""	  
 		try:
 			self.VRT_initialize()
@@ -579,18 +580,18 @@ class PVDER_SmartFeatures():
 			LogUtil.exception_handler()
 
 
-	def update_RT_config(self,DER_config,DER_arguments,config_dict):
+	def update_RT_config(self,config_dict):
 		"""Check whether the config file is good."""
 		try:
-			for RT in list(templates.VRT_config_template.keys()) +  list(templates.FRT_config_template.keys()):
-				if RT in DER_arguments['derConfig']:
-					self.RT_config[RT] = DER_arguments['derConfig'][RT]
-					LogUtil.logger.debug('{}:{} updated with {} from derConfig.'.format(self.name,RT,DER_arguments['derConfig'][RT]))
+			"""for RT in list(templates.VRT_config_template.keys()) +  list(templates.FRT_config_template.keys()):
+				if RT in DER_arguments:
+					self.RT_config[RT] = DER_arguments[RT]
+					LogUtil.logger.debug('{}:{} updated with {} from DER arguments.'.format(self.name,RT,DER_arguments[RT]))
 				elif RT in self.DER_config:
-					if 'config_id' in self.DER_config[RT]:
+					if 'config_id' in self.DER_config[RT]: #Check if an RT config id is provided
 						self.RT_config[RT] = config_dict[self.DER_config[RT]['config_id']]['config']
 						LogUtil.logger.debug('{}:{} updated with {} from config id {}.'.format(self.name,RT,config_dict[self.DER_config[RT]['config_id']]['config'],self.DER_config[RT]['config_id']))
-					elif 'config' in self.DER_config[RT]:
+					elif 'config' in self.DER_config[RT]: #Check if an RT settings are provided
 						self.RT_config[RT] = self.DER_config[RT]['config'] 
 						LogUtil.logger.debug('{}:{} updated with {} from DER config file.'.format(self.name,RT,self.DER_config[RT]['config'] ))
 				else:
@@ -600,7 +601,16 @@ class PVDER_SmartFeatures():
 					if RT in list(templates.FRT_config_template.keys()):
 						self.RT_config[RT] = templates.FRT_config_template[RT]['config']
 					LogUtil.logger.debug('{}:{} updated with {} from template.'.format(self.name,RT,self.RT_config[RT]))
-
+			"""
+			for RT in list(templates.VRT_config_template.keys()) +  list(templates.FRT_config_template.keys()):
+				if 'config' in self.DER_config[RT]: #Check if an RT settings are provided
+					self.RT_config[RT] = self.DER_config[RT]['config'] 
+					LogUtil.logger.debug('{}:{} updated with {} from DER config file.'.format(self.name,RT,self.DER_config[RT]['config'] ))
+				elif 'config_id' in self.DER_config[RT]: #Check if an RT config id is provided
+					self.RT_config[RT] = config_dict[self.DER_config[RT]['config_id']]['config']
+					LogUtil.logger.debug('{}:{} updated with {} from config id {}.'.format(self.name,RT,config_dict[self.DER_config[RT]['config_id']]['config'],self.DER_config[RT]['config_id']))
+				
+			
 			for RT in ['LVRT','HVRT']:
 				for RT_level,RT_config in self.RT_config[RT].items():
 					

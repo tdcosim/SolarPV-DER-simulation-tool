@@ -73,7 +73,7 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
 			self.check_basic_specs()
 			
 			self.RT_config = {}
-			self.update_RT_config(DER_config,DER_arguments,config_dict) #Checks and updates RT_config if any entries are missing
+			self.update_RT_config(config_dict) #Checks and updates RT_config if any entries are missing
 			self.check_RT_config()
 			
 			return DER_arguments
@@ -197,7 +197,7 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
 			
 			self.initialize_grid_measurements(DER_arguments)
 			self.initialize_DER_model() #DER model parameters
-			self.RT_initialize(DER_arguments) #VRT and FRT settings  
+			self.RT_initialize() #VRT and FRT settings  
 			
 			self.initialize_jacobian()
 			
