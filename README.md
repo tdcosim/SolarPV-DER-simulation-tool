@@ -1,16 +1,16 @@
 **Status:** Expect regular updates and bug fixes.
 
-# Utility for simulating dynamics of PV-DER
+# Tool for simulating dynamics of PV-DER
 
 [![Build Status](https://travis-ci.org/sibyjackgrove/SolarPV-DER-simulation-utility.svg?branch=master)](https://travis-ci.org/sibyjackgrove/SolarPV-DER-simulation-utility)
 [![CodeFactor](https://www.codefactor.io/repository/github/tdcosim/solarpv-der-simulation-utility/badge)](https://www.codefactor.io/repository/github/tdcosim/solarpv-der-simulation-utility)
 
-Solar photovoltaic distributed energy resources (PV-DER) are power electronic inverter based generation (IBG) connected to the electric power distribution system (eg. roof top solar PV systems). This utility can be used to simulate the dynamics of a single DER connected to a stiff voltage source as shown in the following schematic:
+Solar photovoltaic distributed energy resources (PV-DER) are power electronic inverter based generation (IBG) connected to the electric power distribution system (eg. roof top solar PV systems). This tool can be used to simulate the dynamics of a single DER connected to a stiff voltage source as shown in the following schematic:
 
 ![schematic of PV-DER](PVDER_schematic.png)
 
 ## Basics
-The dynamics of the DER are modelled using dynamic phasors. Detailed description of the concepts behind this utility can be found in the IEEE publication [Dynamic Modeling of Solar PV Systems for Distribution System Stability Analysis](https://www.researchgate.net/publication/333985171_Dynamic_Modeling_of_Solar_PV_Systems_for_Distribution_System_Stability_Analysis) and detailed list of equations can be found in the [Model specification document.](docs/PV_DER_model_specification_rev3.docx)
+The dynamics of the DER are modelled using dynamic phasors. Detailed description of the concepts behind this tool can be found in the IEEE publication [Dynamic Modeling of Solar PV Systems for Distribution System Stability Analysis](https://www.researchgate.net/publication/333985171_Dynamic_Modeling_of_Solar_PV_Systems_for_Distribution_System_Stability_Analysis) and detailed list of equations can be found in the [Model specification document.](docs/PV_DER_model_specification_rev3.docx)
 
 ### Features
 The following features are available currently:
@@ -24,7 +24,7 @@ The following features are available currently:
 7. Following smart inverter features are available: Low/High voltage ride through (LVRT/HVRT), Low frequency ride through (LFRT), and Volt-VAR control logic.
 
 ## Links
-* Source code repository: https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility
+* Source code repository: https://github.com/sibyjackgrove/SolarPV-DER-simulation-tool
 * API Documentation: https://solarpv-der-simulation-utility.readthedocs.io/en/latest/
 * Additional documentation: [Description of attributes and methods](docs/PVDER_flags_variables_methods.md)
 
