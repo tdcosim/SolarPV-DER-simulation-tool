@@ -31,19 +31,19 @@ The following features are available currently:
 ## Installation
 You can install the module directly from GitHub with following commands:
 ```
-git clone https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility.git
-cd SolarPV-DER-simulation-utility
+git clone https://github.com/sibyjackgrove/SolarPV-DER-simulation-tool.git
+cd SolarPV-DER-simulation-tool
 pip install -e .
 ```
 Dependencies: SciPy >= 1.2.1, Numpy >= 1.16.2, Matlplotlib >= 3.0.3
 
 ## Use cases
-Following projects are using Solar PV-DER simulation utility:
+Following projects are using Solar PV-DER simulation tool:
 1. [Argonne Transmission and Distribution systems Co-Simulation tool (TDcoSim)](https://github.com/tdcosim/TDcoSim)
 2. [OpenAI Gym Distributed Energy Resource Environment  (Gym-DER)](https://github.com/sibyjackgrove/gym-SolarPVDER-environment)
 
-## Using the module
-The module can be imported as a normal python module:
+## Using the tool
+This tool can be imported as a normal python module:
 
 ```python
 import pvder
@@ -106,19 +106,19 @@ results.plot_DER_simulation(plot_type='active_power_Ppv_Pac_PCC')
 Try out Jupyter notebooks with usage examples in Google Colab:
 
 Basic usage:
-[![Basic usage](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sibyjackgrove/SolarPV-DER-simulation-utility/blob/master/examples/PV-DER_usage_example.ipynb)
+[![Basic usage](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sibyjackgrove/SolarPV-DER-simulation-tool/blob/master/examples/PV-DER_usage_example.ipynb)
 
 Running simulation in loop mode:
-[![Updating model parameters](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility/blob/master/examples/PV-DER_usage_example_loop_mode.ipynb)
+[![Updating model parameters](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/sibyjackgrove/SolarPV-DER-simulation-tool/blob/master/examples/PV-DER_usage_example_loop_mode.ipynb)
 
 Updating model parameters:
-[![Updating model parameters](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility/blob/master/examples/PV-DER_parameter_update_example.ipynb)
+[![Updating model parameters](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/sibyjackgrove/SolarPV-DER-simulation-tool/blob/master/examples/PV-DER_parameter_update_example.ipynb)
 
 Voltage anomaly, ride through, and momentary cessation:
-[![Voltage anomaly](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility/blob/master/examples/PV-DER_usage_example_LVRT_momentary_cessation_with_recovery.ipynb)
+[![Voltage anomaly](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/sibyjackgrove/SolarPV-DER-simulation-tool/blob/master/examples/PV-DER_usage_example_LVRT_momentary_cessation_with_recovery.ipynb)
 
 Frequency anomaly, ride through, and trip:
-[![Frequency anomaly](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility/blob/master/examples/PV-DER_usage_example_LFRT_with_trip.ipynb)
+[![Frequency anomaly](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/sibyjackgrove/SolarPV-DER-simulation-tool/blob/master/examples/PV-DER_usage_example_LFRT_with_trip.ipynb)
 
 ## Module details
 A schematic of the relationship between differen classes in the module is shown in the figure below:
@@ -146,10 +146,10 @@ The authors would like to acknowledge [Shrirang Abhyankar](https://github.com/ab
 If you use this code please cite it as:
 ```
 @misc{pvder,
-  title = {{SolarPV-DER-simulation-utility}: A simulation utility for or solar photovoltaic distributed energy resources},
+  title = {{SolarPV-DER-simulation-tool}: A simulation tool for or solar photovoltaic distributed energy resources},
   author = "{Siby Jose Plathottam,Karthikeyan Balasubramaniam}",
-  howpublished = {\url{https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility}},
-  url = "https://github.com/sibyjackgrove/SolarPV-DER-simulation-utility",
+  howpublished = {\url{https://github.com/sibyjackgrove/SolarPV-DER-simulation-tool}},
+  url = "https://github.com/sibyjackgrove/SolarPV-DER-simulation-tool",
   year = 2019,
   note = "[Online; accessed 19-March-2019]"
 }
@@ -157,4 +157,4 @@ If you use this code please cite it as:
 ### Copyright and License
 Copyright © 2019, UChicago Argonne, LLC
 
-Photovoltaic Distributed Energy Resource (PV-DER) Simulation Utility is distributed under the terms of [BSD-3 OSS License.](LICENSE)
+Photovoltaic Distributed Energy Resource (PV-DER) Simulation tool is distributed under the terms of [BSD-3 OSS License.](LICENSE)
