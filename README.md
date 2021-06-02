@@ -29,13 +29,24 @@ The following features are available currently:
 * Additional documentation: [Description of attributes and methods](docs/PVDER_flags_variables_methods.md)
 
 ## Installation
-You can install the module directly from GitHub with following commands:
+
+Dependencies:
+
+- SciPy >= 1.2.1
+- Numpy >= 1.16.2
+- Matlplotlib >= 3.0.3
+
+Install latest release:
 ```
-git clone https://github.com/sibyjackgrove/SolarPV-DER-simulation-tool.git
+pip install pvder
+```
+
+Install from source:
+```
+git clone https://github.com/tdcosim/SolarPV-DER-simulation-tool.git
 cd SolarPV-DER-simulation-tool
 pip install -e .
 ```
-Dependencies: SciPy >= 1.2.1, Numpy >= 1.16.2, Matlplotlib >= 3.0.3
 
 ## Use cases
 Following projects are using Solar PV-DER simulation tool:
