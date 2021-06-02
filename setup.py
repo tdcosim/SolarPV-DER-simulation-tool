@@ -1,15 +1,25 @@
+import pathlib
 from setuptools import setup
+
+# The directory containing this file
+HERE = pathlib.Path(__file__).parent
+
+# The text of the README file
+README = (HERE / "README.md").read_text()
 
 setup(name='pvder',
       version=open("pvder/_version.py").readlines()[-1].split()[-1].strip("\"'"),
       packages=['pvder',],
+      include_package_data=True,
       description='Utility for simulating PV-DER',
+      long_description=README,
+      long_description_content_type="text/markdown",
       url ='https://github.com/tdcosim/SolarPV-DER-simulation-tool',
       author = 'Siby Jose Plathottam',
       author_email='sibyjackgrove@gmail.com',
       license= 'LICENSE.txt',
       classifiers=[
-        'License :: OSI Approved :: BSD-3 License',
+        'License :: OSI Approved :: BSD License',
         'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
