@@ -19,6 +19,12 @@ from pvder import defaults,templates
 from pvder.logutil import LogUtil
 
 
+REAL_CURRENT_RISING_MAX_RATE = 5.25*0.75  #1.35
+IMAG_CURRENT_RISING_MAX_RATE = 5.0
+REAL_CURRENT_FALLING_MAX_RATE = 10.0
+IMAG_CURRENT_FALLING_MAX_RATE = 10.0
+
+USE_CURRENT_RATE_LIMITER = True
 class SolarPVDERThreePhase(PVModule,SolarPVDER):
 	"""
 		Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
@@ -227,20 +233,25 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 				self.S_G = self.S_G_calc()
 				self.S_load1 = self.S_load1_calc()		 
 		except:
-			LogUtil.exception_handler()
+			LogUtil.exception_handler()          
 
-
-	def update_iref(self):
+	def update_iref(self,t):
 		"""Update reference reference current."""
 		try:
 			#Get current controller setpoint
-			self.ia_ref = self.ia_ref_calc()
+			
+			if self.current_gradient_limiter:
+				self.ia_ref = self.get_ramp_limited_iref(t,self.ia_ref_calc())
+			else:
+				#print("No current limit:Real current setpoint changed with rate:{:.4f} at t:{:.6f}".format((self.ia_ref_calc().real - self.ia_ref.real)/(t-self.t_iref),t))
+				self.ia_ref = self.ia_ref_calc()
+				#print("Current setpoint changed to:{num1.real:+0.03f} {num1.imag:=+8.03f}j from {num2.real:+0.03f} {num2.imag:=+8.03f}j".format(num1=self.ia_ref,num2=self.ia_ref_temp))				
+			self.t_iref = t			
 			self.ib_ref = self.ib_ref_calc()
 			self.ic_ref = self.ic_ref_calc()
 		except:
 			LogUtil.exception_handler()
-
-
+            
 	def update_inverter_frequency(self,t):
 		"""Update d-q quantities."""
 		try:
@@ -255,7 +266,6 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 			self.winv = self.we#*self.wbase
 		except:
 			LogUtil.exception_handler()
-
 
 	def ODE_model(self,y,t):
 		"""Derivatives for the equation."""
@@ -280,7 +290,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 		
 			self.update_Qref(t)
 			self.update_Vdc_ref(t)	
-			self.update_iref()
+			self.update_iref(t)
 		
 			self.update_inverter_frequency(t)
 		
@@ -478,7 +488,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 		
 			self.update_Qref(t)
 			self.update_Vdc_ref(t)	
-			self.update_iref()
+			self.update_iref(t)
 		
 			#d-q transformation
 			self.update_inverter_frequency(t)

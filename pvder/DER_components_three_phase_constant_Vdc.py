@@ -157,7 +157,6 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 		except:
 			LogUtil.exception_handler()
 
-
 	def update_inverter_states(self,ia,xa,ua,ib,xb,ub,ic,xc,uc,xP,xQ,xPLL,wte):
 		"""Update inverter states
 		Args:
@@ -186,7 +185,6 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 		except:
 			LogUtil.exception_handler()
 
-
 	def update_voltages(self):
 		"""Update voltages."""
 		try:
@@ -201,7 +199,6 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 			self.vc = self.vc_calc()
 		except:
 			LogUtil.exception_handler()
-
 
 	def update_RMS(self):
 		"""Update RMS voltages."""
@@ -218,7 +215,6 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 				self.Vabrms = self.Vabrms_calc()		
 		except:
 			LogUtil.exception_handler()
-
 
 	def update_power(self):
 		"""Update RMS voltages."""
@@ -242,7 +238,6 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 		except:
 			LogUtil.exception_handler()
 
-
 	def update_Pref(self):
 		"""Update active power reference"""	
 		try:
@@ -253,16 +248,19 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 		except:
 			LogUtil.exception_handler()
 
-
-	def update_iref(self):
+	def update_iref(self,t):
 		"""Update current reference"""	
 		try:
-			self.ia_ref = self.ia_ref_activepower_control()#Get current controller setpoint
-			self.ib_ref = self.ib_ref_activepower_control()#Get current controller setpoint
-			self.ic_ref = self.ic_ref_activepower_control()#Get current controller setpoint
+			if self.current_gradient_limiter:
+				self.ia_ref = self.get_ramp_limited_iref(t,self.ia_ref_activepower_control())
+			else:
+				#print("No current limit:Real current setpoint changed with rate:{:.4f} at t:{:.6f}".format((self.ia_ref_activepower_control().real - self.ia_ref.real)/(t-self.t_iref),t))
+				self.ia_ref =  self.ia_ref_activepower_control() #Get current controller setpoint
+			self.t_iref = t	
+			self.ib_ref = self.ib_ref_activepower_control() #Get current controller setpoint
+			self.ic_ref = self.ic_ref_activepower_control() #Get current controller setpoint
 		except:
 			LogUtil.exception_handler()
-
 
 	def update_inverter_frequency(self,t):
 		"""Update d-q quantities."""
@@ -280,7 +278,6 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 			self.winv = self.we
 		except:
 			LogUtil.exception_handler()
-
 
 	def ODE_model(self,y,t):
 		"""System of ODE's defining the dynamic DER model.
@@ -311,7 +308,7 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 			self.update_RMS()		
 		
 			self.update_Qref(t)		
-			self.update_iref()
+			self.update_iref(t)
 		
 			self.update_inverter_frequency(t)
 		
@@ -499,7 +496,7 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 		
 			self.update_Qref(t)
 			#self.update_Vdc_ref(t)	
-			self.update_iref()
+			self.update_iref(t)
 		
 			#d-q transformation
 			self.update_inverter_frequency(t)
