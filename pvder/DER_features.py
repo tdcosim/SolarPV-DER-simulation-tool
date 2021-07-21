@@ -402,7 +402,7 @@ class PVDER_SmartFeatures():
 					
 					elif  Vrms_measured < V_threshold: #Check if voltage below threshold
 						if HVRT_values['t_start'] > 0.0: #Reset timer if voltage goes below threshold
-							self.print_VRT_events(t,Vrms_measured,zone_name,HVRT_values['t_start'],V_threshold,t_threshold,HVRT_mode,t_min_ridethrough,event_name='zone_reset')
+							self.print_VRT_events(t,Vrms_measured,zone_name,HVRT_values['t_start'],V_threshold,t_threshold,t_min_ridethrough,HVRT_mode,event_name='zone_reset')
 							HVRT_values['t_start']  = 0.0 
 							self.HVRT_MOMENTARY_CESSATION = False #Reset momentary cessation flags
 						else: #Do nothing

@@ -1,7 +1,7 @@
 {
 "50":{"parent_config":"",
       "basic_specs":{"model_type":"SolarPVDERThreePhase"},
-      "basic_options":{"Sinsol":100.0,"current_gradient_limiter":true},
+      "basic_options":{"Sinsol":100.0,"current_gradient_limiter":false},
       "module_parameters":{"Np":11,"Ns":735,"Vdcmpp0":550.0,"Vdcmpp_min": 525.0,"Vdcmpp_max": 650.0},
                           
       "inverter_ratings":{"Srated":50e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0,"Iramp_max_gradient_real":0.95,"Iramp_max_gradient_imag":0.95},
