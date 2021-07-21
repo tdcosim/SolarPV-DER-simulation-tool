@@ -328,7 +328,7 @@ class PVDER_SetupUtilities(BaseValues):
 			self.update_voltages()
 			self.update_power()
 			self.update_RMS()
-			if self.DER_model_type == 'SolarPVDERThreePhaseConstantVdc':
+			if self.DER_model_type in templates.constant_Vdc_models:
 				self.ia_ref  = self.ia_ref_activepower_control()
 			else:
 				self.ia_ref = self.ia_ref_calc()

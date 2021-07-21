@@ -8,6 +8,8 @@ Created on Mon Mar 30 10:19:16 2020
 single_phase_models = ["SolarPVDERSinglePhase","SolarPVDERSinglePhaseConstantVdc"]
 three_phase_models = ["SolarPVDERThreePhase","SolarPVDERThreePhaseConstantVdc","SolarPVDERThreePhaseBalanced","SolarPVDERThreePhaseNumba"]
 
+constant_Vdc_models = ["SolarPVDERSinglePhaseConstantVdc","SolarPVDERThreePhaseConstantVdc"]
+
 model_types = ['SinglePhase','SinglePhaseConstantVdc',
 			   'ThreePhaseUnbalanced','ThreePhaseUnbalancedConstantVdc','ThreePhaseBalanced','ThreePhaseUnbalancedNumba']
 

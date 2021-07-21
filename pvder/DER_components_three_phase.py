@@ -19,12 +19,6 @@ from pvder import defaults,templates
 from pvder.logutil import LogUtil
 
 
-REAL_CURRENT_RISING_MAX_RATE = 5.25*0.75  #1.35
-IMAG_CURRENT_RISING_MAX_RATE = 5.0
-REAL_CURRENT_FALLING_MAX_RATE = 10.0
-IMAG_CURRENT_FALLING_MAX_RATE = 10.0
-
-USE_CURRENT_RATE_LIMITER = True
 class SolarPVDERThreePhase(PVModule,SolarPVDER):
 	"""
 		Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
@@ -526,7 +520,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 											 + 0.5*rc*math.cos(theta_c)*math.sin(self.wte) - 0.8660254037*rc*math.cos(theta_c)*math.cos(self.wte))
 			
 			#Current controller dynamics
-			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
+			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
 				if np.sign(self.Ki_GCC*self.ua.real) == np.sign(self.xa.real):
 					J[varInd['xaR'],varInd['uaR']]=0.0
 				else:
@@ -540,7 +534,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 					J[varInd['xaR'],varInd['uaR']]=self.Ki_GCC
 					J[varInd['xaI'],varInd['uaI']]=self.Ki_GCC
 		
-			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
+			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
 				if np.sign( (self.wp)*(-self.ua.real +	self.ia_ref.real - self.ia.real)) == np.sign(self.ua.real):
 					J[varInd['uaR'],varInd['iaR']]= 0.0
 					J[varInd['uaR'],varInd['uaR']]= 0.0
