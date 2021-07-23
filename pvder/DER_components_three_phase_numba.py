@@ -587,7 +587,7 @@ class SolarPVDERThreePhaseNumba(PVModule,SolarPVDER):
 											 + 0.5*rc*math.cos(theta_c)*math.sin(self.wte) - 0.8660254037*rc*math.cos(theta_c)*math.cos(self.wte))
 			
 			#Current controller dynamics
-			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
+			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
 				if np.sign(self.Ki_GCC*self.ua.real) == np.sign(self.xa.real):
 					J[varInd['xaR'],varInd['uaR']]=0.0
 				else:
@@ -601,7 +601,7 @@ class SolarPVDERThreePhaseNumba(PVModule,SolarPVDER):
 					J[varInd['xaR'],varInd['uaR']]=self.Ki_GCC
 					J[varInd['xaI'],varInd['uaI']]=self.Ki_GCC
 		
-			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
+			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
 				if np.sign( (self.wp)*(-self.ua.real +	self.ia_ref.real - self.ia.real)) == np.sign(self.ua.real):
 					J[varInd['uaR'],varInd['iaR']]= 0.0
 					J[varInd['uaR'],varInd['uaR']]= 0.0
