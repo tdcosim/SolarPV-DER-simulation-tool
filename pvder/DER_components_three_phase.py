@@ -72,6 +72,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 		except:
 			LogUtil.exception_handler()
 	
+    
 	#Apparent power output at inverter terminal
 	def S_calc(self):
 		"""Inverter apparent power output"""
