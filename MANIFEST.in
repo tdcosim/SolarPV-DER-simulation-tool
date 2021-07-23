@@ -1,0 +1,3 @@
+include logs/*.gitignore
+include tests/*.py
+include config_der.json
