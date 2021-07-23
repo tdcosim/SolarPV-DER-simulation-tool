@@ -195,11 +195,14 @@ class SolarPVDERSinglePhase(PVModule,SolarPVDER):
 		except:
 			LogUtil.exception_handler()
 
-	def update_iref(self):
+	def update_iref(self,t):
 		"""Update reference reference current."""
 		try:
-			#Get current controller setpoint
-			self.ia_ref = self.ia_ref_calc()
+			#Get current controller setpoint			
+			if self.current_gradient_limiter:
+				self.ia_ref = self.get_ramp_limited_iref(t,self.ia_ref_calc())
+			else:
+				self.ia_ref = self.ia_ref_calc()
 		except:
 			LogUtil.exception_handler()
 
@@ -251,7 +254,7 @@ class SolarPVDERSinglePhase(PVModule,SolarPVDER):
 		
 			self.update_Qref(t)
 			self.update_Vdc_ref(t) 
-			self.update_iref()
+			self.update_iref(t)
 		
 			self.update_inverter_frequency(t)
 		
@@ -263,7 +266,7 @@ class SolarPVDERSinglePhase(PVModule,SolarPVDER):
 			diaI = (1/self.Lf)*(-self.Rf*self.ia.imag - self.va.imag + self.vta.imag) - (self.winv/self.wbase)*self.ia.real
 		 
 			#Current controller dynamics
-			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
+			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
 				if np.sign(self.Ki_GCC*self.ua.real) == np.sign(self.xa.real):
 					dxaR = 0.0
 				else:
@@ -277,7 +280,7 @@ class SolarPVDERSinglePhase(PVModule,SolarPVDER):
 				dxaR = self.Ki_GCC*self.ua.real
 				dxaI = self.Ki_GCC*self.ua.imag
 			
-			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
+			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
 				if np.sign( (self.wp)*(-self.ua.real +self.ia_ref.real - self.ia.real)) == np.sign(self.ua.real):
 					duaR = 0.0
 				else:
@@ -363,7 +366,7 @@ class SolarPVDERSinglePhase(PVModule,SolarPVDER):
 		
 			self.update_Qref(t)
 			self.update_Vdc_ref(t)	
-			self.update_iref()
+			self.update_iref(t)
 		
 			#d-q transformation
 			self.update_inverter_frequency(t)
@@ -395,7 +398,7 @@ class SolarPVDERSinglePhase(PVModule,SolarPVDER):
 																						+ math.cos(theta_a-math.pi/2)*math.cos(self.wte))
 			
 			#Current controller dynamics
-			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
+			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
 				if np.sign(self.Ki_GCC*self.ua.real) == np.sign(self.xa.real):
 					J[varInd['xaR'],varInd['uaR']]=0.0
 				else:
@@ -409,7 +412,7 @@ class SolarPVDERSinglePhase(PVModule,SolarPVDER):
 					J[varInd['xaR'],varInd['uaR']]=self.Ki_GCC
 					J[varInd['xaI'],varInd['uaI']]=self.Ki_GCC
 		
-			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
+			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
 				if np.sign( (self.wp)*(-self.ua.real +self.ia_ref.real - self.ia.real)) == np.sign(self.ua.real):
 					J[varInd['uaR'],varInd['iaR']]= 0.0
 					J[varInd['uaR'],varInd['uaR']]= 0.0

@@ -756,7 +756,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 			self.uaR_t = solution[:,4]
 			self.uaI_t = solution[:,5]
 		
-			if type(self.PV_model).__name__ == 'SolarPVDERSinglePhase':
+			if self.DER_model_type == 'SolarPVDERSinglePhase':
 				#DC link voltage variables
 				self.Vdc_t = solution[:,6]
 				self.xDC_t = solution[:,7]
@@ -794,7 +794,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 				#Frequency integration to get angle
 				self.wte_t = solution[:,22]		
 		
-			elif type(self.PV_model).__name__ == 'SolarPVDER_SinglePhaseConstantVdc':
+			elif self.DER_model_type  == 'SolarPVDERSinglePhaseConstantVdc':
 				self.Vdc_t = np.array([self.PV_model.Vdc]*len(self.iaR_t))
 						
 				self.xP_t = solution[:,6] #Active power control variable
@@ -803,7 +803,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 				self.xPLL_t = solution[:,8] #PLL variables			
 				self.wte_t = solution[:,9] #Frequency integration to get angle
 		
-			elif type(self.PV_model).__name__ == 'SolarPVDERThreePhaseConstantVdc':
+			elif self.DER_model_type == 'SolarPVDERThreePhaseConstantVdc':
 				#Phase b states
 				self.ibR_t = solution[:,6]
 				self.ibI_t = solution[:,7]
@@ -828,7 +828,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 				self.xPLL_t = solution[:,20] #PLL variables			
 				self.wte_t = solution[:,21] #Frequency integration to get angle
 			
-			elif type(self.PV_model).__name__ == 'SolarPVDERThreePhaseBalanced':
+			elif self.DER_model_type == 'SolarPVDERThreePhaseBalanced':
 			
 				ia_t = self.iaR_t+self.iaI_t*1j
 				xa_t = self.xaR_t+self.xaI_t*1j

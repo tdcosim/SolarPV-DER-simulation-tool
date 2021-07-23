@@ -12,7 +12,7 @@ import numpy as np
 
 from pvder.utility_classes import Utilities
 from pvder.grid_components import BaseValues
-from pvder import utility_functions
+from pvder import utility_functions,utility_functions_numba
 from pvder import defaults, templates, properties
 from pvder.logutil import LogUtil
 
@@ -349,7 +349,56 @@ class PVDER_ModelUtilities(BaseValues,Utilities):
 			return (1/2)*(vph*iph.conjugate())
 		except:
 			LogUtil.exception_handler()
-
+	
+	def get_ramp_limited_iref(self,t,ia_ref_command):
+		"""Update reference reference current."""
+		try:
+			#Get current controller setpoint
+			if t > self.t_iref:
+				iaR_ref_previous = self.ia_ref.real 
+				iaI_ref_previous = self.ia_ref.imag 
+				ia_ref,del_iaR_ref_actual,del_iaI_ref_actual = self.get_iref_actual(t,ia_ref_command,iaR_ref_previous,iaI_ref_previous)	
+				#if abs(del_iaR_ref_actual) > 0.0001:
+				#	print("Real current setpoint changed from {:.4f} to {:.4f} ({:.4f}) with rate:{:.4f} with dt = {:.4f} s".format(iaR_ref_previous,self.ia_ref.real,self.ia.real,del_iaR_ref_actual/(t-self.t_iref),t -self.t_iref))
+				#if abs(del_iaI_ref_actual) > 0.0001:
+				#	print("Imag current setpoint changed from {:.4f} to {:.4f} ({:.4f}) with rate:{:.4f} with dt = {:.4f} s".format(iaI_ref_previous,self.ia_ref.imag,self.ia.imag,del_iaI_ref_actual/(t-self.t_iref),t -self.t_iref))
+					
+			elif t < self.t_iref:
+				iaR_ref_previous = self.ia.real
+				iaI_ref_previous = self.ia.imag
+				ia_ref,del_iaR_ref_actual,del_iaI_ref_actual = self.get_iref_actual(t,ia_ref_command,iaR_ref_previous,iaI_ref_previous)					
+				#if abs(del_iaR_ref_actual) > 0.0001:
+				#	print("Back in time:Real current setpoint changed from {:.4f} to {:.4f} ({:.4f}) with dt = {:.4f} s".format(iaR_ref_previous,self.ia_ref.real,self.ia.real,t -self.t_iref))
+				#if abs(del_iaI_ref_actual) > 0.0001:
+				#	print("Back in time:Imag current setpoint changed from {:.4f} to {:.4f} ({:.4f}) with dt = {:.4f} s".format(iaI_ref_previous,self.ia_ref.imag,self.ia.imag,t -self.t_iref))
+			else:
+				ia_ref = self.ia_ref
+			return ia_ref
+		except:
+			LogUtil.exception_handler()
+	
+	def get_iref_actual(self,t,ia_ref_command,iaR_ref_previous,iaI_ref_previous):
+		"""Update reference reference current."""
+		try:
+			#Get ramp rate			
+			del_iaR_ref_command = ia_ref_command.real - iaR_ref_previous
+			del_iaI_ref_command = ia_ref_command.imag - iaI_ref_previous					
+					
+			if del_iaR_ref_command > 0:
+				del_iaR_ref_actual = math.copysign(min(abs(del_iaR_ref_command)/(t-self.t_iref),self.iR_ramp_up_max_gradient)*(t-self.t_iref), del_iaR_ref_command)
+			else:
+				del_iaR_ref_actual = math.copysign(min(abs(del_iaR_ref_command)/(t-self.t_iref),self.iR_ramp_up_max_gradient)*(t-self.t_iref), del_iaR_ref_command) #del_iref_real_command
+			ia_ref_real = iaR_ref_previous + del_iaR_ref_actual
+								
+			if del_iaI_ref_command > 0:
+				del_iaI_ref_actual = math.copysign(min(abs(del_iaI_ref_command)/(t-self.t_iref),self.iI_ramp_up_max_gradient)*(t-self.t_iref), del_iaI_ref_command)
+			else:
+				del_iaI_ref_actual = math.copysign(min(abs(del_iaI_ref_command)/(t-self.t_iref),self.iI_ramp_up_max_gradient)*(t-self.t_iref), del_iaI_ref_command) #del_iref_imag_command
+			ia_ref_imag = iaI_ref_previous + del_iaI_ref_actual
+									
+			return ia_ref_real + 1j*ia_ref_imag,del_iaR_ref_actual,del_iaI_ref_actual
+		except:
+			LogUtil.exception_handler()
 
 	def show_PV_DER_states(self,quantity='voltage'):
 		"""Display values of states in the DER model quantities.
@@ -425,17 +474,21 @@ class PVDER_ModelUtilities(BaseValues,Utilities):
 		"""Compare error between RMS quantities and Phasor quantities."""
 		try:
 			#Calculation with phasor quantities
-			self.Pf_phasor = self.S_calc().real-self.S_PCC_calc().real  #Active power consumed by filter resistor
-			self.Qf_phasor = self.S_calc().imag-self.S_PCC_calc().imag  #Reactive power consumed by filter inductor 
-		
+			if not self.DER_model_type == "SolarPVDERThreePhaseNumba":
+				self.Pf_phasor = self.S_calc().real-self.S_PCC_calc().real	#Active power consumed by filter resistor
+				self.Qf_phasor = self.S_calc().imag-self.S_PCC_calc().imag	#Reactive power consumed by filter inductor
+				self.Pt_phasor = self.S_calc().real	  #Active power output at inverter terminal
+				self.Qt_phasor = self.S_calc().imag	  #Reactive power output at inverter terminal
+			else:
+				self.Pf_phasor = utility_functions_numba.S_calc(self.vta,self.vtb,self.vtc,self.ia,self.ib,self.ic).real - utility_functions_numba.S_calc(self.va,self.vb,self.vc,self.ia,self.ib,self.ic).real
+				self.Qf_phasor = utility_functions_numba.S_calc(self.vta,self.vtb,self.vtc,self.ia,self.ib,self.ic).imag - utility_functions_numba.S_calc(self.va,self.vb,self.vc,self.ia,self.ib,self.ic).imag
+				self.Pt_phasor = utility_functions_numba.S_calc(self.vta,self.vtb,self.vtc,self.ia,self.ib,self.ic).real 
+				self.Qt_phasor = utility_functions_numba.S_calc(self.vta,self.vtb,self.vtc,self.ia,self.ib,self.ic).imag                        
+			
 			#Caculation with RMS quantities		
 			self.Pf_RMS = self.n_phases*((self.Irms)**2)*self.Rf   #Active power consumed by filter resistor
-			self.Qf_RMS = self.n_phases*((self.Irms)**2)*self.Xf   #Reactive power consumed by filter inductor 
-		
-			#Calculation with phasor quantities
-			self.Pt_phasor = self.S_calc().real   #Active power output at inverter terminal
-			self.Qt_phasor = self.S_calc().imag   #Reactive power output at inverter terminal
-				
+			self.Qf_RMS = self.n_phases*((self.Irms)**2)*self.Xf   #Reactive power consumed by filter inductor 		
+			
 			#Caculation with RMS quantities 
 			ra1,pha1 = cmath.polar(self.vta)
 			ra2,pha2 = cmath.polar(self.ia)		
@@ -466,7 +519,6 @@ class PVDER_ModelUtilities(BaseValues,Utilities):
 				print('Inverter filter active power loss error:{:.4f}\nInverter filter reactive power loss error:{:.4f}'.format(abs(self.Pf_phasor-self.Pf_RMS),abs(self.Qf_phasor-self.Qf_RMS)))
 		except:
 			LogUtil.exception_handler()
-
 
 	def set_Vdc_ref(self):
 		"""Return the correct Vdc reference voltage."""

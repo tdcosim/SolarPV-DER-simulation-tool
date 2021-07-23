@@ -378,18 +378,20 @@ class SolarPVDERThreePhaseNumba(PVModule,SolarPVDER):
 		except:
 			LogUtil.exception_handler()
 
-
-	def update_iref(self):
+	def update_iref(self,t):
 		"""Update reference reference current."""
 		try:
-			#Get current controller setpoint			
-			self.ia_ref = utility_functions_numba.ia_ref_Vdc_Q_control_calc(self.xDC,self.xQ,self.Vdc,self.S_PCC,self.Vdc_ref,self.Q_ref,self.Kp_DC,self.Kp_Q)
+			#Get current controller setpoint
+			if not self.current_gradient_limiter:
+				self.ia_ref = utility_functions_numba.ia_ref_Vdc_Q_control_calc(self.xDC,self.xQ,self.Vdc,self.S_PCC,self.Vdc_ref,self.Q_ref,self.Kp_DC,self.Kp_Q)				  
+			else:
+				self.ia_ref = self.get_ramp_limited_iref(t,utility_functions_numba.ia_ref_Vdc_Q_control_calc(self.xDC,self.xQ,self.Vdc,self.S_PCC,self.Vdc_ref,self.Q_ref,self.Kp_DC,self.Kp_Q))
+			self.t_iref = t	
 			self.ib_ref = utility_functions_numba.Ub_calc(self.ia_ref)
 			self.ic_ref = utility_functions_numba.Uc_calc(self.ia_ref)
 			
 		except:
 			LogUtil.exception_handler()
-
 	def update_inverter_frequency(self,t):
 		"""Update d-q quantities."""
 		try:
@@ -434,7 +436,7 @@ class SolarPVDERThreePhaseNumba(PVModule,SolarPVDER):
 		
 			self.update_Qref(t)
 			self.update_Vdc_ref(t)	
-			self.update_iref()
+			self.update_iref(t)
 		
 			self.update_inverter_frequency(t)
 		
@@ -547,7 +549,7 @@ class SolarPVDERThreePhaseNumba(PVModule,SolarPVDER):
 		
 			self.update_Qref(t)
 			self.update_Vdc_ref(t)	
-			self.update_iref()
+			self.update_iref(t)
 		
 			#d-q transformation
 			self.update_inverter_frequency(t)

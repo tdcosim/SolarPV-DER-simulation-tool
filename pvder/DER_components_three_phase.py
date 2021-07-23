@@ -72,6 +72,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 		except:
 			LogUtil.exception_handler()
 	
+    
 	#Apparent power output at inverter terminal
 	def S_calc(self):
 		"""Inverter apparent power output"""
@@ -227,20 +228,25 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 				self.S_G = self.S_G_calc()
 				self.S_load1 = self.S_load1_calc()		 
 		except:
-			LogUtil.exception_handler()
+			LogUtil.exception_handler()          
 
-
-	def update_iref(self):
+	def update_iref(self,t):
 		"""Update reference reference current."""
 		try:
 			#Get current controller setpoint
-			self.ia_ref = self.ia_ref_calc()
+			
+			if self.current_gradient_limiter:
+				self.ia_ref = self.get_ramp_limited_iref(t,self.ia_ref_calc())
+			else:
+				#print("No current limit:Real current setpoint changed with rate:{:.4f} at t:{:.6f}".format((self.ia_ref_calc().real - self.ia_ref.real)/(t-self.t_iref),t))
+				self.ia_ref = self.ia_ref_calc()
+				#print("Current setpoint changed to:{num1.real:+0.03f} {num1.imag:=+8.03f}j from {num2.real:+0.03f} {num2.imag:=+8.03f}j".format(num1=self.ia_ref,num2=self.ia_ref_temp))				
+			self.t_iref = t			
 			self.ib_ref = self.ib_ref_calc()
 			self.ic_ref = self.ic_ref_calc()
 		except:
 			LogUtil.exception_handler()
-
-
+            
 	def update_inverter_frequency(self,t):
 		"""Update d-q quantities."""
 		try:
@@ -255,7 +261,6 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 			self.winv = self.we#*self.wbase
 		except:
 			LogUtil.exception_handler()
-
 
 	def ODE_model(self,y,t):
 		"""Derivatives for the equation."""
@@ -280,7 +285,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 		
 			self.update_Qref(t)
 			self.update_Vdc_ref(t)	
-			self.update_iref()
+			self.update_iref(t)
 		
 			self.update_inverter_frequency(t)
 		
@@ -478,7 +483,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 		
 			self.update_Qref(t)
 			self.update_Vdc_ref(t)	
-			self.update_iref()
+			self.update_iref(t)
 		
 			#d-q transformation
 			self.update_inverter_frequency(t)
@@ -516,7 +521,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 											 + 0.5*rc*math.cos(theta_c)*math.sin(self.wte) - 0.8660254037*rc*math.cos(theta_c)*math.cos(self.wte))
 			
 			#Current controller dynamics
-			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
+			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
 				if np.sign(self.Ki_GCC*self.ua.real) == np.sign(self.xa.real):
 					J[varInd['xaR'],varInd['uaR']]=0.0
 				else:
@@ -530,7 +535,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 					J[varInd['xaR'],varInd['uaR']]=self.Ki_GCC
 					J[varInd['xaI'],varInd['uaI']]=self.Ki_GCC
 		
-			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
+			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
 				if np.sign( (self.wp)*(-self.ua.real +	self.ia_ref.real - self.ia.real)) == np.sign(self.ua.real):
 					J[varInd['uaR'],varInd['iaR']]= 0.0
 					J[varInd['uaR'],varInd['uaR']]= 0.0

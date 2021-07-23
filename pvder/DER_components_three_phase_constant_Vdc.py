@@ -157,7 +157,6 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 		except:
 			LogUtil.exception_handler()
 
-
 	def update_inverter_states(self,ia,xa,ua,ib,xb,ub,ic,xc,uc,xP,xQ,xPLL,wte):
 		"""Update inverter states
 		Args:
@@ -186,7 +185,6 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 		except:
 			LogUtil.exception_handler()
 
-
 	def update_voltages(self):
 		"""Update voltages."""
 		try:
@@ -201,7 +199,6 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 			self.vc = self.vc_calc()
 		except:
 			LogUtil.exception_handler()
-
 
 	def update_RMS(self):
 		"""Update RMS voltages."""
@@ -218,7 +215,6 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 				self.Vabrms = self.Vabrms_calc()		
 		except:
 			LogUtil.exception_handler()
-
 
 	def update_power(self):
 		"""Update RMS voltages."""
@@ -242,7 +238,6 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 		except:
 			LogUtil.exception_handler()
 
-
 	def update_Pref(self):
 		"""Update active power reference"""	
 		try:
@@ -253,16 +248,19 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 		except:
 			LogUtil.exception_handler()
 
-
-	def update_iref(self):
+	def update_iref(self,t):
 		"""Update current reference"""	
 		try:
-			self.ia_ref = self.ia_ref_activepower_control()#Get current controller setpoint
-			self.ib_ref = self.ib_ref_activepower_control()#Get current controller setpoint
-			self.ic_ref = self.ic_ref_activepower_control()#Get current controller setpoint
+			if self.current_gradient_limiter and t > 0.1:
+				self.ia_ref = self.get_ramp_limited_iref(t,self.ia_ref_activepower_control())
+			else:
+				#print("No current limit:Real current setpoint changed with rate:{:.4f} at t:{:.6f}".format((self.ia_ref_activepower_control().real - self.ia_ref.real)/(t-self.t_iref),t))
+				self.ia_ref =  self.ia_ref_activepower_control() #Get current controller setpoint
+			self.t_iref = t	
+			self.ib_ref = self.ib_ref_activepower_control() #Get current controller setpoint
+			self.ic_ref = self.ic_ref_activepower_control() #Get current controller setpoint
 		except:
 			LogUtil.exception_handler()
-
 
 	def update_inverter_frequency(self,t):
 		"""Update d-q quantities."""
@@ -280,7 +278,6 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 			self.winv = self.we
 		except:
 			LogUtil.exception_handler()
-
 
 	def ODE_model(self,y,t):
 		"""System of ODE's defining the dynamic DER model.
@@ -311,7 +308,7 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 			self.update_RMS()		
 		
 			self.update_Qref(t)		
-			self.update_iref()
+			self.update_iref(t)
 		
 			self.update_inverter_frequency(t)
 		
@@ -323,7 +320,7 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 			diaI = (1/self.Lf)*(-self.Rf*self.ia.imag - self.va.imag + self.vta.imag) - (self.winv/self.wbase)*self.ia.real
 		
 			#Current controller dynamics
-			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
+			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
 				if np.sign(self.Ki_GCC*self.ua.real) == np.sign(self.xa.real):
 					dxaR = 0.0
 				else:
@@ -337,7 +334,7 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 				dxaR = self.Ki_GCC*self.ua.real
 				dxaI = self.Ki_GCC*self.ua.imag
 			
-			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
+			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
 				if np.sign( (self.wp)*(-self.ua.real +self.ia_ref.real - self.ia.real)) == np.sign(self.ua.real):
 					duaR = 0.0
 				else:
@@ -499,7 +496,7 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 		
 			self.update_Qref(t)
 			#self.update_Vdc_ref(t)	
-			self.update_iref()
+			self.update_iref(t)
 		
 			#d-q transformation
 			self.update_inverter_frequency(t)
@@ -532,7 +529,7 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 																						+ math.cos(theta_a-math.pi/2)*math.cos(self.wte))
 			
 			#Current controller dynamics
-			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
+			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
 				if np.sign(self.Ki_GCC*self.ua.real) == np.sign(self.xa.real):
 					J[varInd['xaR'],varInd['uaR']]=0.0
 				else:
@@ -546,7 +543,7 @@ class SolarPVDERThreePhaseConstantVdc(PVModule,SolarPVDER):
 					J[varInd['xaR'],varInd['uaR']]=self.Ki_GCC
 					J[varInd['xaI'],varInd['uaI']]=self.Ki_GCC
 		
-			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit*1e1:
+			if abs(self.Kp_GCC*self.ua + self.xa)>self.m_limit:
 				if np.sign( (self.wp)*(-self.ua.real +self.ia_ref.real - self.ia.real)) == np.sign(self.ua.real):
 					J[varInd['uaR'],varInd['iaR']]= 0.0
 					J[varInd['uaR'],varInd['uaR']]= 0.0

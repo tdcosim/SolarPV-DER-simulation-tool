@@ -35,6 +35,8 @@ parameter_properties = {"Rf":{'base':'impendance','type':(int,float)},
 						"Vdcrated":{'base':'voltage','type':(int,float)},
 						"Ioverload":{'type':(int,float)},
 						"Vrmsrated":{'base':'voltage','type':(int,float)},
+						"Iramp_max_gradient_real":{'type':(int,float)},
+						"Iramp_max_gradient_imag":{'type':(int,float)},
 						
 						"Kp_GCC":{'type':(int,float)},
 						"Ki_GCC":{'type':(int,float)},
@@ -88,7 +90,8 @@ parameter_properties = {"Rf":{'base':'impendance','type':(int,float)},
 						't_stable':{'type':(int,float)},
 						'm_steady_state':{'type':(float)},
 						"Sinsol":{'type':(int,float)},
-						'use_Pref':{'type':(bool)}
+						'use_Pref':{'type':(bool)},
+						'current_gradient_limiter':{'type':(bool)}
 						
 						
 					   }

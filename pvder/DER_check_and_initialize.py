@@ -185,6 +185,7 @@ class PVDER_SetupUtilities(BaseValues):
 		try:
 			self.t_stable = self.DER_config['basic_options']['t_stable'] #0.5#Time delay before activating logic for MPP, Volt-VAR control,LVRT/LFRT 
 			self.m_steady_state = self.DER_config['basic_options']['m_steady_state'] #0.96 #Expected duty cycle at steady state	
+			self.current_gradient_limiter = self.DER_config['basic_options']['current_gradient_limiter'] #0.96 #Expected duty cycle at steady state	
 		except:
 			LogUtil.exception_handler()
 
@@ -325,10 +326,14 @@ class PVDER_SetupUtilities(BaseValues):
 		"""Initialize quantities other than states."""
 		try:
 			self.update_voltages()
-			self.update_power()		
-			self.update_RMS()		
-			
-			self.update_iref() #Reference currents
+			self.update_power()
+			self.update_RMS()
+			if self.DER_model_type in templates.constant_Vdc_models:
+				self.ia_ref  = self.ia_ref_activepower_control()
+			else:
+				self.ia_ref = self.ia_ref_calc()
+			self.t_iref = 0.0
+			self.update_iref(t=0.000001) #Reference currents
 			self.update_inverter_frequency(t=0.0)
 		except:
 			LogUtil.exception_handler()
@@ -405,6 +410,8 @@ class PVDER_SetupUtilities(BaseValues):
 			self.Iarated = (self.Sinverter_rated/(self.n_phases*(self.Varated/math.sqrt(2))))*math.sqrt(2)
 			self.Ioverload = self.inverter_ratings[self.parameter_ID]['Ioverload']#Inverter current overload rating (Max 10s)			
 			self.iref_limit = (self.Iarated/self.Ibase)*self.Ioverload #Maximum current reference
+			self.iR_ramp_up_max_gradient = (self.inverter_ratings[self.parameter_ID]['Iramp_max_gradient_real']*self.Iarated)/self.Ibase
+			self.iI_ramp_up_max_gradient = (self.inverter_ratings[self.parameter_ID]['Iramp_max_gradient_imag']*self.Iarated)/self.Ibase
 		except:
 			LogUtil.exception_handler()
 
