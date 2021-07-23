@@ -12,7 +12,7 @@ import numpy as np
 
 from pvder.utility_classes import Utilities
 from pvder.grid_components import BaseValues
-from pvder import utility_functions
+from pvder import utility_functions,utility_functions_numba
 from pvder import defaults, templates, properties
 from pvder.logutil import LogUtil
 
@@ -474,17 +474,21 @@ class PVDER_ModelUtilities(BaseValues,Utilities):
 		"""Compare error between RMS quantities and Phasor quantities."""
 		try:
 			#Calculation with phasor quantities
-			self.Pf_phasor = self.S_calc().real-self.S_PCC_calc().real  #Active power consumed by filter resistor
-			self.Qf_phasor = self.S_calc().imag-self.S_PCC_calc().imag  #Reactive power consumed by filter inductor 
-		
+			if not self.DER_model_type == "SolarPVDERThreePhaseNumba":
+				self.Pf_phasor = self.S_calc().real-self.S_PCC_calc().real	#Active power consumed by filter resistor
+				self.Qf_phasor = self.S_calc().imag-self.S_PCC_calc().imag	#Reactive power consumed by filter inductor
+				self.Pt_phasor = self.S_calc().real	  #Active power output at inverter terminal
+				self.Qt_phasor = self.S_calc().imag	  #Reactive power output at inverter terminal
+			else:
+				self.Pf_phasor = utility_functions_numba.S_calc(self.vta,self.vtb,self.vtc,self.ia,self.ib,self.ic).real - utility_functions_numba.S_calc(self.va,self.vb,self.vc,self.ia,self.ib,self.ic).real
+				self.Qf_phasor = utility_functions_numba.S_calc(self.vta,self.vtb,self.vtc,self.ia,self.ib,self.ic).imag - utility_functions_numba.S_calc(self.va,self.vb,self.vc,self.ia,self.ib,self.ic).imag
+				self.Pt_phasor = utility_functions_numba.S_calc(self.vta,self.vtb,self.vtc,self.ia,self.ib,self.ic).real 
+				self.Qt_phasor = utility_functions_numba.S_calc(self.vta,self.vtb,self.vtc,self.ia,self.ib,self.ic).imag                        
+			
 			#Caculation with RMS quantities		
 			self.Pf_RMS = self.n_phases*((self.Irms)**2)*self.Rf   #Active power consumed by filter resistor
-			self.Qf_RMS = self.n_phases*((self.Irms)**2)*self.Xf   #Reactive power consumed by filter inductor 
-		
-			#Calculation with phasor quantities
-			self.Pt_phasor = self.S_calc().real   #Active power output at inverter terminal
-			self.Qt_phasor = self.S_calc().imag   #Reactive power output at inverter terminal
-				
+			self.Qf_RMS = self.n_phases*((self.Irms)**2)*self.Xf   #Reactive power consumed by filter inductor 		
+			
 			#Caculation with RMS quantities 
 			ra1,pha1 = cmath.polar(self.vta)
 			ra2,pha2 = cmath.polar(self.ia)		
@@ -515,7 +519,6 @@ class PVDER_ModelUtilities(BaseValues,Utilities):
 				print('Inverter filter active power loss error:{:.4f}\nInverter filter reactive power loss error:{:.4f}'.format(abs(self.Pf_phasor-self.Pf_RMS),abs(self.Qf_phasor-self.Qf_RMS)))
 		except:
 			LogUtil.exception_handler()
-
 
 	def set_Vdc_ref(self):
 		"""Return the correct Vdc reference voltage."""
