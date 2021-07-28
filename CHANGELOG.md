@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1 - 2021-07-28
+
+### Bug fix
+
+-   Fixed bug due to logs folder not being found.
+
 ## 0.5.0 - 2021-07-23
 
 ### Features
