@@ -26,6 +26,6 @@ setup(name='pvder',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.7',
       ],
-      install_requires=['scipy>=1.0.0','numpy>=1.15.1','matplotlib>=2.0.2'],#And any other dependencies required
+      install_requires=['scipy>=1.0.0','numpy>=1.15.1','matplotlib>=2.0.2','numba>=0.53.0'],#And any other dependencies required
       extras_require={"docs": ['sphinx-rtd-theme','nbsphinx','nbsphinx-link']}
       )

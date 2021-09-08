@@ -10,7 +10,6 @@ import six
 import json
 import logging
 import scipy.io as sio
-#from numba import jit
 from pvder.logutil import LogUtil
 
 
