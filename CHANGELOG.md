@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1 - 2021-09-09
+
+### Bug fix
+
+-   Added Numba to setup.py
+
 ## 0.5.1 - 2021-07-28
 
 ### Bug fix
