@@ -1,11 +1,10 @@
-import pathlib
+import os
 from setuptools import setup
 
-# The directory containing this file
-HERE = pathlib.Path(__file__).parent
-
 # The text of the README file
-README = (HERE / "README.md").read_text()
+f=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'README.md'))
+README=f.read()
+f.close()
 
 setup(name='pvder',
       version=open("pvder/_version.py").readlines()[-1].split()[-1].strip("\"'"),

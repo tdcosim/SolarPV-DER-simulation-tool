@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.3 - 2021-09-13
+
+### Bug fix
+
+-   Removed pathlib module from setup.py
+
 ## 0.5.2 - 2021-09-09
 
 ### Bug fix
