@@ -736,7 +736,7 @@ class PVDER_SetupUtilities(BaseValues):
 		
 			if not result.success:
 				raise ValueError('Steady state solution did not converge! Change operating point or disable steady state flag and try again.')
-			print(f"Rf:{self.Rf},Optimization results:{result.x}")
+			print("Optimization results:{}".format(result.x))
 			if 'xDC' in templates.DER_design_template[self.DER_model_type]['initial_states']:
 			 self.xDC = self.ia.real
 			if 'xP' in templates.DER_design_template[self.DER_model_type]['initial_states']:
@@ -813,14 +813,14 @@ class PVDER_SetupUtilities(BaseValues):
 		try:
 			#Calculate numerical Jacobian using finite differences
 			x = self.y0
-			x0 = x.copy()
+			x0 = x[:] #x.copy()
 
 			eps = 1e-6
 			Jn = np.zeros([len(x), len(x)], dtype = np.float)
 
 			for i in range(len(x)):
-				x1 = x.copy()
-				x2 = x.copy()
+				x1 = x[:] #x.copy()
+				x2 = x[:] #x.copy()
 
 				x1[i] += eps
 				x2[i] -= eps
