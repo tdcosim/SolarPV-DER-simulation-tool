@@ -163,8 +163,8 @@ class PVDER_SetupUtilities(BaseValues):
 			self.initialize_module_parameters()
 			self.initialize_DER_model()
 		
-			self.initialize_states(ia0 = 0+0j, xa0 = 0+0j, ua0 = 0+0j,\
-									xDC0 = 0, xQ0 = 0, xPLL0 = 0.0,wte0 = 2*math.pi)
+			self.initialize_states(dict(ia = 0+0j, xa = 0+0j, ua = 0+0j,\
+									    xDC0 = 0, xQ = 0, xPLL = 0.0,wte = 2*math.pi))
 		
 			self.initialize_derived_quantities()
 		
@@ -263,7 +263,7 @@ class PVDER_SetupUtilities(BaseValues):
 					xDC0 = DER_arguments['xDC']
 				else:
 					xDC0 = self.DER_config['initial_states']['xDC']
-		
+			
 			if 'xP' in templates.DER_design_template[self.DER_model_type]['initial_states']:
 				if 'xP' in DER_arguments:
 					xP0 = DER_arguments['xP']
@@ -275,15 +275,21 @@ class PVDER_SetupUtilities(BaseValues):
 					xQ0 = DER_arguments['xQ']
 				else:
 					xQ0 = self.DER_config['initial_states']['xQ']
-		
-			xPLL0 = self.DER_config['initial_states']['xPLL']
-			wte0 = self.DER_config['initial_states']['wte']		
-		
-			self.Vdc = self.Vdc_ref#DC link voltage		
+			
+			if 'xPLL' in DER_arguments:
+				xPLL0 = DER_arguments['xPLL']
+			else:
+				xPLL0 = self.DER_config['initial_states']['xPLL']
+			if 'wte' in DER_arguments:
+				wte0 = DER_arguments['wte']
+			else:
+				wte0 = self.DER_config['initial_states']['wte']
+			
+			self.Vdc = self.Vdc_ref#DC link voltage
 			self.Ppv = self.Ppv_calc(self.Vdc_actual) #PV module power output	
-		
+			
 			 #Initialize all states with steady state values at current operating point
-			if self.steady_state_initialization:			
+			if self.steady_state_initialization:
 				self.steady_state_calc()
 			else:
 				#Phase a
