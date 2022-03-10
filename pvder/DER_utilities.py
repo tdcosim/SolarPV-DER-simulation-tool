@@ -660,7 +660,7 @@ class PVDER_ModelUtilities(BaseValues,Utilities):
 		try:
 			if self.DER_model_type == 'SolarPVDERSinglePhase':
 				default_ID = '10'  
-			elif self.DER_model_type == 'SolarPVDERThreePhase':
+			elif self.DER_model_type in ['SolarPVDERThreePhase','SolarPVDERThreePhaseNumba']:
 				default_ID = '50'  
 
 			return default_ID
@@ -710,8 +710,8 @@ class PVDER_ModelUtilities(BaseValues,Utilities):
 				
 				LogUtil.logger.debug('{}:Updating {} in parameter dicitonary {} with {}!'.format(self.name,parameter,parameter_ID,parameter_dict[parameter]))
 		
-			if self.parameter_ID == parameter_ID:
-				self.initialize_DER()
+			#if self.parameter_ID == parameter_ID:
+			#	self.modify_DER_parameters(parameter_ID=parameter_ID) #This is bugged
 		except:
 			LogUtil.exception_handler()
 
@@ -758,7 +758,8 @@ class PVDER_ModelUtilities(BaseValues,Utilities):
 		try:
 			if parameter_type not in {'module_parameters','inverter_ratings','controller_gains','circuit_parameters','all'}:
 				raise ValueError('Unknown parameter type: ' + str(parameter_type))
-				
+			if parameter_ID not in self.module_parameters.keys():
+				raise ValueError('Parameter ID:{} not found...avialable IDs are:{}'.format(parameter_ID,list(self.module_parameters.keys())))
 			parameter_dict = {}
 		
 			if parameter_type == 'module_parameters' or parameter_type == 'all':
