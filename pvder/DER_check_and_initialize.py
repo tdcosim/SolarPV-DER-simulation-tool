@@ -29,7 +29,7 @@ class PVDER_SetupUtilities(BaseValues):
 	steadystate_solver = defaults.STEADYSTATE_SOLVER
 	
 	def creation_message(self):
-		"""Message after PV-DER instance was created."""		
+		"""Message after PV-DER instance was created."""
 		try:
 			LogUtil.logger.info('{}:Instance created with DER parameter ID: {}; Specifications - Srated:{:.1f} kVA, Ppv:{:.1f} kW, Vrms:{:.1f} V, Steady state:{},LVRT Enable:{},HVRT Enable:{}'.format(self.name,self.parameter_ID,self.Sinverter_rated/1e3,(self.Ppv*BaseValues.Sbase)/1e3,self.Vrms_rated,self.steady_state_initialization,self.LVRT_ENABLE,self.HVRT_ENABLE))
 		except:
@@ -66,7 +66,7 @@ class PVDER_SetupUtilities(BaseValues):
 						default_RT = templates.VRT_config_template[RT_component]
 					if RT_component in list(templates.FRT_config_template.keys()):
 						default_RT = templates.FRT_config_template[RT_component]
-					LogUtil.logger.debug('{}:Updating {} from template with  settings:{}.'.format(self.name,RT_component,default_RT))
+					LogUtil.logger.debug('{}:Updating {} from template with	 settings:{}.'.format(self.name,RT_component,default_RT))
 					self.DER_config[RT_component] = default_RT
 	
 			self.basic_specs = {DER_id:self.DER_config['basic_specs']}
@@ -164,7 +164,7 @@ class PVDER_SetupUtilities(BaseValues):
 			self.initialize_DER_model()
 		
 			self.initialize_states(dict(ia = 0+0j, xa = 0+0j, ua = 0+0j,\
-									    xDC0 = 0, xQ = 0, xPLL = 0.0,wte = 2*math.pi))
+										xDC0 = 0, xQ = 0, xPLL = 0.0,wte = 2*math.pi))
 		
 			self.initialize_derived_quantities()
 		
@@ -335,7 +335,7 @@ class PVDER_SetupUtilities(BaseValues):
 			self.update_power()
 			self.update_RMS()
 			if self.DER_model_type in templates.constant_Vdc_models:
-				self.ia_ref  = self.ia_ref_activepower_control()
+				self.ia_ref	 = self.ia_ref_activepower_control()
 			else:
 				self.ia_ref = self.ia_ref_calc()
 			self.t_iref = 0.0
@@ -522,8 +522,14 @@ class PVDER_SetupUtilities(BaseValues):
 				state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
 							'ibR','ibI','xbR','xbI','ubR','ubI',
 							'icR','icI','xcR','xcI','ucR','ucI',
+							'Vdc','xDC','xQ','xPLL','wte','Vrms']
+				
+			elif self.DER_model_type == 'SolarPVDERThreePhaseNoVrmsFilter':
+				state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
+							'ibR','ibI','xbR','xbI','ubR','ubI',
+							'icR','icI','xcR','xcI','ucR','ucI',
 							'Vdc','xDC','xQ','xPLL','wte']
-		
+			
 			elif self.DER_model_type == 'SolarPVDERSinglePhaseConstantVdc':
 				state_list = ['iaR','iaI','xaR','xaI','uaR','uaI',
 							'xP','xQ',
@@ -805,7 +811,7 @@ class PVDER_SetupUtilities(BaseValues):
 				self.Irms = self.Irms_calc()
 		
 			LogUtil.logger.debug('{}:Steady state values for operating point defined by Ppv:{:.2f} W, Vdc:{:.2f} V, va:{:.2f} V found at:'.format(self.name,self.Ppv*self.Sbase,self.Vdc*self.Vdcbase,self.va*self.Vbase))
-			
+			self.Vrms_filter = self.Vrms
 			if self.verbosity == 'DEBUG':
 				self.show_PV_DER_states(quantity='power')
 				self.show_PV_DER_states(quantity='duty cycle')

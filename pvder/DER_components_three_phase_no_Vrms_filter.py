@@ -19,7 +19,7 @@ from pvder import defaults,templates
 from pvder.logutil import LogUtil
 
 
-class SolarPVDERThreePhase(PVModule,SolarPVDER):
+class SolarPVDERThreePhaseNoVrmsFilter(PVModule,SolarPVDER):
 	"""
 		Class for describing a Solar Photo-voltaic Distributed Energy Resource consisting of panel, converters, and
 		control systems.
@@ -49,13 +49,13 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 			ValueError: If rated DC link voltage is not sufficient.
 		"""
 		try:
-			SolarPVDERThreePhase.count = SolarPVDERThreePhase.count+1 #Increment count to keep track of number of PV-DER model instances
+			SolarPVDERThreePhaseNoVrmsFilter.count = SolarPVDERThreePhaseNoVrmsFilter.count+1 #Increment count to keep track of number of PV-DER model instances
 			DER_arguments = self.setup_DER(events,configFile,**kwargs)		 
 		
 			if six.PY3:
 				super().__init__(self.DER_config['basic_options']['Sinsol'])	#Initialize PV module class (base class)
 			elif six.PY2:
-				super(SolarPVDERThreePhase,self).__init__(self.DER_config['basic_options']['Sinsol'])
+				super(SolarPVDERThreePhaseNoVrmsFilter,self).__init__(self.DER_config['basic_options']['Sinsol'])
 			self.initialize_DER(DER_arguments)
 			self.creation_message()
 		except:
@@ -68,11 +68,11 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 			return	[self.ia.real, self.ia.imag, self.xa.real, self.xa.imag, self.ua.real,self.ua.imag,\
 					 self.ib.real, self.ib.imag, self.xb.real, self.xb.imag, self.ub.real,self.ub.imag,\
 					 self.ic.real, self.ic.imag, self.xc.real, self.xc.imag, self.uc.real,self.uc.imag,\
-					 self.Vdc,self.xDC,self.xQ,self.xPLL,self.wte,self.Vrms_filter]
+					 self.Vdc,self.xDC,self.xQ,self.xPLL,self.wte]
 		except:
 			LogUtil.exception_handler()
 	
-	
+    
 	#Apparent power output at inverter terminal
 	def S_calc(self):
 		"""Inverter apparent power output"""
@@ -149,7 +149,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 		except:
 			LogUtil.exception_handler()
 
-	def update_inverter_states(self,ia,xa,ua,ib,xb,ub,ic,xc,uc,Vdc,xDC,xQ,xPLL,wte,Vrms_filter):
+	def update_inverter_states(self,ia,xa,ua,ib,xb,ub,ic,xc,uc,Vdc,xDC,xQ,xPLL,wte):
 		"""Update inverter states"""
 		try:
 			self.ia = ia
@@ -170,7 +170,6 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 		
 			self.xPLL = xPLL
 			self.wte = wte
-			self.Vrms_filter = Vrms_filter
 		except:
 			LogUtil.exception_handler()
 
@@ -229,7 +228,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 				self.S_G = self.S_G_calc()
 				self.S_load1 = self.S_load1_calc()		 
 		except:
-			LogUtil.exception_handler()			 
+			LogUtil.exception_handler()          
 
 	def update_iref(self,t):
 		"""Update reference reference current."""
@@ -247,7 +246,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 			self.ic_ref = self.ic_ref_calc()
 		except:
 			LogUtil.exception_handler()
-			
+            
 	def update_inverter_frequency(self,t):
 		"""Update d-q quantities."""
 		try:
@@ -269,13 +268,13 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 			iaR, iaI, xaR, xaI, uaR, uaI,\
 			ibR, ibI, xbR, xbI, ubR, ubI,\
 			icR, icI, xcR, xcI, ucR, ucI,\
-			Vdc, xDC, xQ, xPLL, wte,Vrms_filter = y	 # unpack current values of y
+			Vdc, xDC, xQ, xPLL, wte = y	 # unpack current values of y
 		
 			self.update_inverter_states(iaR + 1j*iaI, xaR + 1j*xaI,uaR + 1j*uaI,\
 										ibR + 1j*ibI, xbR + 1j*xbI,ubR + 1j*ubI,\
 										icR + 1j*icI, xcR + 1j*xcI,ucR + 1j*ucI,\
 										Vdc,xDC,xQ,\
-										xPLL,wte,Vrms_filter)
+										xPLL,wte)
 		
 			self.update_Ppv(t)
 			self.update_Zload1(t)		
@@ -430,8 +429,6 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 		
 			#Frequency integration to get angle
 			dwte = self.we
-			
-			dVrms_filter = (1/0.1)*(self.Vrms - self.Vrms_filter)
 		
 			result =	 [ diaR,# list of dy/dt=f functions
 							 diaI,
@@ -455,7 +452,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 							 dxDC,
 							 dxQ,
 							 dxPLL,
-							 dwte,dVrms_filter]
+							 dwte]
 
 			return np.array(result)
 		except:

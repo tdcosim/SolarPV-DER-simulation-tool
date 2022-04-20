@@ -7,6 +7,7 @@ Created on Thu May 14 13:10:31 2020
 
 from pvder.DER_components_three_phase  import SolarPVDERThreePhase
 from pvder.DER_components_three_phase_constant_Vdc import SolarPVDERThreePhaseConstantVdc
+from pvder.DER_components_three_phase_no_Vrms_filter import SolarPVDERThreePhaseNoVrmsFilter
 from pvder.DER_components_three_phase_balanced  import SolarPVDERThreePhaseBalanced
 from pvder.DER_components_single_phase import SolarPVDERSinglePhase
 from pvder.DER_components_single_phase_constant_Vdc import SolarPVDERSinglePhaseConstantVdc
@@ -43,19 +44,21 @@ class DERModel(object):
 		
 		"""
 		try:
-			if modelType == 'ThreePhaseUnbalanced':			
-				self.DER_model = SolarPVDERThreePhase(events,configFile,**kwargs)		
+			if modelType == 'ThreePhaseUnbalanced':
+				self.DER_model = SolarPVDERThreePhase(events,configFile,**kwargs)
+			elif modelType == 'ThreePhaseUnbalancedNoVrmsFilter':
+				self.DER_model = SolarPVDERThreePhaseNoVrmsFilter(events,configFile,**kwargs)
 			elif modelType == 'ThreePhaseUnbalancedConstantVdc':
 				self.DER_model = SolarPVDERThreePhaseConstantVdc(events,configFile,**kwargs)
 			elif modelType == 'ThreePhaseBalanced':
-				self.DER_model = SolarPVDERThreePhaseBalanced(events,configFile,**kwargs)		
+				self.DER_model = SolarPVDERThreePhaseBalanced(events,configFile,**kwargs)
 			elif modelType == 'SinglePhase':   
 				self.DER_model = SolarPVDERSinglePhase(events,configFile,**kwargs)
 			elif modelType == 'SinglePhaseConstantVdc':   
 				self.DER_model = SolarPVDERSinglePhaseConstantVdc(events,configFile,**kwargs)
-			elif modelType == 'ThreePhaseUnbalancedNumba':		
+			elif modelType == 'ThreePhaseUnbalancedNumba':
 				from pvder.DER_components_three_phase_numba  import SolarPVDERThreePhaseNumba
-				self.DER_model = SolarPVDERThreePhaseNumba(events,configFile,**kwargs)		
+				self.DER_model = SolarPVDERThreePhaseNumba(events,configFile,**kwargs)
 			else:
 				raise ValueError('{} is not a valid model type! - Valid model types:{}'.format(modelType,templates.model_types))
 		except:
