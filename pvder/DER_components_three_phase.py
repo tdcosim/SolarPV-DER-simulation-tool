@@ -468,13 +468,13 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 			iaR, iaI, xaR, xaI, uaR, uaI,\
 			ibR, ibI, xbR, xbI, ubR, ubI,\
 			icR, icI, xcR, xcI, ucR, ucI,\
-			Vdc, xDC, xQ, xPLL, wte = y	 # unpack current values of y
+			Vdc, xDC, xQ, xPLL, wte,Vrms_filter = y	 # unpack current values of y
 		
 			self.update_inverter_states(iaR + 1j*iaI, xaR + 1j*xaI,uaR + 1j*uaI,\
 										ibR + 1j*ibI, xbR + 1j*xbI,ubR + 1j*ubI,\
 										icR + 1j*icI, xcR + 1j*xcI,ucR + 1j*ucI,\
 										Vdc,xDC,xQ,\
-										xPLL,wte)
+										xPLL,wte,Vrms_filter)
 
 			J = self.J
 			varInd = self.varInd 

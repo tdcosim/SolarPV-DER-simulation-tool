@@ -417,7 +417,9 @@ class PVDER_SmartFeatures():
 			if specifications.RT_measurement_type == 'minimum':
 				Vrms_measured  = self.Vrms_min  #Select minimum value of PCC-Voltages as per IEEE 1547-2018 reccomendations
 			elif specifications.RT_measurement_type == 'average':
-				Vrms_measured = self.Vrms   #Select PCC - LV side voltage  
+				Vrms_measured = self.Vrms   #Select PCC - LV side voltage
+			elif specifications.RT_measurement_type == 'filtered':
+				Vrms_measured = self.Vrms_filter   #Select the firt order filtered PCC - LV side voltage  
 
 			return Vrms_measured
 		except:
