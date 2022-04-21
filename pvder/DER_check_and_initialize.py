@@ -84,6 +84,7 @@ class PVDER_SetupUtilities(BaseValues):
 		"""Update DER config using both config file and arguments."""
 		try:
 			parameters ={}
+			assert DER_parameter in properties.parameter_properties.keys(), "{} is not found in properties dictionary!".format(DER_parameter)
 			DER_parameter_type = properties.parameter_properties[DER_parameter]['type']
 			if DER_parameter in DER_arguments: #Check if parameter exists in DER key word arguments
 				if isinstance(DER_arguments[DER_parameter],DER_parameter_type):
@@ -186,6 +187,7 @@ class PVDER_SetupUtilities(BaseValues):
 			self.t_stable = self.DER_config['basic_options']['t_stable'] #0.5#Time delay before activating logic for MPP, Volt-VAR control,LVRT/LFRT 
 			self.m_steady_state = self.DER_config['basic_options']['m_steady_state'] #0.96 #Expected duty cycle at steady state	
 			self.current_gradient_limiter = self.DER_config['basic_options']['current_gradient_limiter'] #0.96 #Expected duty cycle at steady state	
+			self.Vrms_measurement_type = self.DER_config['basic_options']['Vrms_measurement_type']
 		except:
 			LogUtil.exception_handler()
 
@@ -493,16 +495,20 @@ class PVDER_SetupUtilities(BaseValues):
 					self.Kp_DC = self.controller_gains[self.parameter_ID]['Kp_DC'] #Active power controller Proportional constant
 				if 'Kp_DC' in templates.DER_design_template[self.DER_model_type]['controller_gains']:
 					self.Ki_DC = self.controller_gains[self.parameter_ID]['Ki_DC'] #Active power controller Integral constant
-			
+				
 				if 'Kp_P' in templates.DER_design_template[self.DER_model_type]['controller_gains']:
 					self.Kp_P = self.controller_gains[self.parameter_ID]['Kp_P']#Active power controller Proportional constant
 				if 'Ki_P' in templates.DER_design_template[self.DER_model_type]['controller_gains']:
 					self.Ki_P = self.controller_gains[self.parameter_ID]['Ki_P'] #Active power controller Integral constant 
-			
+				
 				if 'Kp_Q' in templates.DER_design_template[self.DER_model_type]['controller_gains']:
 					self.Kp_Q = self.controller_gains[self.parameter_ID]['Kp_Q']#Reactive power controller Proportional constant
 				if 'Ki_Q' in templates.DER_design_template[self.DER_model_type]['controller_gains']:
-					self.Ki_Q = self.controller_gains[self.parameter_ID]['Ki_Q'] #Reactive power controller Integral constant 
+					self.Ki_Q = self.controller_gains[self.parameter_ID]['Ki_Q'] #Reactive power controller Integral constant
+				
+				if 'Tfilter_Vrms' in templates.DER_design_template[self.DER_model_type]['controller_gains']:
+					self.Tfilter_Vrms = self.controller_gains[self.parameter_ID]['Tfilter_Vrms'] #First order filter time constant for Vrms
+				
 			else:
 				raise ValueError('Controller gains not available for parameter ID: {}!'.format(self.parameter_ID))	
 		except:

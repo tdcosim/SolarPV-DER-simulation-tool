@@ -11,8 +11,6 @@ from pvder.grid_components import Grid
 steadystate_solver_spec = {'SLSQP':{'ftol': 1e-10, 'disp': True, 'maxiter':10000},
 			   'nelder-mead':{'xtol': 1e-8, 'disp': True, 'maxiter':10000}}
 
-RT_measurement_type = 'filtered'#average,minimum,filtered
-
 if six.PY3:
 	string_type = (str)
 elif six.PY2:

@@ -16,7 +16,7 @@ model_types = ['SinglePhase','SinglePhaseConstantVdc',
 DER_design_template = {"SolarPVDERSinglePhase":
 					   {"parent_config":"",
 						"basic_specs":{'phases':('a'),'n_phases':1,'n_ODE':11,"model_type":"SolarPVDERSinglePhase"},
-						"basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,"current_gradient_limiter":False},
+						"basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,"current_gradient_limiter":False,"Vrms_measurement_type":"minimum"},
 					   "module_parameters":{"Np":2,"Ns":1000,"Vdcmpp0":750.0,"Vdcmpp_min": 650.0,"Vdcmpp_max": 800.0},
 					   "inverter_ratings":{"Srated":10e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0,"Iramp_max_gradient_real":1.0,"Iramp_max_gradient_imag":1.0},
 					   "circuit_parameters":{"Rf_actual":0.002,"Lf_actual":25.0e-6,"C_actual":30.0e-6,"R1_actual":0.0019,"X1_actual":0.0561},
@@ -32,7 +32,7 @@ DER_design_template = {"SolarPVDERSinglePhase":
 					   "SolarPVDERSinglePhaseConstantVdc":
 					   {"parent_config":"",
 						"basic_specs":{'phases':('a'),'n_phases':1,'n_ODE':10,"model_type":"SolarPVDERSinglePhaseConstantVdc"},
-						"basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,'use_Pref':False,"current_gradient_limiter":False},
+						"basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,'use_Pref':False,"current_gradient_limiter":False,"Vrms_measurement_type":"minimum"},
 					   "module_parameters":{"Np":2,"Ns":1000,"Vdcmpp0":750.0,"Vdcmpp_min": 650.0,"Vdcmpp_max": 800.0},
 					   "inverter_ratings":{"Srated":10e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0,"Iramp_max_gradient_real":1.0,"Iramp_max_gradient_imag":1.0},
 					   "circuit_parameters":{"Rf_actual":0.002,"Lf_actual":25.0e-6,"R1_actual":0.0019,"X1_actual":0.0561},
@@ -46,11 +46,11 @@ DER_design_template = {"SolarPVDERSinglePhase":
 					   "SolarPVDERThreePhase":
 					   {"parent_config":"",
 						"basic_specs":{'phases':('a','b','c'),'n_phases':3,'n_ODE':24,'unbalanced':True,"model_type":"SolarPVDERThreePhase"},
-						"basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,"current_gradient_limiter":False},
+						"basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,"current_gradient_limiter":False,"Vrms_measurement_type":"filtered"},#average,minimum,filtered
 						"module_parameters":{"Np":11,"Ns":735,"Vdcmpp0":550.0,"Vdcmpp_min": 525.0,"Vdcmpp_max": 650.0}, 
 						"inverter_ratings":{"Srated":50e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0,"Iramp_max_gradient_real":1.0,"Iramp_max_gradient_imag":1.0},
 					    "circuit_parameters":{"Rf_actual":0.002,"Lf_actual":25.0e-6,"C_actual":300.0e-6,"R1_actual":0.0019,"X1_actual":0.0561},
-					    "controller_gains":{"Kp_GCC":6000.0,"Ki_GCC":2000.0,"Kp_DC":-2.0,"Ki_DC":-10.0,"Kp_Q":0.2,"Ki_Q":10.0,"wp": 20e4},
+					    "controller_gains":{"Kp_GCC":6000.0,"Ki_GCC":2000.0,"Kp_DC":-2.0,"Ki_DC":-10.0,"Kp_Q":0.2,"Ki_Q":10.0,"wp": 20e4,"Tfilter_Vrms":0.1},
 					    "steadystate_values":{"maR0":0.89,"maI0":0.0,"iaR0":1.0,"iaI0":0.001},
 					    "initial_states":{"iaR":0,"iaI":0.0,"xaR":0.0,"xaI":0.0,"uaR":0.0,"uaI":0.0,
 										 "ibR":0,"ibI":0.0,"xbR":0.0,"xbI":0.0,"ubR":0.0,"ubI":0.0,
@@ -62,7 +62,7 @@ DER_design_template = {"SolarPVDERSinglePhase":
                        "SolarPVDERThreePhaseNoVrmsFilter":
 					   {"parent_config":"",
                         "basic_specs":{'phases':('a','b','c'),'n_phases':3,'n_ODE':23,'unbalanced':True,"model_type":"SolarPVDERThreePhase"},
-						"basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,"current_gradient_limiter":False},
+						"basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,"current_gradient_limiter":False,"Vrms_measurement_type":"minimum"},
 						"module_parameters":{"Np":11,"Ns":735,"Vdcmpp0":550.0,"Vdcmpp_min": 525.0,"Vdcmpp_max": 650.0}, 
 						"inverter_ratings":{"Srated":50e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0,"Iramp_max_gradient_real":1.0,"Iramp_max_gradient_imag":1.0},
 					    "circuit_parameters":{"Rf_actual":0.002,"Lf_actual":25.0e-6,"C_actual":300.0e-6,"R1_actual":0.0019,"X1_actual":0.0561},
@@ -77,7 +77,7 @@ DER_design_template = {"SolarPVDERSinglePhase":
 					   "SolarPVDERThreePhaseNumba":
 					   {"parent_config":"",
 						"basic_specs":{'phases':('a','b','c'),'n_phases':3,'n_ODE':23,'unbalanced':True,"model_type":"SolarPVDERThreePhase"},
-						"basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,"current_gradient_limiter":False},
+						"basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,"current_gradient_limiter":False,"Vrms_measurement_type":"minimum"},
 						"module_parameters":{"Np":11,"Ns":735,"Vdcmpp0":550.0,"Vdcmpp_min": 525.0,"Vdcmpp_max": 650.0}, 
 						"inverter_ratings":{"Srated":50e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0,"Iramp_max_gradient_real":1.0,"Iramp_max_gradient_imag":1.0},
 					   "circuit_parameters":{"Rf_actual":0.002,"Lf_actual":25.0e-6,"C_actual":300.0e-6,"R1_actual":0.0019,"X1_actual":0.0561},
@@ -94,7 +94,7 @@ DER_design_template = {"SolarPVDERSinglePhase":
 					   "SolarPVDERThreePhaseBalanced":
 					   {"parent_config":"",
 						"basic_specs":{'phases':('a','b','c'),'n_phases':3,'n_ODE':11,'unbalanced':False,"model_type":"SolarPVDERThreePhaseBalanced"},
-						"basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,"current_gradient_limiter":False},
+						"basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,"current_gradient_limiter":False,"Vrms_measurement_type":"minimum"},
 					   "module_parameters":{"Np":11,"Ns":735,"Vdcmpp0":550.0,"Vdcmpp_min": 525.0,"Vdcmpp_max": 650.0}, 
 					   "inverter_ratings":{"Srated":50e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0,"Iramp_max_gradient_real":1.0,"Iramp_max_gradient_imag":1.0},
 					   "circuit_parameters":{"Rf_actual":0.002,"Lf_actual":25.0e-6,"C_actual":300.0e-6,"R1_actual":0.0019,"X1_actual":0.0561},
@@ -109,7 +109,7 @@ DER_design_template = {"SolarPVDERSinglePhase":
 					   "SolarPVDERThreePhaseConstantVdc":
 					   {"parent_config":"",
 						"basic_specs":{'phases':('a','b','c'),'n_phases':3,'n_ODE':22,'unbalanced':True,"model_type":"SolarPVDERThreePhaseConstantVdc"},
-						"basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,"current_gradient_limiter":False},
+						"basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,"current_gradient_limiter":False,"Vrms_measurement_type":"minimum"},
 						"module_parameters":{"Np":11,"Ns":735,"Vdcmpp0":550.0,"Vdcmpp_min": 525.0,"Vdcmpp_max": 650.0}, 
 						"inverter_ratings":{"Srated":50e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0,"Iramp_max_gradient_real":1.0,"Iramp_max_gradient_imag":1.0},
 					   "circuit_parameters":{"Rf_actual":0.002,"Lf_actual":25.0e-6,"R1_actual":0.0019,"X1_actual":0.0561},

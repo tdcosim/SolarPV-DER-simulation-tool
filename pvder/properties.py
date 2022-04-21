@@ -43,11 +43,12 @@ parameter_properties = {"Rf":{'base':'impendance','type':(int,float)},
 						"Kp_DC":{'type':(int,float)},
 						"Ki_DC":{'type':(int,float)},
 						"Kp_P":{'type':(int,float)},
-						"Ki_P":{'type':(int,float)},						
+						"Ki_P":{'type':(int,float)},
 						"Kp_Q":{'type':(int,float)},
 						"Ki_Q":{'type':(int,float)},
 						"wp": {'type':(int,float)},
-							   
+						"Tfilter_Vrms": {'type':(int,float)},
+						
 						"maR0":{'type':(int,float)},
 						"maI0":{'type':(int,float)},
 						"iaR0":{'type':(int,float)},
@@ -91,10 +92,10 @@ parameter_properties = {"Rf":{'base':'impendance','type':(int,float)},
 						'm_steady_state':{'type':(float)},
 						"Sinsol":{'type':(int,float)},
 						'use_Pref':{'type':(bool)},
-						'current_gradient_limiter':{'type':(bool)}
+						'current_gradient_limiter':{'type':(bool)},
+						"Vrms_measurement_type":{'type':(string_type)}
 						
-						
-					   }
+						}
 
 phase_properties =	{"i":{'base':'current','type':(complex,float),'description':'Current'},
 					   "x":{'base':'','type':(complex,float),'description':'Controller state'},

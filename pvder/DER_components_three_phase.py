@@ -431,7 +431,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 			#Frequency integration to get angle
 			dwte = self.we
 			
-			dVrms_filter = (1/0.1)*(self.Vrms - self.Vrms_filter)
+			dVrms_filter = (1.0/self.Tfilter_Vrms)*(self.Vrms - self.Vrms_filter)
 		
 			result =	 [ diaR,# list of dy/dt=f functions
 							 diaI,
