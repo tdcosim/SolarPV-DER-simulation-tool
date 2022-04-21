@@ -420,7 +420,8 @@ class PVDER_SmartFeatures():
 				Vrms_measured = self.Vrms   #Select PCC - LV side voltage
 			elif specifications.RT_measurement_type == 'filtered':
 				Vrms_measured = self.Vrms_filter   #Select the firt order filtered PCC - LV side voltage  
-
+			else:
+				raise ValueError("{} is not a valid RT measurement type".format(specifications.RT_measurement_type))
 			return Vrms_measured
 		except:
 			LogUtil.exception_handler()
