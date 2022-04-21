@@ -358,7 +358,7 @@ class PVModule(object):
 		try:
 			self.Iph = self.Iph_calc()
 			self.Ipv = (self.Np*self.Iph)-(self.Np*self.Irs*(math.exp((self.q*Vdc_actual)/(self.k*self.Tactual*self.A*self.Ns))-1))   #Faster  with Pure Python functions
-		
+			
 			return max(0,(self.Ipv*Vdc_actual))/BaseValues.Sbase
 			#return utility_functions.Ppv_calc(self.Iph,self.Np,self.Ns,Vdc_actual,self.Tactual,Grid.Sbase)
 		except:
