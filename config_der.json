@@ -123,7 +123,7 @@
                   "basic_options":{"Sinsol":100.0,"current_gradient_limiter":true},
       "module_parameters":{"Np":2,"Ns":1000,"Vdcmpp0":750.0,"Vdcmpp_min": 650.0,"Vdcmpp_max": 800.0},
       
-      "inverter_ratings":{"Srated":10e3,"Varated":250.0,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0,"Iramp_max_gradient_real":1.0,"Iramp_max_gradient_imag":1.0},
+      "inverter_ratings":{"Srated":10e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0,"Iramp_max_gradient_real":1.0,"Iramp_max_gradient_imag":1.0},
       
       "circuit_parameters":{"Rf_actual":0.002,"Lf_actual":25.0e-6,
                             "C_actual":30.0e-6,"R1_actual":0.0019,"X1_actual":0.0561},
@@ -157,7 +157,7 @@
      "basic_specs":{"model_type":"SolarPVDERSinglePhase"},
      "basic_options":{"Sinsol":100.0},
      "module_parameters":{"Np":2,"Ns":1000,"Vdcmpp0":750.0,"Vdcmpp_min": 650.0,"Vdcmpp_max": 800.0},
-     "inverter_ratings":{"Srated":10e3,"Varated":250.0,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0},
+     "inverter_ratings":{"Srated":10e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0},
      
      "circuit_parameters":{"Rf_actual":0.01,"Lf_actual":3.0e-3,
                             "C_actual":300.0e-6,"R1_actual":0.0019,"X1_actual":0.0561},

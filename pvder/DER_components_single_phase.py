@@ -260,7 +260,7 @@ class SolarPVDERSinglePhase(PVModule,SolarPVDER):
 		
 			self.update_ridethrough_flags(t)
 			self.disconnect_or_reconnect(t)
-		
+			
 			#Phase a inverter output current
 			diaR = (1/self.Lf)*(-self.Rf*self.ia.real - self.va.real + self.vta.real) + (self.winv/self.wbase)*self.ia.imag 
 			diaI = (1/self.Lf)*(-self.Rf*self.ia.imag - self.va.imag + self.vta.imag) - (self.winv/self.wbase)*self.ia.real

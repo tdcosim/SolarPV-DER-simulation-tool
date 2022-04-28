@@ -11,8 +11,6 @@ from pvder.grid_components import Grid
 steadystate_solver_spec = {'SLSQP':{'ftol': 1e-10, 'disp': True, 'maxiter':10000},
 			   'nelder-mead':{'xtol': 1e-8, 'disp': True, 'maxiter':10000}}
 
-RT_measurement_type = 'average'#average,minimum
-
 if six.PY3:
 	string_type = (str)
 elif six.PY2:
@@ -20,7 +18,7 @@ elif six.PY2:
 		   
 DER_argument_spec = {'derId':{'default_value':None,'type':string_type},
 						 'Srated':{'default_value':None,'type':(int,float)},
-						 'powerRating':{'default_value':None,'type':(int,float)},						 
+						 'powerRating':{'default_value':None,'type':(int,float)},
 						 'Vrmsrated':{'default_value':None,'type':(int,float)},
 						 'VrmsRating':{'default_value':None,'type':(int,float)},
 						 'Vdcrated':{'default_value':None,'type':(int,float)},

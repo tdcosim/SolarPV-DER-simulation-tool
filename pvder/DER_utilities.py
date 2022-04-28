@@ -499,7 +499,7 @@ class PVDER_ModelUtilities(BaseValues,Utilities):
 		
 			self.Qt_RMS = (abs(self.vta)/math.sqrt(2))*(abs(self.ia)/math.sqrt(2))*math.sin(pha1-pha2) #Reactive power output		
 		
-			if type(self).__name__ == 'SolarPV_DER_ThreePhase':
+			if self.DER_model_type == 'SolarPVDERThreePhase':
 				rb1,phb1 = cmath.polar(self.vtb)
 				rb2,phb2 = cmath.polar(self.ib) 
 				rc1,phc1 = cmath.polar(self.vtc)
@@ -517,8 +517,8 @@ class PVDER_ModelUtilities(BaseValues,Utilities):
 			#self.Qt_RMS = 3*(self.Vtrms)*(self.Irms)*math.sin(ph1-ph2) #Reactive power output at inverter terminal
 		
 			if PRINT_ERROR:
-				print('Active power output error:{:.4f}\nReactive power output error:{:.4f}'.format(abs(self.Pt_phasor-self.Pt_RMS),abs(self.Qt_phasor-self.Qt_RMS)))	
-				print('Inverter filter active power loss error:{:.4f}\nInverter filter reactive power loss error:{:.4f}'.format(abs(self.Pf_phasor-self.Pf_RMS),abs(self.Qf_phasor-self.Qf_RMS)))
+				print('Active power output error:{:.4f} p.u.\nReactive power output error:{:.4f} p.u.'.format(abs(self.Pt_phasor-self.Pt_RMS),abs(self.Qt_phasor-self.Qt_RMS)))	
+				print('Inverter filter active power loss error:{:.4f} p.u.\nInverter filter reactive power loss error:{:.4f} p.u.'.format(abs(self.Pf_phasor-self.Pf_RMS),abs(self.Qf_phasor-self.Qf_RMS)))
 		except:
 			LogUtil.exception_handler()
 
@@ -660,7 +660,7 @@ class PVDER_ModelUtilities(BaseValues,Utilities):
 		try:
 			if self.DER_model_type == 'SolarPVDERSinglePhase':
 				default_ID = '10'  
-			elif self.DER_model_type in ['SolarPVDERThreePhase','SolarPVDERThreePhaseNumba']:
+			elif self.DER_model_type in ['SolarPVDERThreePhase','SolarPVDERThreePhaseNoVrmsFilter','SolarPVDERThreePhaseNumba']:
 				default_ID = '50'  
 
 			return default_ID

@@ -55,8 +55,8 @@ def Ppv_calc(Iph,Np,Ns,Vdc_actual,Tactual,Sbase):
 		q = 1.602e-19		#Charge of an electron
 		k = 1.38e-23		#Boltzmann's constant
 		A = 1.92	  #p-n junction ideality factor
-		Ipv = (Np*Iph)-(Np*Irs*(math.exp((q*Vdc_actual)/(k*Tactual*A*Ns))-1))   #Faster  with Pure Python functions
-		return max(0,(Ipv*Vdc_actual))/Sbase	
+		Ipv = (Np*Iph)-(Np*Irs*(math.exp((q*Vdc_actual)/(k*Tactual*A*Ns))-1))	#Faster	 with Pure Python functions
+		return max(0,(Ipv*Vdc_actual))/Sbase
 	except:
 		LogUtil.exception_handler()
 
@@ -75,7 +75,7 @@ def S_calc(va,vb,vc,ia,ib,ic):
 def m_calc(Kp_GCC,u,x):
 	"""Duty cycle for a single phase."""
 	try:
-		return Kp_GCC*u + x #PI controller equation  
+		return Kp_GCC*u + x #PI controller equation	 
 	except:
 		LogUtil.exception_handler()
 
@@ -100,7 +100,7 @@ def Urms_min_calc(ua,ub,uc):
 def Urms_calc_1phase(ua):
 	"""Function to calculate rms value of scalar phasor quantities for single phase."""
 	try:
-		return abs(ua)/math.sqrt(2)  #Pure python implementation is faster	  
+		return abs(ua)/math.sqrt(2)	 #Pure python implementation is faster	  
 	except:
 		LogUtil.exception_handler()
 
@@ -110,7 +110,7 @@ def Ub_calc(Ua):
 	"""Convert phase A quantity to Phase B."""
 	try:
 		return Ua*np.power(np.e,1j*(-(2/3)*np.pi))
-		#return Ua*pow(math.e,1j*(-(2/3)*math.pi))  #Shift by -120 degrees
+		#return Ua*pow(math.e,1j*(-(2/3)*math.pi))	#Shift by -120 degrees
 	#@jit(nopython=True)
 	except:
 		LogUtil.exception_handler()
@@ -150,7 +150,7 @@ def phasor_to_time(upha = 1+1j*0.0,uphb = -0.5-1j*0.867,uphc = -0.5+1j*0.867,w=2
 		ua = ra*pow(math.e,1j*(w*t+pha-(math.pi/2))).real
 		ub = rb*pow(math.e,1j*(w*t+phb-(math.pi/2))).real
 		uc = rc*pow(math.e,1j*(w*t+phc-(math.pi/2))).real
-		return ua,ub,uc   
+		return ua,ub,uc	  
 	except:
 		LogUtil.exception_handler()
 
@@ -215,7 +215,7 @@ def phasor_to_symmetrical(upha,uphb,uphc):
 		a = pow(math.e,1j*((2/3)*math.pi))
 		aa = pow(math.e,1j*((4/3)*math.pi))
 		u0 = (1/3)*(upha + uphb + uphc)
-		u1 = (1/3)*(upha + a*uphb + (aa)*uphc)  #Positive sequence
+		u1 = (1/3)*(upha + a*uphb + (aa)*uphc)	#Positive sequence
 		u2 = (1/3)*(upha + (aa)*uphb + a*uphc) #Negative sequence
 
 		return u0,u1,u2
@@ -284,7 +284,7 @@ def extract_matlab_file(file_name,series_label):
 def limit_complex(z,low_limit=-1.0,high_limit=1.0):
 	"""Check if complex number is within limits."""
 	try:
-		assert  low_limit < high_limit,'low limit should be higher than high limit'
+		assert	low_limit < high_limit,'low limit should be higher than high limit'
 		r,phi = cmath.polar(z)
 		r = min(max(r,low_limit),high_limit)
 	
@@ -292,7 +292,7 @@ def limit_complex(z,low_limit=-1.0,high_limit=1.0):
 		#z_imag = min(max(z.imag,low_limit),high_limit)
 		#z_imag = z.imag
 		#return z_real + z_imag*1j
-		return  cmath.rect(r, phi)
+		return	cmath.rect(r, phi)
 	except:
 		LogUtil.exception_handler()
 
@@ -300,7 +300,7 @@ def limit_complex(z,low_limit=-1.0,high_limit=1.0):
 def limit_complex_time_series(z,low_limit=-1.0,high_limit=1.0):
 	"""Check if complex number is within limits."""
 	try:
-		assert  low_limit < high_limit,'low limit should be higher than high limit'
+		assert	low_limit < high_limit,'low limit should be higher than high limit'
 		#z_real = np.minimum(np.maximum(z.real,np.full(len(z),-1)),np.full(len(z),1))
 		#z_imag = np.minimum(np.maximum(z.imag,np.full(len(z),-1)),np.full(len(z),1))
 		r = np.absolute(z)
@@ -351,11 +351,19 @@ def read_json(file_name):
 def get_logger(logging_level):
 	"""Get logger."""
 	try:
-		logger=logging.getLogger()  #Creating an object 
+		logger=logging.getLogger()	#Creating an object 
 		logger.setLevel(eval('logging.'+logging_level)) #Setting the threshold of logger to DEBUG 
 
 		return logger
 	except:
 		LogUtil.exception_handler()
-
-
+		
+def find_first_order_time_constant(t_t,y_t,t_event):
+	"""Find first_order time constant from time series data"""
+	try:
+		for t,y in zip(t_t,y_t):
+			if y<(y_t[0]-(y_t[0]-y_t[-1])*.63):
+				print("Time constant:{:.3f},Value at time constant:{:.3f},Expected value at time constant:{:.3f}".format(t-t_event,y,(y_t[0]-(y_t[0]-y_t[-1])*.63)))		
+				break
+	except:
+		LogUtil.exception_handler()
