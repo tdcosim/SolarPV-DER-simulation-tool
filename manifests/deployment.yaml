@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: solar_LDES
+  labels:
+    app: solar_LDES
+  namespace: solarldes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: solar_LDES
+  template:
+    metadata:
+      labels:
+        app: solar_LDES
+    spec:
+      containers:
+        - name: solar_LDES
+          image: acrworkflow1685747240213.azurecr.io/image-workflow-1685747240213:latest
+          ports:
+            - containerPort: 8000
