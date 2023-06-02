@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: solar_LDES
+  namespace: solarldes
+spec:
+  type: LoadBalancer
+  selector:
+    app: solar_LDES
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
