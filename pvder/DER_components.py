@@ -49,7 +49,7 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
 			self.events = events
 			self.DER_model_type = type(self).__name__ 
 			
-			self.parameter_ID = self.get_DER_id(**kwargs)
+			self.parameter_ID = kwargs['derId'] #self.get_DER_id(**kwargs)
 			self.create_template()
 			
 			DER_config,config_dict = self.get_DER_config(configFile,self.parameter_ID)
