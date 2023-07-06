@@ -43,33 +43,34 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
 	winv = we = 2.0*math.pi*60.0 #Frequency of fundamental waveform
 	fswitching  = 10e3 #Inverter switching frequency (not used by model)
 
-	def setup_DER(self,events,configFile,**kwargs):
+	def setup_DER(self,events,configFile,derID,**kwargs):#configFile
 		"""Setup pvder instance"""
 		try:
 			self.events = events
 			self.DER_model_type = type(self).__name__ 
+			DER_config,DER_parent_config,config_dict = self.create_DER_config(configFile,derID)
+			#self.parameter_ID = kwargs['derId'] #self.get_DER_id(**kwargs)
+			#self.create_template()
 			
-			self.parameter_ID = kwargs['derId'] #self.get_DER_id(**kwargs)
-			self.create_template()
-			
-			DER_config,config_dict = self.get_DER_config(configFile,self.parameter_ID)
+			#DER_config,config_dict = self.get_DER_config(configFile,self.parameter_ID)
 			
 			DER_arguments = self.get_DER_arguments(DER_config,**kwargs)   
 			
 			self.name_instance(DER_arguments['identifier']) #Generate a name for the instance  
 			self.initialize_logger(DER_arguments['verbosity'])  #Set logging level - {DEBUG,INFO,WARNING,ERROR}
 			
-			self.DER_parent_ID = self.get_DER_parent_id(DER_config)
-			DER_parent_config = self.get_DER_parent_config(configFile,self.DER_parent_ID)
+			#self.DER_parent_ID = self.get_DER_parent_id(DER_config)
+			#DER_parent_config = self.get_DER_parent_config(configFile,self.DER_parent_ID)
 			
-			for DER_component in self.DER_design_template:
-				if DER_component not in DER_config:
-					DER_config.update({DER_component:{}})
-				if DER_component not in DER_parent_config:
-					DER_parent_config.update({DER_component:{}})
-			
+			#DER_config, DER_parent_config = self.get_completed_DER_config(DER_config,DER_parent_config)
+			#for DER_component in self.DER_design_template:
+			#	if DER_component not in DER_config:
+			#		DER_config.update({DER_component:{}})
+			#	if DER_component not in DER_parent_config:
+			#		DER_parent_config.update({DER_component:{}})
+			print("der arguments:",DER_arguments)
 			self.check_model_type(DER_config,DER_parent_config)
-			self.update_DER_config(DER_config,DER_parent_config,DER_arguments,self.parameter_ID,self.DER_parent_ID)
+			self.update_DER_config(DER_config,DER_parent_config,DER_arguments,self.parameter_ID,self.DER_parent_ID) #DER_arguments #No more updating DER parameters from DER arguments
 			self.check_basic_specs()
 			
 			self.RT_config = {}
@@ -80,6 +81,20 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
 		except:
 			LogUtil.exception_handler()
 
+	def create_DER_config(self,configFile,derID):
+		"""Create a valid DER configuration."""
+		try:
+			self.parameter_ID = derID #self.get_DER_id(derID) #DER parameter id must be passed as an argument
+			self.create_template()
+			DER_config,config_dict = self.get_DER_config(configFile,self.parameter_ID)			
+			self.DER_parent_ID = self.get_DER_parent_id(DER_config)
+			DER_parent_config = self.get_DER_parent_config(configFile,self.DER_parent_ID)
+			DER_config, DER_parent_config = self.get_completed_DER_config(DER_config,DER_parent_config)
+			DER_config = self.update_DER_config_specs(DER_config,DER_parent_config)			
+			return DER_config,DER_parent_config,config_dict
+		except:
+			LogUtil.exception_handler()
+	
 	def get_DER_parent_id(self,DER_config):
 		"""Check if user has specified a parent configuration."""
 		try:
@@ -118,7 +133,47 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
 			return config_dict[derId],config_dict
 		except:
 			LogUtil.exception_handler()
+
+	def update_DER_config_specs(self,DER_config,DER_parent_config):
+		"""Check if user has specified a parent configuration."""
+		try:
+			spec_config = {"basic_specs":["model_type"],"inverter_ratings":["Srated","Vrmsrated"]}
+			for spec_type in list(spec_config.keys()):
+				for spec in spec_config[spec_type]:
+					if spec_type in DER_config and spec in DER_config[spec_type]:
+						pass
+					elif spec_type in DER_parent_config and spec in DER_parent_config[spec_type]:
+						if spec_type in DER_config:
+							DER_config[spec_type].update({spec:DER_parent_config[spec_type][spec]})
+						else:
+							DER_config.update({spec_type:{spec:DER_parent_config[spec_type][spec]}})
+					else:
+						raise ValueError(f"{spec_type}-{spec} should be available either in DER config or DER parent config!")			
+			return DER_config
+		except:
+			LogUtil.exception_handler()
 	
+	def get_completed_DER_config(self,DER_config,DER_parent_config):
+		"""Completes missing elements in DER config compared to to DER design template"""
+
+		for DER_component in self.DER_design_template:
+			if DER_component not in DER_config:
+				DER_config.update({DER_component:{}})
+			if DER_component not in DER_parent_config:
+				DER_parent_config.update({DER_component:{}})
+		
+		return DER_config, DER_parent_config
+
+	def read_config(self,configFile):
+		"""Load config json file and return dictionary."""
+		try:
+			LogUtil.logger.log(10,'Reading configuration file:{}'.format(configFile))
+			confDict = utility_functions.read_json(configFile)
+			
+			return confDict
+		except:
+			LogUtil.exception_handler()
+
 	def create_template(self):
 		"""Create templates for DER model."""
 		try:
@@ -127,27 +182,6 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
 		except:
 			LogUtil.exception_handler()
 		
-	def get_DER_id(self,**kwargs):
-		"""Create a parameter ID from inverter rated power output.		
-		
-		Args:
-			 powerRating (float): The inverter power rating in kVA.
-			 derId (str): User specified parameter ID (can be None). 
-
-		Returns:
-			 str: Parameter id
-		"""	   
-		try:
-			assert 'derId' in kwargs or 'powerRating' in kwargs,\
-			'Neither DER parameter ID nor DER power rating was provided!'
-			if 'derId' in kwargs:
-				DER_id = kwargs['derId']   
-			elif 'powerRating' in kwargs:
-				DER_id = str(int(kwargs['powerRating']/1e3)) 
-			return DER_id
-		except:
-			LogUtil.exception_handler()
-	
 	def get_DER_arguments(self,DER_config,**kwargs):
 		"""Initialize flags"""
 		try:
@@ -176,11 +210,11 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
 			LogUtil.logger.log(10,'Used arguments:{} and Invalid arguments:{}'.format(\
 			used_arguments,list(set(found_arguments).difference(set(used_arguments)))))
 			
-			if 'powerRating' in found_arguments:
-				DER_arguments.update({'Srated':kwargs['powerRating']})
+			#if 'powerRating' in found_arguments:
+			#	DER_arguments.update({'Srated':kwargs['powerRating']}) #power rating can only be supplied through config file
 				
-			if 'VrmsRating' in found_arguments:
-				DER_arguments.update({'Vrmsrated':kwargs['VrmsRating']})  
+			#if 'VrmsRating' in found_arguments:
+			#	DER_arguments.update({'Vrmsrated':kwargs['VrmsRating']})  #Vrms rating can only be supplied through config file
 						
 			return DER_arguments
 		except:
@@ -262,16 +296,6 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
 						  
 			else:
 				LogUtil.logger.log(40,'{}:{} is an invalid DER model class'.format(self.name,self.DER_model_type)) 
-		except:
-			LogUtil.exception_handler()
-
-	def read_config(self,configFile):
-		"""Load config json file and return dictionary."""
-		try:
-			LogUtil.logger.log(10,'Reading configuration file:{}'.format(configFile))
-			confDict = utility_functions.read_json(configFile)
-			
-			return confDict
 		except:
 			LogUtil.exception_handler()
 

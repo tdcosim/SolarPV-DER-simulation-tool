@@ -562,25 +562,6 @@ class PVDER_SmartFeatures():
 		except:
 			LogUtil.exception_handler()
 
-
-	def update_RT_config_old(self,derConfig):
-		"""Check whether the config file is good."""		
-		try:
-			for item in templates.RT_config_template.keys():
-				if item in derConfig:
-					self.RT_config[item] = derConfig[item]
-				elif item in self.DER_config:
-					self.RT_config[item] = self.DER_config[item]
-					LogUtil.logger.debug('{}:{} updated with alue from config file {}.'.format(self.name,item,self.DER_config[item]))
-				elif item in self.default_RT_config:
-					LogUtil.logger.debug('{}:{} updated with default value {}.'.format(self.name,item,self.default_RT_config[item]))	
-					self.RT_config[item] = self.default_RT_config[item]
-				else:
-					raise KeyError('{}:Ridethrough setting {} could not be found!'.format(self.name,item))
-		except:
-			LogUtil.exception_handler()
-
-
 	def update_RT_config(self,config_dict):
 		"""Check whether the config file is good."""
 		try:			

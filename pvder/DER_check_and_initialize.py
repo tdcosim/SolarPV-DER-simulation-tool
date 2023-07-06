@@ -591,8 +591,10 @@ class PVDER_SetupUtilities(BaseValues):
 			 ValueError: If any of the specificied voltage ratings is infeasible.
 		"""
 		try:
+			Vanominal_actual = self.Vanominal*self.Vbase
+			gridVoltagePhaseA_actual = abs(self.gridVoltagePhaseA)*self.Vbase
 			if not self.standAlone and abs(abs(self.gridVoltagePhaseA) - self.Vanominal)/self.Vanominal > 0.1:
-				raise ValueError('The rated PCC-LV voltage {:.2f} V has more than 10% deviation from the voltage input from external program {:.2f} V!'.format(self.Vanominal, abs(self.gridVoltagePhaseA)))
+				raise ValueError(f'The rated PCC-LV voltage magnitude {Vanominal_actual:.2f} V ({self.Vanominal:.2f} V p.u.) has more than 10% deviation from the voltage input from external program {gridVoltagePhaseA_actual:.2f} V {abs(self.gridVoltagePhaseA):.2f} V p.u.!')
 								 
 			if self.m_steady_state*(self.Vdcrated/2) < self.Varated:
 				raise ValueError('The nominal DC link voltage {:.1f} V is not sufficient for the inverter to generate the nominal voltage at PCC - LV side {:.1f} V (L-G peak). Increase nominal DC link voltage to {:.1f} V.'.format(self.Vdcrated,self.Varated,math.ceil((self.Varated/self.m_steady_state)*2)))
@@ -754,7 +756,8 @@ class PVDER_SetupUtilities(BaseValues):
 		
 			if not result.success:
 				raise ValueError('Steady state solution did not converge! Change operating point or disable steady state flag and try again.')
-			print("Optimization results:{}".format(result.x))
+			#print("Optimization results:{}".format(result.x))
+			LogUtil.logger.debug("Optimization results:{}".format(result.x))
 			if 'xDC' in templates.DER_design_template[self.DER_model_type]['initial_states']:
 			 self.xDC = self.ia.real
 			if 'xP' in templates.DER_design_template[self.DER_model_type]['initial_states']:
