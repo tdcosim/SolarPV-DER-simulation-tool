@@ -178,6 +178,7 @@ class PVDER_SetupUtilities(BaseValues):
 		try:
 			self.n_ODE = templates.DER_design_template[self.DER_model_type]['basic_specs']['n_ODE'] #23#Number of ODE's
 			self.n_phases = templates.DER_design_template[self.DER_model_type]['basic_specs']['n_phases'] #3 #Number of phases
+			self.unbalanced = templates.DER_design_template[self.DER_model_type]['basic_specs']['unbalanced'] #3 if model uses unbalanced voltages
 		except:
 			LogUtil.exception_handler()
 

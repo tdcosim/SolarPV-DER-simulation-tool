@@ -68,7 +68,7 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
 			#		DER_config.update({DER_component:{}})
 			#	if DER_component not in DER_parent_config:
 			#		DER_parent_config.update({DER_component:{}})
-			print("der arguments:",DER_arguments)
+			
 			self.check_model_type(DER_config,DER_parent_config)
 			self.update_DER_config(DER_config,DER_parent_config,DER_arguments,self.parameter_ID,self.DER_parent_ID) #DER_arguments #No more updating DER parameters from DER arguments
 			self.check_basic_specs()
