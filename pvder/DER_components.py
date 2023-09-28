@@ -43,32 +43,18 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
 	winv = we = 2.0*math.pi*60.0 #Frequency of fundamental waveform
 	fswitching  = 10e3 #Inverter switching frequency (not used by model)
 
-	def setup_DER(self,events,configFile,derID,**kwargs):#configFile
+	def setup_DER(self,events,configFile,derID,**kwargs):
 		"""Setup pvder instance"""
 		try:
 			self.events = events
 			self.DER_model_type = type(self).__name__ 
 			DER_config,DER_parent_config,config_dict = self.create_DER_config(configFile,derID)
-			#self.parameter_ID = kwargs['derId'] #self.get_DER_id(**kwargs)
-			#self.create_template()
-			
-			#DER_config,config_dict = self.get_DER_config(configFile,self.parameter_ID)
-			
+						
 			DER_arguments = self.get_DER_arguments(DER_config,**kwargs)   
 			
 			self.name_instance(DER_arguments['identifier']) #Generate a name for the instance  
 			self.initialize_logger(DER_arguments['verbosity'])  #Set logging level - {DEBUG,INFO,WARNING,ERROR}
-			
-			#self.DER_parent_ID = self.get_DER_parent_id(DER_config)
-			#DER_parent_config = self.get_DER_parent_config(configFile,self.DER_parent_ID)
-			
-			#DER_config, DER_parent_config = self.get_completed_DER_config(DER_config,DER_parent_config)
-			#for DER_component in self.DER_design_template:
-			#	if DER_component not in DER_config:
-			#		DER_config.update({DER_component:{}})
-			#	if DER_component not in DER_parent_config:
-			#		DER_parent_config.update({DER_component:{}})
-			
+						
 			self.check_model_type(DER_config,DER_parent_config)
 			self.update_DER_config(DER_config,DER_parent_config,DER_arguments,self.parameter_ID,self.DER_parent_ID) #DER_arguments #No more updating DER parameters from DER arguments
 			self.check_basic_specs()
@@ -84,7 +70,7 @@ class SolarPVDER(PVDER_SetupUtilities,PVDER_SmartFeatures,PVDER_ModelUtilities,B
 	def create_DER_config(self,configFile,derID):
 		"""Create a valid DER configuration."""
 		try:
-			self.parameter_ID = derID #self.get_DER_id(derID) #DER parameter id must be passed as an argument
+			self.parameter_ID = derID #DER parameter id must be passed as an argument
 			self.create_template()
 			DER_config,config_dict = self.get_DER_config(configFile,self.parameter_ID)			
 			self.DER_parent_ID = self.get_DER_parent_id(DER_config)

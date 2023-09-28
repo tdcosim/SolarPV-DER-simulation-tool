@@ -6,10 +6,11 @@
 
 -   Removed support for Python 2
 -   Changes to creating DER model instance using "DERModel" class.
-    - Removed need to specify "modelType" when creating model instance. Model type is specified in config file now.
-	- "derID" is now a required argument
--   Minor refactoring and code clean up.
--   Added Dockerfile for using high performance Julia ODE solvers library - Acknowledgement to Abel Siqueira (Netherlands eScience Center)
+    - Removed the need to specify "modelType" when creating a model instance. The model type is specified in the config file now.
+	- "derID" is now a required argument.
+	- "powerRating" and "VrmsRating" can only be supplied through the config file now.
+-   Minor refactoring and code cleanup.
+-   Added Dockerfile for using high-performance Julia ODE solvers library - Acknowledgement to Abel Siqueira (Netherlands eScience Center)
 
 ## 0.5.3 - 2021-09-13
 
