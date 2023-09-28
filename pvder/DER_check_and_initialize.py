@@ -592,9 +592,9 @@ class PVDER_SetupUtilities(BaseValues):
 			 ValueError: If any of the specificied voltage ratings is infeasible.
 		"""
 		try:
-			Vanominal_actual = self.Vanominal*self.Vbase
-			gridVoltagePhaseA_actual = abs(self.gridVoltagePhaseA)*self.Vbase
-			if not self.standAlone and abs(abs(self.gridVoltagePhaseA) - self.Vanominal)/self.Vanominal > 0.1:
+			Vanominal_actual = self.Vanominal*self.Vbase			
+			if not self.standAlone and abs(abs(self.gridVoltagePhaseA) - self.Vanominal)/self.Vanominal > 0.1: #Only check if not in stand alone mode
+				gridVoltagePhaseA_actual = abs(self.gridVoltagePhaseA)*self.Vbase
 				raise ValueError(f'The rated PCC-LV voltage magnitude {Vanominal_actual:.2f} V ({self.Vanominal:.2f} V p.u.) has more than 10% deviation from the voltage input from external program {gridVoltagePhaseA_actual:.2f} V {abs(self.gridVoltagePhaseA):.2f} V p.u.!')
 								 
 			if self.m_steady_state*(self.Vdcrated/2) < self.Varated:

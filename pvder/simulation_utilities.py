@@ -96,7 +96,7 @@ class SimulationResults(Utilities):
 	 #{'power','active_power','active_power_Ppv_Pac_PCC','active_power_Pac_PCC','reactive_power','reactive_power_Q_PCC','reactive_power_Q_PCC_smoothed','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','voltage_Vpcclv_smoothed','current','phase_angle','frequency','duty_cycle','voltage_Vpcclv_all_phases'}:
 				raise ValueError('Unknown plot type: ' + str(plot_type))
 		
-			if self.simulation.LOOP_MODE:
+			if self.simulation.loop_mode:
 				self.simulation.invert_arrays()
 			time = self.simulation.t_t	
 			self.change_units()
@@ -116,7 +116,7 @@ class SimulationResults(Utilities):
 			
 			if plot_type == 'voltage':
 				plot_values = [self.simulation.Vdc_t*self.V_multiplier,self.simulation.Vtrms_t*self.V_multiplier,self.simulation.Vrms_t*self.V_multiplier,self.simulation.vdg_t*self.V_multiplier]
-				if self.simulation.PV_model.standAlone:
+				if self.simulation.DER_model.standAlone:
 				 plot_values = plot_values + [self.simulation.Vhvrms_t*self.V_multiplier,self.simulation.Vgrms_t*self.V_multiplier]
 				
 				#legends=['DC link voltage','Inverter terminal voltage','PCC LV side voltage','PCC HV side voltage','Grid voltage','Grid voltage - d component']
@@ -153,7 +153,7 @@ class SimulationResults(Utilities):
 				legends=[r"$v^{PCC-LV}_{arms}$"] 
 				#legends=['Vpcclv-a']
 			
-				if type(self.simulation.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+				if type(self.simulation.DER_model).__name__ == 'SolarPV_DER_ThreePhase':
 					plot_values = plot_values + [self.simulation.Vbrms_t*self.V_multiplier,self.simulation.Vcrms_t*self.V_multiplier]
 					legends = legends + [r"$v^{PCC-LV}_{brms}$",r"$v^{PCC-LV}_{crms}$"] 
 			
@@ -161,7 +161,7 @@ class SimulationResults(Utilities):
 				y_labels=_voltage_label		
 		
 			elif plot_type == 'voltage_HV':
-				if not self.simulation.PV_model.standAlone:
+				if not self.simulation.DER_model.standAlone:
 					raise ValueError('Plot '+str(plot_type)+' is only available in Stand Alone mode!')
 				
 				plot_values = [self.simulation.Vhvrms_t*self.V_multiplier,self.simulation.Vgrms_t*self.V_multiplier]
@@ -182,7 +182,7 @@ class SimulationResults(Utilities):
 				plot_values = [self.simulation.Ppv_t*self.S_multiplier,self.simulation.S_t.real*self.S_multiplier,self.simulation.S_t.imag*self.S_multiplier,
 	 self.simulation.S_PCC_t.real*self.S_multiplier,self.simulation.S_PCC_t.imag*self.S_multiplier]
 			
-				if self.simulation.PV_model.standAlone:
+				if self.simulation.DER_model.standAlone:
 					plot_values = plot_values + [self.simulation.S_load1_t.real*self.S_multiplier,self.simulation.S_G_t.real*self.S_multiplier]
 			
 				#legends=['Ppv','Pac','Q','Pac_PCC','Q_PCC','Pac_load1','Pac_G']
@@ -193,7 +193,7 @@ class SimulationResults(Utilities):
 		
 			elif plot_type == 'active_power':
 				plot_values = [self.simulation.Ppv_t*self.S_multiplier,self.simulation.S_t.real*self.S_multiplier,self.simulation.S_PCC_t.real*self.S_multiplier]
-				if self.simulation.PV_model.standAlone:
+				if self.simulation.DER_model.standAlone:
 					plot_values = plot_values + [self.simulation.S_load1_t.real*self.S_multiplier,self.simulation.S_G_t.real*self.S_multiplier]
 				#legends=['Ppv','Pac','Pac_PCC','Pac_load1','Pac_G']
 			
@@ -223,7 +223,7 @@ class SimulationResults(Utilities):
 				plot_values = [self.simulation.S_t.imag*self.S_multiplier,self.simulation.S_PCC_t.imag*self.S_multiplier]
 				legends=[r"$Q^{inv}$",r"$Q^{PCC-LV}$"]
 				plot_title='Inverter,PCC-LV:Reactive power'
-				if self.simulation.PV_model.standAlone:
+				if self.simulation.DER_model.standAlone:
 					plot_values = plot_values + [self.simulation.S_load1_t.imag*self.S_multiplier,self.simulation.S_G_t.imag*self.S_multiplier]
 					legends= legends + [r"$Q^{load1}$",r"$Q^{G}$"] 
 					plot_title = 'Inverter,PCC-LV,Load,& Grid voltage:Reactive power'
@@ -240,11 +240,11 @@ class SimulationResults(Utilities):
 				y_labels=_reactive_power_label
 	
 			elif plot_type == 'phase_angle':
-				if not self.simulation.PV_model.standAlone:
+				if not self.simulation.DER_model.standAlone:
 					raise ValueError('Plot {} is only available in Stand Alone mode!'.format(plot_type))
 			
 				plot_values = [self.simulation.phi_at_t,self.simulation.phi_a_t]
-				if self.simulation.PV_model.standAlone:
+				if self.simulation.DER_model.standAlone:
 					plot_values = plot_values + [self.simulation.phi_ag_t,self.simulation.phi_a_t-self.simulation.phi_ag_t]
 				
 				#legends=['theta_vat','theta_va','theta_vag','theta_va-theta_vag']
@@ -254,7 +254,7 @@ class SimulationResults(Utilities):
 				y_labels='radians'
 		
 			elif plot_type == 'frequency':
-				if not self.simulation.PV_model.standAlone:
+				if not self.simulation.DER_model.standAlone:
 					raise ValueError('Plot {} is only available in Stand Alone mode!'.format(plot_type))
 				
 				plot_values = [self.simulation.wgrid_t,self.simulation.we_t] #legends=['Grid frequency','PLL frequency']
@@ -267,7 +267,7 @@ class SimulationResults(Utilities):
 				plot_values = [self.simulation.ma_absolute_t]
 				#legends = [r"$\m^{absolute}_{a}$"]
 				legends = ["ma"]
-				if type(self.simulation.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+				if type(self.simulation.DER_model).__name__ == 'SolarPV_DER_ThreePhase':
 					plot_values = plot_values + [self.simulation.mb_absolute_t,self.simulation.mc_absolute_t]
 					#legends = legends + [r"$\m^{absolute}_{b}$",r"$\mc^{absolute}_{c}$"]
 					legends = legends + ["mb","mc"]
@@ -276,7 +276,7 @@ class SimulationResults(Utilities):
 				plot_title = 'Inverter: Duty cycle'
 				y_labels = 'p.u.'
 		
-			plot_title = self.simulation.PV_model.name + ' -- ' + plot_title
+			plot_title = self.simulation.DER_model.name + ' -- ' + plot_title
 		
 			if self.simulation.solution_time is not None and self.solution_time:
 				plot_title = plot_title + '\nSolution time:{:.4f} seconds'.format(self.simulation.solution_time) 

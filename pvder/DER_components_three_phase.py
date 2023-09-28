@@ -29,7 +29,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 	"""
 	count = 0 #Object count
 
-	def __init__(self,events,configFile,derID,**kwargs):		
+	def __init__(self,events,configFile,derId,**kwargs):		
 		"""Creates an instance of `SolarPV_DER_ThreePhase`.
 		Args:
 			events (SimulationEvents): An instance of `SimulationEvents`.
@@ -50,7 +50,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 		"""
 		try:
 			SolarPVDERThreePhase.count = SolarPVDERThreePhase.count+1 #Increment count to keep track of number of PV-DER model instances
-			DER_arguments = self.setup_DER(events,configFile,derID,**kwargs)		
+			DER_arguments = self.setup_DER(events,configFile,derId,**kwargs)		
 			super().__init__(self.DER_config['basic_options']['Sinsol'])	#Initialize PV module class (base class)
 			
 			self.initialize_DER(DER_arguments)			

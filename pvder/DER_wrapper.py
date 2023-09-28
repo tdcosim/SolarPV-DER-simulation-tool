@@ -23,7 +23,7 @@ class DERModel(SolarPVDER):
 	"""
 
 	#def __init__(self,modelType,events,configFile,**kwargs):
-	def __init__(self,events,configFile,derID,createDERModel=True,**kwargs):
+	def __init__(self,events,configFile,derId,createDERModel=True,**kwargs):
 		"""Creates an instance of `SolarPV_DER_SinglePhase`.
 		
 		Args:
@@ -63,9 +63,9 @@ class DERModel(SolarPVDER):
 				raise ValueError('{} is not a valid model type! - Valid model types:{}'.format(modelType,templates.model_types))
 			"""
 			if createDERModel:
-				DER_config = self.get_config(configFile,derID)
+				DER_config = self.get_config(configFile,derId)
 				modelType = DER_config["basic_specs"]["model_type"] #self.get_DER_model_type(DER_config,DER_parent_config)
-				self.create_DER_model(events,modelType,configFile,derID,**kwargs)
+				self.create_DER_model(events,modelType,configFile,derId,**kwargs)
 						
 		except:
 			LogUtil.exception_handler()

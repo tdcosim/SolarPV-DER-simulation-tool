@@ -35,7 +35,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 	
 	jac_list = ['SolarPVDERThreePhase','SolarPVDERThreePhaseNoVrmsFilter','SolarPVDERSinglePhase','SolarPVDERThreePhaseBalanced']
 		
-	def __init__(self,DER_model,events,gridModel = None,tStop = 0.5,
+	def __init__(self,derModel,events,gridModel = None,tStop = 0.5,
 				 loopMode = False,collectSolution = True,jacFlag = False,
 				 verbosity ='INFO',solverType ='odeint',identifier = None):
 		"""Creates an instance of `GridSimulation`.
@@ -52,15 +52,15 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 			self.name_instance(identifier) #Generate a name for the instance
 			self.tStop = tStop
 			self.t = self.t_calc()
-			self.DER_model = DER_model
+			self.DER_model = derModel
 			self.DER_model_type = type(self.DER_model).__name__
 			self.simulation_events = events
 			self.simulation_events.del_t_event = self.tInc
 			self.initialize_solver(solver_type=solverType)
 			self.solver_convergence = False
 			self.convergence_failure_list =[]
-			self.loopMode = loopMode
-			self.collectSolution = collectSolution
+			self.loop_mode = loopMode
+			self.collect_solution = collectSolution
 			self.jacFlag = jacFlag
 			self.check_jac_availability()
 		
@@ -74,7 +74,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 			#self.simulation_events.remove_load_event(4.0)
 			#self.simulation_events.remove_grid_event(5.0)
 			self.solution_time = None #Always reset solution time to None
-			if self.loopMode:
+			if self.loop_mode:
 				self.reset_stored_trajectories()
 			self.initialize_y0_t()
 		except:
@@ -508,7 +508,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 			self.vcgR_t = self.vcg_t.real
 			self.vcgI_t = self.vcg_t.imag
 		
-			if not self.loopMode:
+			if not self.loop_mode:
 				self.simulation_events.reset_event_counters() #reset event counters
 		except:
 			LogUtil.exception_handler()
@@ -566,7 +566,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 				self.Zload1_t.append(_Zload1)
 
 			self.Zload1_t = np.asarray(self.Zload1_t)
-			if not self.loopMode:
+			if not self.loop_mode:
 				self.simulation_events.reset_event_counters() #reset event counters
 		except:
 			LogUtil.exception_handler()
@@ -585,7 +585,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 				self.Ppv_t.append(self.DER_model.Ppv_calc(self.DER_model.Vdc_actual))
 			self.Sinsol_t = np.asarray(self.Sinsol_t)
 			self.Ppv_t = np.asarray(self.Ppv_t)
-			if not self.loopMode:
+			if not self.loop_mode:
 				self.simulation_events.reset_event_counters() #reset event counters
 		except:
 			LogUtil.exception_handler()
@@ -646,10 +646,10 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 			LogUtil.exception_handler()
 
 
-	def collect_solution(self,solution,t=None):
+	def collect_simulation_results(self,solution,t=None):
 		"""Collect solution."""
 		try:
-			if self.loopMode:
+			if self.loop_mode:
 				self.t = t
 				self.collect_full_trajectory(solution)
 				self.collect_last_states()
@@ -932,7 +932,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 		"""Call the ODE solver and collect states."""
 		try:
 			self.solution_time = None #Always reset simulation time to None
-			if self.loopMode:
+			if self.loop_mode:
 			
 				if isinstance(gridVoltagePhaseA,complex) and isinstance(y0,list) and isinstance(t,list):
 					self.update_grid_measurements(gridVoltagePhaseA=gridVoltagePhaseA, gridVoltagePhaseB=gridVoltagePhaseB, gridVoltagePhaseC=gridVoltagePhaseC)
@@ -969,8 +969,8 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 				self.simulation_events.reset_event_counters() #Reset grid and solar event counters
 				self.DER_model.reset_reference_counters() #Reset counters for reference change events
 		
-			if self.COLLECT_SOLUTION:
-				self.collect_solution(solution,t=t)	 #Collect full solution
+			if self.collect_solution:
+				self.collect_simulation_results(solution,t=t)	 #Collect full solution
 			else:
 				self.collect_states(solution)  #Atleast states must be collected
 		except:
@@ -1006,7 +1006,7 @@ class DynamicSimulation(Grid,SimulationUtilities,Utilities):
 	def get_trajectories(self):
 		"""Return trajectories as a dictionary."""
 		try:
-			if self.loopMode:
+			if self.loop_mode:
 				self.invert_arrays()
 			trajectory_dictionary = {'ia_t':self.ia_t,'ma_t':self.ma_t,
 									 'Vdc_t':self.Vdc_t,'vta_t':self.vta_t,'va_t':self.va_t,
