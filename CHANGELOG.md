@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.0 - 2023-09-27
+
+### Bug fix
+
+-   Removed support for Python 2
+-   Changes to creating DER model instance using "DERModel" class.
+    - Removed need to specify "modelType" when creating model instance. Model type is specified in config file now.
+	- "derID" is now a required argument
+-   Minor refactoring and code clean up.
+-   Added Dockerfile for using high performance Julia ODE solvers library - Acknowledgement to Abel Siqueira (Netherlands eScience Center)
+
 ## 0.5.3 - 2021-09-13
 
 ### Bug fix

@@ -32,7 +32,7 @@ class SolarPVDERThreePhaseBalanced(PVModule,SolarPVDER):
 	count = 0 #Object count
 
 
-	def __init__(self,events,configFile=None,**kwargs):		
+	def __init__(self,events,configFile,derID,**kwargs):		
 		"""Creates an instance of `SolarPV_DER_ThreePhase`.
 		Args:
 			events (SimulationEvents): An instance of `SimulationEvents`.
@@ -43,7 +43,7 @@ class SolarPVDERThreePhaseBalanced(PVModule,SolarPVDER):
 			xDC0,xQ0,xPLL0,wte0 (float): Initial value of inverter states in the DER instance.
 			gridVoltatePhaseA (complex): Initial voltage phasor (V) at PCC - LV side from external program (only need to be suppled if model is not stand alone).
 			standAlone (bool): Specify if the DER instance is a stand alone simulation or part of a larger simulation.
-			STEADY_STATE_INITIALIZATION (bool): Specify whether states in the DER instance will be initialized to steady state values.
+			steadStateInitialization (bool): Specify whether states in the DER instance will be initialized to steady state values.
 			allow_unbalanced_m (bool): Allow duty cycles to take on unbalanced values during initialization (default: False).
 			derConfig (dict): Configuration parameters that may be supplied from an external program.
 			identifier (str): An identifier that can be used to name the instance (default: None).
@@ -54,12 +54,8 @@ class SolarPVDERThreePhaseBalanced(PVModule,SolarPVDER):
 		"""
 		try:
 			SolarPVDERThreePhaseBalanced.count = SolarPVDERThreePhaseBalanced.count+1 #Increment count to keep track of number of PV-DER model instances
-			DER_arguments = self.setup_DER(events,configFile,**kwargs)		 
-		
-			if six.PY3:
-				super().__init__(self.DER_config['basic_options']['Sinsol'])	#Initialize PV module class (base class)
-			elif six.PY2:
-				super(SolarPVDERThreePhaseBalanced,self).__init__(self.DER_config['basic_options']['Sinsol'])
+			DER_arguments = self.setup_DER(events,configFile,derID,**kwargs)		
+			super().__init__(self.DER_config['basic_options']['Sinsol'])	#Initialize PV module class (base class)			
 		
 			self.initialize_DER(DER_arguments)
 			self.creation_message()

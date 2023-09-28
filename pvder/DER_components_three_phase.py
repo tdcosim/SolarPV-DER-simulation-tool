@@ -53,8 +53,7 @@ class SolarPVDERThreePhase(PVModule,SolarPVDER):
 			DER_arguments = self.setup_DER(events,configFile,derID,**kwargs)		
 			super().__init__(self.DER_config['basic_options']['Sinsol'])	#Initialize PV module class (base class)
 			
-			self.initialize_DER(DER_arguments)
-			
+			self.initialize_DER(DER_arguments)			
 			self.creation_message()
 		except:
 			LogUtil.exception_handler()
