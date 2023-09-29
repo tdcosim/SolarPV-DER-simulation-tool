@@ -33,13 +33,13 @@ class SimulationResults(Utilities):
 	
 	available_plot_types = ['power','active_power','active_power_Ppv_Pac_PCC','active_power_Pac_PCC','reactive_power','reactive_power_Q_PCC','reactive_power_Q_PCC_smoothed','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','voltage_Vpcclv_smoothed','current','phase_angle','frequency','duty_cycle','voltage_Vpcclv_all_phases']
 	
-	def __init__(self,simulation,figure_index=1,PER_UNIT=True,font_size=18,PLOT_TITLE=True,SOLUTION_TIME=True,verbosity='INFO',identifier=None):
+	def __init__(self,simulation,figure_index=1,per_unit=True,font_size=18,plot_title=True,solution_time=True,verbosity='INFO',identifier=None):
 		"""Creates an instance of `SimulationResults`.
 		Args:
 		simulation: An instance of `GridSimulation`.
 		figure_index: An integer specifying the figure index.
 		font_size: An integer spcifying the font size to be used withing plots.
-		PLOT_TITLE: A boolean specifying whether the title will be displayed in plots.
+		plot_title: A boolean specifying whether the title will be displayed in plots.
 		verbosity: A string specifying the verbosity level (DEBUG,INFO,WARNING,ERROR).
 		"""
 		try:
@@ -58,9 +58,9 @@ class SimulationResults(Utilities):
 			self.name_instance(identifier)
 			self.figure_index =1
 			self.simulation = simulation
-			self.PER_UNIT = PER_UNIT
-			self.PLOT_TITLE = PLOT_TITLE
-			self.SOLUTION_TIME = SOLUTION_TIME
+			self.per_unit = per_unit
+			self.plot_title = plot_title
+			self.solution_time = solution_time
 			self.font_size = font_size
 		except:
 			LogUtil.exception_handler()
@@ -69,7 +69,7 @@ class SimulationResults(Utilities):
 	def change_units(self):
 		"""Change units from per unit to S.I. or vice versa."""
 		try:
-			if self.PER_UNIT:
+			if self.per_unit:
 				self.V_multiplier = 1.0
 				self.I_multiplier = 1.0
 				self.S_multiplier = 1.0
@@ -96,32 +96,32 @@ class SimulationResults(Utilities):
 	 #{'power','active_power','active_power_Ppv_Pac_PCC','active_power_Pac_PCC','reactive_power','reactive_power_Q_PCC','reactive_power_Q_PCC_smoothed','voltage','voltage_Vdc','voltage_HV','voltage_HV_imbalance','voltage_LV','voltage_Vpcclv','voltage_Vpcclv_smoothed','current','phase_angle','frequency','duty_cycle','voltage_Vpcclv_all_phases'}:
 				raise ValueError('Unknown plot type: ' + str(plot_type))
 		
-			if self.simulation.LOOP_MODE:
+			if self.simulation.loop_mode:
 				self.simulation.invert_arrays()
 			time = self.simulation.t_t	
 			self.change_units()
 		
-			if self.PER_UNIT:
-			 _voltage_label = 'V (p.u.)'
-			 _current_label = 'A (p.u.)'
-			 _power_label = 'W/VAR (p.u.)'
-			 _active_power_label = 'W (p.u.)'
-			 _reactive_power_label = 'VAR (p.u.)'
+			if self.per_unit:
+				_voltage_label = 'V (p.u.)'
+				_current_label = 'A (p.u.)'
+				_power_label = 'W/VAR (p.u.)'
+				_active_power_label = 'W (p.u.)'
+				_reactive_power_label = 'VAR (p.u.)'
 			else:
-			 _voltage_label = 'V'
-			 _current_label = 'A'
-			 _power_label = 'W/VAR'
-			 _active_power_label = 'Active Power (W)'
-			 _reactive_power_label = 'Reactive Power (VAR)'
-			 
+				_voltage_label = 'V'
+				_current_label = 'A'
+				_power_label = 'W/VAR'
+				_active_power_label = 'Active Power (W)'
+				_reactive_power_label = 'Reactive Power (VAR)'
+			
 			if plot_type == 'voltage':
 				plot_values = [self.simulation.Vdc_t*self.V_multiplier,self.simulation.Vtrms_t*self.V_multiplier,self.simulation.Vrms_t*self.V_multiplier,self.simulation.vdg_t*self.V_multiplier]
-				if self.simulation.PV_model.standAlone:
+				if self.simulation.DER_model.standAlone:
 				 plot_values = plot_values + [self.simulation.Vhvrms_t*self.V_multiplier,self.simulation.Vgrms_t*self.V_multiplier]
-			
+				
 				#legends=['DC link voltage','Inverter terminal voltage','PCC LV side voltage','PCC HV side voltage','Grid voltage','Grid voltage - d component']
 				legends=[r"$V_{DC}$",r"$v^{inv}_{rms}$",r"$v^{PCC-LV}_{rms}$",r"$v^{PCC-HV}_{rms}$",r"$v^{grid}_{rms}$",r"$v^{grid}_{d}$"]
-			
+				
 				plot_title='All available voltage quantities!'
 				y_labels=_voltage_label
 		
@@ -153,7 +153,7 @@ class SimulationResults(Utilities):
 				legends=[r"$v^{PCC-LV}_{arms}$"] 
 				#legends=['Vpcclv-a']
 			
-				if type(self.simulation.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+				if type(self.simulation.DER_model).__name__ == 'SolarPV_DER_ThreePhase':
 					plot_values = plot_values + [self.simulation.Vbrms_t*self.V_multiplier,self.simulation.Vcrms_t*self.V_multiplier]
 					legends = legends + [r"$v^{PCC-LV}_{brms}$",r"$v^{PCC-LV}_{crms}$"] 
 			
@@ -161,7 +161,7 @@ class SimulationResults(Utilities):
 				y_labels=_voltage_label		
 		
 			elif plot_type == 'voltage_HV':
-				if not self.simulation.PV_model.standAlone:
+				if not self.simulation.DER_model.standAlone:
 					raise ValueError('Plot '+str(plot_type)+' is only available in Stand Alone mode!')
 				
 				plot_values = [self.simulation.Vhvrms_t*self.V_multiplier,self.simulation.Vgrms_t*self.V_multiplier]
@@ -182,7 +182,7 @@ class SimulationResults(Utilities):
 				plot_values = [self.simulation.Ppv_t*self.S_multiplier,self.simulation.S_t.real*self.S_multiplier,self.simulation.S_t.imag*self.S_multiplier,
 	 self.simulation.S_PCC_t.real*self.S_multiplier,self.simulation.S_PCC_t.imag*self.S_multiplier]
 			
-				if self.simulation.PV_model.standAlone:
+				if self.simulation.DER_model.standAlone:
 					plot_values = plot_values + [self.simulation.S_load1_t.real*self.S_multiplier,self.simulation.S_G_t.real*self.S_multiplier]
 			
 				#legends=['Ppv','Pac','Q','Pac_PCC','Q_PCC','Pac_load1','Pac_G']
@@ -193,13 +193,13 @@ class SimulationResults(Utilities):
 		
 			elif plot_type == 'active_power':
 				plot_values = [self.simulation.Ppv_t*self.S_multiplier,self.simulation.S_t.real*self.S_multiplier,self.simulation.S_PCC_t.real*self.S_multiplier]
-				if self.simulation.PV_model.standAlone:
+				if self.simulation.DER_model.standAlone:
 					plot_values = plot_values + [self.simulation.S_load1_t.real*self.S_multiplier,self.simulation.S_G_t.real*self.S_multiplier]
 				#legends=['Ppv','Pac','Pac_PCC','Pac_load1','Pac_G']
 			
 				legends=[r"$P^{PV}_{DC}$",r"$P^{inv}_{AC}$",r"$P^{PCC-LV}_{AC}$",r"$P^{load1}_{AC}$",r"$P^{G}_{AC}$"] 
 				plot_title='PV,Inverter,PCC-LV,Load,& Grid voltage:Active power'
-				y_labels=_active_power_label		
+				y_labels=_active_power_label
 		
 			elif plot_type == 'active_power_Ppv_Pac_PCC':
 				plot_values = [self.simulation.Ppv_t*self.S_multiplier,self.simulation.S_PCC_t.real*self.S_multiplier]
@@ -208,7 +208,7 @@ class SimulationResults(Utilities):
 			
 				legends=[r"$P^{PV}_{DC}$",r"$P^{PCC-LV}_{ac}$"] 
 				plot_title='PV,PCC-LV:Active power'
-				y_labels=_active_power_label							 
+				y_labels=_active_power_label
 		
 			elif plot_type == 'active_power_Pac_PCC':
 				plot_values = [self.simulation.S_PCC_t.real*self.S_multiplier]
@@ -223,12 +223,12 @@ class SimulationResults(Utilities):
 				plot_values = [self.simulation.S_t.imag*self.S_multiplier,self.simulation.S_PCC_t.imag*self.S_multiplier]
 				legends=[r"$Q^{inv}$",r"$Q^{PCC-LV}$"]
 				plot_title='Inverter,PCC-LV:Reactive power'
-				if self.simulation.PV_model.standAlone:
+				if self.simulation.DER_model.standAlone:
 					plot_values = plot_values + [self.simulation.S_load1_t.imag*self.S_multiplier,self.simulation.S_G_t.imag*self.S_multiplier]
 					legends= legends + [r"$Q^{load1}$",r"$Q^{G}$"] 
 					plot_title = 'Inverter,PCC-LV,Load,& Grid voltage:Reactive power'
 			
-				#legends=['Q','Q_PCC','Q_load1','Q_G']						
+				#legends=['Q','Q_PCC','Q_load1','Q_G']
 				y_labels=_reactive_power_label
 		
 			elif plot_type == 'reactive_power_Q_PCC':
@@ -240,11 +240,11 @@ class SimulationResults(Utilities):
 				y_labels=_reactive_power_label
 	
 			elif plot_type == 'phase_angle':
-				if not self.simulation.PV_model.standAlone:
+				if not self.simulation.DER_model.standAlone:
 					raise ValueError('Plot {} is only available in Stand Alone mode!'.format(plot_type))
 			
 				plot_values = [self.simulation.phi_at_t,self.simulation.phi_a_t]
-				if self.simulation.PV_model.standAlone:
+				if self.simulation.DER_model.standAlone:
 					plot_values = plot_values + [self.simulation.phi_ag_t,self.simulation.phi_a_t-self.simulation.phi_ag_t]
 				
 				#legends=['theta_vat','theta_va','theta_vag','theta_va-theta_vag']
@@ -254,7 +254,7 @@ class SimulationResults(Utilities):
 				y_labels='radians'
 		
 			elif plot_type == 'frequency':
-				if not self.simulation.PV_model.standAlone:
+				if not self.simulation.DER_model.standAlone:
 					raise ValueError('Plot {} is only available in Stand Alone mode!'.format(plot_type))
 				
 				plot_values = [self.simulation.wgrid_t,self.simulation.we_t] #legends=['Grid frequency','PLL frequency']
@@ -267,7 +267,7 @@ class SimulationResults(Utilities):
 				plot_values = [self.simulation.ma_absolute_t]
 				#legends = [r"$\m^{absolute}_{a}$"]
 				legends = ["ma"]
-				if type(self.simulation.PV_model).__name__ == 'SolarPV_DER_ThreePhase':
+				if type(self.simulation.DER_model).__name__ == 'SolarPV_DER_ThreePhase':
 					plot_values = plot_values + [self.simulation.mb_absolute_t,self.simulation.mc_absolute_t]
 					#legends = legends + [r"$\m^{absolute}_{b}$",r"$\mc^{absolute}_{c}$"]
 					legends = legends + ["mb","mc"]
@@ -276,9 +276,9 @@ class SimulationResults(Utilities):
 				plot_title = 'Inverter: Duty cycle'
 				y_labels = 'p.u.'
 		
-			plot_title = self.simulation.PV_model.name + ' -- ' + plot_title
+			plot_title = self.simulation.DER_model.name + ' -- ' + plot_title
 		
-			if self.simulation.solution_time is not None and self.SOLUTION_TIME:
+			if self.simulation.solution_time is not None and self.solution_time:
 				plot_title = plot_title + '\nSolution time:{:.4f} seconds'.format(self.simulation.solution_time) 
 		
 			for plot_value in plot_values:
@@ -314,7 +314,7 @@ class SimulationResults(Utilities):
 			plt.ylabel(y_labels,weight = "bold", fontsize=self.font_size)
 			plt.xlabel('Time (s)',weight = "bold", fontsize=self.font_size)
 
-			if self.PLOT_TITLE:
+			if self.plot_title:
 				plt.title(plot_title,weight = "bold", fontsize=self.font_size) 
 			plt.xlim(0, time_values[0][-1])
 			plt.legend(fontsize =self.font_size)
@@ -425,7 +425,7 @@ class SimulationUtilities():
 
 			if self.solver_type == 'ode-vode-bdf':
 				self.ode_solver = ode(self.ODE_model_ode,self.jac_ODE_model_ode).set_integrator('vode',method='bdf',rtol=1e-4,atol=1e-4)
-				self.ode_solver.set_initial_value(self.y0,t0)		
+				self.ode_solver.set_initial_value(self.y0,t0)
 			
 			elif self.solver_type == 'odeint':
 				pass #Initialization not required if using odeint
@@ -438,10 +438,10 @@ class SimulationUtilities():
 	def ODE_model_ode(self,t,y):
 		"""" Combine all derivatives when using ode method"""
 		try:
-			y1 = y[0:self.PV_model.n_ODE]
-			if self.PV_model.standAlone:
+			y1 = y[0:self.DER_model.n_ODE]
+			if self.DER_model.standAlone:
 				self.grid_model.steady_state_model(t)
-			y = self.PV_model.ODE_model(y1,t)
+			y = self.DER_model.ODE_model(y1,t)
 			if self.DEBUG_SIMULATION:
 				self.debug_simulation(t)
 
@@ -453,10 +453,10 @@ class SimulationUtilities():
 	def jac_ODE_model_ode(self,t,y):
 		""" Combine all derivatives."""
 		try:
-			y1 = y[0:self.PV_model.n_ODE]
-			if self.PV_model.standAlone:
+			y1 = y[0:self.DER_model.n_ODE]
+			if self.DER_model.standAlone:
 				self.grid_model.steady_state_model(t)
-			y = self.PV_model.jac_ODE_model(y1,t)
+			y = self.DER_model.jac_ODE_model(y1,t)
 
 			return y
 		except:
@@ -471,22 +471,22 @@ class SimulationUtilities():
 				assert len(infodict_mused) == len(t)-1," The number of methods used should be equal to the number of time steps."
 				failure_time_point = list(map(lambda status: status == 0 or status > 2,infodict_mused)).index(True)
 				self.SOLVER_CONVERGENCE = False
-				self.convergence_failure_list.append({'Model':self.PV_model.name,
+				self.convergence_failure_list.append({'Model':self.DER_model.name,
 													'Simulation':self.name,
 													'failure_time_point':t[failure_time_point],
 													'failure_code':infodict_mused[failure_time_point],
-													'S':self.PV_model.S*self.PV_model.Sbase})
+													'S':self.DER_model.S*self.DER_model.Sbase})
 					 
-				error_message = '{}:ODE solver failed at {:.6f} s for {} with failure code:{}!'.format(self.name,t[failure_time_point],self.PV_model.name,infodict_mused[failure_time_point])
+				error_message = '{}:ODE solver failed at {:.6f} s for {} with failure code:{}!'.format(self.name,t[failure_time_point],self.DER_model.name,infodict_mused[failure_time_point])
 			
-				states_at_failure = '\n___States at failure___\nVdc:{:.4f},Vta:{:.4f},Vpcca:{:.4f}\nia:{:.4f}\nPpv:{:.4f},S:{:.4f},\nma:{:.4f}'.format(self.PV_model.Vdc*self.PV_model.Vdcbase,
-																																					 self.PV_model.vta*self.PV_model.Vbase,self.PV_model.va*self.PV_model.Vbase,self.PV_model.ia*self.PV_model.Ibase,self.PV_model.Ppv*self.PV_model.Sbase,self.PV_model.S*self.PV_model.Sbase,self.PV_model.ma)
-				primary_controller_states = '\nxa:{:.4f},ua:{:.4f}'.format(self.PV_model.xa,self.PV_model.ua) 
+				states_at_failure = '\n___States at failure___\nVdc:{:.4f},Vta:{:.4f},Vpcca:{:.4f}\nia:{:.4f}\nPpv:{:.4f},S:{:.4f},\nma:{:.4f}'.format(self.DER_model.Vdc*self.DER_model.Vdcbase,
+																																					 self.DER_model.vta*self.DER_model.Vbase,self.DER_model.va*self.DER_model.Vbase,self.DER_model.ia*self.DER_model.Ibase,self.DER_model.Ppv*self.DER_model.Sbase,self.DER_model.S*self.DER_model.Sbase,self.DER_model.ma)
+				primary_controller_states = '\nxa:{:.4f},ua:{:.4f}'.format(self.DER_model.xa,self.DER_model.ua) 
 			
 				if self.DER_model_type in ['SolarPVDERSinglePhase', 'SolarPVDERThreePhase','SolarPVDERThreePhaseNumba','SolarPVDERThreePhaseBalanced']:
-					secondary_controller_states = '\nxDC:{:.4f},xQ:{:.4f}'.format(self.PV_model.xDC,self.PV_model.xQ)
+					secondary_controller_states = '\nxDC:{:.4f},xQ:{:.4f}'.format(self.DER_model.xDC,self.DER_model.xQ)
 				elif self.DER_model_type == 'SolarPVDERSinglePhaseConstantVdc' or self.DER_model_type == 'SolarPVDERThreePhaseConstantVdc':
-					secondary_controller_states = '\nxP:{:.4f},xQ:{:.4f}'.format(self.PV_model.xP,self.PV_model.xQ)
+					secondary_controller_states = '\nxP:{:.4f},xQ:{:.4f}'.format(self.DER_model.xP,self.DER_model.xQ)
 				else:
 					raise ValueError('{} is not a valid DER model type!'.format(self.DER_model_type))
 				raise ValueError(error_message+states_at_failure+primary_controller_states+secondary_controller_states)
@@ -494,9 +494,9 @@ class SimulationUtilities():
 				if self.DEBUG_SOLVER:
 					infodict_time_steps = infodict['hu']
 					assert len(infodict_mused) == len(infodict_time_steps) == len(t)-1," The number of methods used should be equal to the number of time steps."
-					six.print_('{}:Time:{},Methods:{},Time steps:{}'.format(self.PV_model.name,t,infodict_mused,infodict_time_steps))
+					six.print_('{}:Time:{},Methods:{},Time steps:{}'.format(self.DER_model.name,t,infodict_mused,infodict_time_steps))
 					if all(status == 1 or status == 2 for status in infodict_mused):
-						six.print_('{}:Simulation successful for all time steps!'.format(self.PV_model.name))
+						six.print_('{}:Simulation successful for all time steps!'.format(self.DER_model.name))
 				self.SOLVER_CONVERGENCE = True
 		except:
 			LogUtil.exception_handler()

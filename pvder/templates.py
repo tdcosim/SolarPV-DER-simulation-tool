@@ -61,7 +61,7 @@ DER_design_template = {"SolarPVDERSinglePhase":
                        
                        "SolarPVDERThreePhaseNoVrmsFilter":
 					   {"parent_config":"",
-                        "basic_specs":{'phases':('a','b','c'),'n_phases':3,'n_ODE':23,'unbalanced':True,"model_type":"SolarPVDERThreePhase"},
+                        "basic_specs":{'phases':('a','b','c'),'n_phases':3,'n_ODE':23,'unbalanced':True,"model_type":"SolarPVDERThreePhaseNoVrmsFilter"},
 						"basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,"current_gradient_limiter":False,"Vrms_measurement_type":"minimum"},
 						"module_parameters":{"Np":11,"Ns":735,"Vdcmpp0":550.0,"Vdcmpp_min": 525.0,"Vdcmpp_max": 650.0}, 
 						"inverter_ratings":{"Srated":50e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0,"Iramp_max_gradient_real":1.0,"Iramp_max_gradient_imag":1.0},
@@ -76,7 +76,7 @@ DER_design_template = {"SolarPVDERSinglePhase":
 					   
 					   "SolarPVDERThreePhaseNumba":
 					   {"parent_config":"",
-						"basic_specs":{'phases':('a','b','c'),'n_phases':3,'n_ODE':23,'unbalanced':True,"model_type":"SolarPVDERThreePhase"},
+						"basic_specs":{'phases':('a','b','c'),'n_phases':3,'n_ODE':23,'unbalanced':True,"model_type":"SolarPVDERThreePhaseNumba"},
 						"basic_options":{'t_stable':0.5,'m_steady_state':0.96,"Sinsol":100.0,"current_gradient_limiter":False,"Vrms_measurement_type":"minimum"},
 						"module_parameters":{"Np":11,"Ns":735,"Vdcmpp0":550.0,"Vdcmpp_min": 525.0,"Vdcmpp_max": 650.0}, 
 						"inverter_ratings":{"Srated":50e3,"Vdcrated":550.0,"Ioverload":1.3,"Vrmsrated":177.0,"Iramp_max_gradient_real":1.0,"Iramp_max_gradient_imag":1.0},

@@ -29,12 +29,12 @@ class SimulationEvents(Utilities):
 	override_angle = True
 
 
-	def __init__(self,events_spec = None,SOLAR_EVENT_ENABLE = True,GRID_EVENT_ENABLE = True, LOAD_EVENT_ENABLE = True,verbosity='INFO',identifier=''):
+	def __init__(self,events_spec = None,solarEventEnable = True,gridEventEnable = True, loadEventEnable = True,verbosity='INFO',identifier=''):
 		"""Creates an instance of `SimulationEvents`.
 		Args:
-		  SOLAR_EVENT_ENABLE: A boolean to enable solar insolation events.
-		  GRID_EVENT_ENABLE: A boolean to enable grid voltage or frequency events.
-		  LOAD_EVENT_ENABLE: A boolean to enable load change events at PCC-LV side.
+		  solarEventEnable: A boolean to enable solar insolation events.
+		  gridEventEnable: A boolean to enable grid voltage or frequency events.
+		  loadEventEnable: A boolean to enable load change events at PCC-LV side.
 		"""
 		try:
 			#Increment count to keep track of number of simulation events instances
@@ -44,9 +44,9 @@ class SimulationEvents(Utilities):
 			if events_spec is not None:
 				self.update_events_spec(events_spec)
 
-			self.SOLAR_EVENT_ENABLE = SOLAR_EVENT_ENABLE
-			self.GRID_EVENT_ENABLE = GRID_EVENT_ENABLE
-			self.LOAD_EVENT_ENABLE = LOAD_EVENT_ENABLE
+			self.solarEventEnable = solarEventEnable
+			self.gridEventEnable = gridEventEnable
+			self.loadEventEnable = loadEventEnable
 		
 			self.solar_events_list = []#{'T':3.0,'Sinsol':self.Sinsol_default,'Tactual':self.Tactual_default}]
 			self.load_events_list = [] #{'T':4.0,'Zload1_actual':self.Zload1_actual_default}
@@ -84,7 +84,7 @@ class SimulationEvents(Utilities):
 		   t (float): A scalar specifying the time (s).
 		"""
 		try:
-			if self.SOLAR_EVENT_ENABLE and self.solar_events_list: #Check whether list is empty
+			if self.solarEventEnable and self.solar_events_list: #Check whether list is empty
 				if t<self.solar_events_list[0]['T']: 
 					Sinsol = self._events_spec['insolation']['default']
 					Tactual = self.Tactual_default
@@ -109,7 +109,7 @@ class SimulationEvents(Utilities):
 		   t (float): A scalar specifying the time (s).
 		"""
 		try:
-			if self.GRID_EVENT_ENABLE and self.grid_events_list: #Check whether list is empty
+			if self.gridEventEnable and self.grid_events_list: #Check whether list is empty
 			
 				if t<self.grid_events_list[self.grid_event_counter]['T'] and self.grid_event_counter ==0:
 					Vgrid = self._events_spec['voltage']['default']
@@ -165,7 +165,7 @@ class SimulationEvents(Utilities):
 		   t (float): A scalar specifying the time (s).
 		"""
 		try:
-			if self.LOAD_EVENT_ENABLE and self.load_events_list: #Check whether list is empty
+			if self.loadEventEnable and self.load_events_list: #Check whether list is empty
 				if t<self.load_events_list[0]['T']: 
 					Zload1_actual = self.Zload1_actual_default
 				elif t<self.load_events_list[self.load_event_counter]['T']  and self.load_event_counter >=1:
